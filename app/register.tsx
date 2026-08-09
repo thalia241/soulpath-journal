@@ -105,7 +105,7 @@ export default function RegisterScreen() {
         return;
       }
 
-      router.replace("/home");
+      router.replace("/(tabs)/today");
     } catch (error) {
       console.error("Unexpected registration error:", error);
 

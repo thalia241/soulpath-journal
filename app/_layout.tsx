@@ -1,5 +1,6 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+
 import {
   ActivityIndicator,
   StyleSheet,
@@ -29,6 +30,7 @@ function RootNavigator() {
     <Stack
       screenOptions={{
         headerShown: false,
+
         contentStyle: {
           backgroundColor: "#0C0A18",
         },
@@ -41,12 +43,19 @@ function RootNavigator() {
       </Stack.Protected>
 
       <Stack.Protected guard={!!session}>
+        <Stack.Screen name="(tabs)" />
+
         <Stack.Screen name="home" />
 
         <Stack.Screen name="journal/index" />
         <Stack.Screen name="journal/new" />
         <Stack.Screen name="journal/[id]" />
         <Stack.Screen name="journal/edit/[id]" />
+
+        <Stack.Screen name="experiences/index" />
+        <Stack.Screen name="experiences/new" />
+        <Stack.Screen name="experiences/[id]" />
+        <Stack.Screen name="experiences/edit/[id]" />
       </Stack.Protected>
     </Stack>
   );
@@ -56,6 +65,7 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <StatusBar style="light" />
+
       <RootNavigator />
     </AuthProvider>
   );

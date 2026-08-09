@@ -45,7 +45,7 @@ export default function LoginScreen() {
         return;
       }
 
-      router.replace("/home");
+      router.replace("/(tabs)/today");
     } catch {
       Alert.alert(
         "Something went wrong",
