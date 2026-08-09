@@ -1,19 +1,66 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import {
+  ActivityIndicator,
+  StyleSheet,
+  View,
+} from "react-native";
+
+import {
+  AuthProvider,
+  useAuth,
+} from "../src/context/AuthContext";
+
+function RootNavigator() {
+  const { session, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator
+          size="large"
+          color="#D9C6FF"
+        />
+      </View>
+    );
+  }
+
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: {
+          backgroundColor: "#0C0A18",
+        },
+      }}
+    >
+      <Stack.Protected guard={!session}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="login" />
+        <Stack.Screen name="register" />
+      </Stack.Protected>
+
+      <Stack.Protected guard={!!session}>
+        <Stack.Screen name="home" />
+      </Stack.Protected>
+    </Stack>
+  );
+}
 
 export default function RootLayout() {
   return (
-    <>
+    <AuthProvider>
       <StatusBar style="light" />
-
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: {
-            backgroundColor: "#0C0A18",
-          },
-        }}
-      />
-    </>
+      <RootNavigator />
+    </AuthProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#0C0A18",
+  },
+}); 
