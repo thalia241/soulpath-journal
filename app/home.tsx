@@ -1,4 +1,5 @@
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
 import {
   Pressable,
   SafeAreaView,
@@ -10,6 +11,14 @@ import {
 
 import { useAuth } from "../src/context/AuthContext";
 import { supabase } from "../src/lib/supabase";
+
+import {
+  getJournalEntryCount,
+  getJournalStreak,
+  getRecentJournalEntries,
+  getTodayJournalEntry,
+  JournalEntry,
+} from "../src/services/journalService";
 
 const practices = [
   "Meditation",
@@ -23,8 +32,81 @@ export default function HomeScreen() {
   const { session } = useAuth();
 
   const displayName =
-    session?.user.user_metadata?.display_name ||
-    "Traveler";
+    session?.user.user_metadata?.display_name || "Traveler";
+
+  const [entryCount, setEntryCount] = useState(0);
+  const [streak, setStreak] = useState(0);
+
+  const [todayEntry, setTodayEntry] =
+    useState<JournalEntry | null>(null);
+
+  const [recentEntries, setRecentEntries] =
+    useState<JournalEntry[]>([]);
+
+  const [dashboardLoading, setDashboardLoading] =
+    useState(true);
+
+  const loadDashboard = useCallback(async () => {
+    try {
+      setDashboardLoading(true);
+
+      const [
+        count,
+        journalStreak,
+        todaysEntry,
+        recent,
+      ] = await Promise.all([
+        getJournalEntryCount(),
+        getJournalStreak(),
+        getTodayJournalEntry(),
+        getRecentJournalEntries(3),
+      ]);
+
+      setEntryCount(count);
+      setStreak(journalStreak);
+      setTodayEntry(todaysEntry);
+      setRecentEntries(recent);
+    } catch (error) {
+      console.error(
+        "Unable to load SoulPath dashboard:",
+        error
+      );
+    } finally {
+      setDashboardLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadDashboard();
+    }, [loadDashboard])
+  );
+
+  function openTodayEntry() {
+    if (todayEntry) {
+      router.push({
+        pathname: "/journal/[id]",
+        params: {
+          id: todayEntry.id,
+        },
+      });
+    } else {
+      router.push("/journal/new");
+    }
+  }
+
+  function editTodayEntry() {
+    if (todayEntry) {
+      router.push({
+        pathname: "/journal/edit/[id]",
+        params: {
+          id: todayEntry.id,
+        },
+      });
+    } else {
+      router.push("/journal/new");
+    }
+  }
 
   async function handleLogout() {
     const { error } = await supabase.auth.signOut();
@@ -40,8 +122,9 @@ export default function HomeScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* Header */}
         <View style={styles.header}>
-          <View>
+          <View style={styles.headerText}>
             <Text style={styles.eyebrow}>
               YOUR SOULPATH
             </Text>
@@ -65,8 +148,11 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
+        {/* Reflection prompt */}
         <View style={styles.quoteCard}>
-          <Text style={styles.quoteSymbol}>✦</Text>
+          <Text style={styles.quoteSymbol}>
+            ✦
+          </Text>
 
           <Text style={styles.quote}>
             “What is asking for your attention today?”
@@ -77,12 +163,16 @@ export default function HomeScreen() {
           </Text>
         </View>
 
+        {/* Mood + Energy */}
         <Text style={styles.sectionTitle}>
           How are you feeling?
         </Text>
 
         <View style={styles.trackingGrid}>
-          <Pressable style={styles.trackingCard}>
+          <Pressable
+            style={styles.trackingCard}
+            onPress={editTodayEntry}
+          >
             <Text style={styles.trackingIcon}>
               ◉
             </Text>
@@ -92,11 +182,16 @@ export default function HomeScreen() {
             </Text>
 
             <Text style={styles.trackingValue}>
-              Check in
+              {dashboardLoading
+                ? "..."
+                : todayEntry?.mood ?? "Check in"}
             </Text>
           </Pressable>
 
-          <Pressable style={styles.trackingCard}>
+          <Pressable
+            style={styles.trackingCard}
+            onPress={editTodayEntry}
+          >
             <Text style={styles.trackingIcon}>
               ✧
             </Text>
@@ -106,11 +201,16 @@ export default function HomeScreen() {
             </Text>
 
             <Text style={styles.trackingValue}>
-              Check in
+              {dashboardLoading
+                ? "..."
+                : todayEntry?.energy_level
+                  ? `${todayEntry.energy_level} / 5`
+                  : "Check in"}
             </Text>
           </Pressable>
         </View>
 
+        {/* Practices */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>
             Today's practices
@@ -140,6 +240,7 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
 
+        {/* Daily reflection */}
         <View style={styles.journalCard}>
           <View style={styles.journalTopRow}>
             <Text style={styles.journalSymbol}>
@@ -160,16 +261,28 @@ export default function HomeScreen() {
             dream, or moment that feels meaningful.
           </Text>
 
-            <Pressable
-                style={styles.primaryButton}
-                onPress={() => router.push("/journal")}
-            >
-                <Text style={styles.primaryButtonText}>
-                    Write Today's Entry
-                </Text>
-            </Pressable>
+          <Pressable
+            style={styles.primaryButton}
+            onPress={openTodayEntry}
+          >
+            <Text style={styles.primaryButtonText}>
+              {todayEntry
+                ? "View Today's Reflection"
+                : "Write Today's Entry"}
+            </Text>
+          </Pressable>
+
+          <Pressable
+            style={styles.secondaryJournalButton}
+            onPress={() => router.push("/journal")}
+          >
+            <Text style={styles.secondaryJournalText}>
+              View Journal
+            </Text>
+          </Pressable>
         </View>
 
+        {/* Stats */}
         <Text style={styles.sectionTitle}>
           Your path
         </Text>
@@ -177,7 +290,9 @@ export default function HomeScreen() {
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <Text style={styles.statNumber}>
-              0
+              {dashboardLoading
+                ? "—"
+                : entryCount}
             </Text>
 
             <Text style={styles.statLabel}>
@@ -187,7 +302,9 @@ export default function HomeScreen() {
 
           <View style={styles.statCard}>
             <Text style={styles.statNumber}>
-              0
+              {dashboardLoading
+                ? "—"
+                : streak}
             </Text>
 
             <Text style={styles.statLabel}>
@@ -206,27 +323,113 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        {/* Recent reflections */}
         <View style={styles.recentSection}>
-          <Text style={styles.sectionTitle}>
-            Recent reflections
-          </Text>
-
-          <View style={styles.emptyState}>
-            <Text style={styles.emptySymbol}>
-              ☾
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>
+              Recent reflections
             </Text>
 
-            <Text style={styles.emptyTitle}>
-              Your journal is waiting
-            </Text>
-
-            <Text style={styles.emptyDescription}>
-              Your most recent reflections will appear
-              here once you begin writing.
-            </Text>
+            {recentEntries.length > 0 ? (
+              <Pressable
+                onPress={() =>
+                  router.push("/journal")
+                }
+              >
+                <Text style={styles.sectionAction}>
+                  View all
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
+
+          {dashboardLoading ? (
+            <Text style={styles.loadingText}>
+              Gathering your reflections...
+            </Text>
+          ) : recentEntries.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptySymbol}>
+                ☾
+              </Text>
+
+              <Text style={styles.emptyTitle}>
+                Your journal is waiting
+              </Text>
+
+              <Text
+                style={styles.emptyDescription}
+              >
+                Your most recent reflections will
+                appear here once you begin writing.
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.recentList}>
+              {recentEntries.map((entry) => (
+                <Pressable
+                  key={entry.id}
+                  style={styles.recentCard}
+                  onPress={() =>
+                    router.push({
+                      pathname:
+                        "/journal/[id]",
+                      params: {
+                        id: entry.id,
+                      },
+                    })
+                  }
+                >
+                  <Text style={styles.recentDate}>
+                    {entry.entry_date}
+                  </Text>
+
+                  <Text
+                    style={styles.recentTitle}
+                  >
+                    {entry.title}
+                  </Text>
+
+                  <Text
+                    style={styles.recentPreview}
+                    numberOfLines={2}
+                  >
+                    {entry.content}
+                  </Text>
+
+                  <View
+                    style={
+                      styles.recentMetadata
+                    }
+                  >
+                    {entry.mood ? (
+                      <Text
+                        style={
+                          styles.recentChip
+                        }
+                      >
+                        {entry.mood}
+                      </Text>
+                    ) : null}
+
+                    {entry.energy_level ? (
+                      <Text
+                        style={
+                          styles.recentChip
+                        }
+                      >
+                        Energy{" "}
+                        {entry.energy_level}/5
+                      </Text>
+                    ) : null}
+                  </View>
+                </Pressable>
+              ))}
+            </View>
+          )}
         </View>
 
+        {/* Logout */}
         <Pressable
           style={styles.logoutButton}
           onPress={handleLogout}
@@ -260,6 +463,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
     marginBottom: 30,
+  },
+
+  headerText: {
+    flex: 1,
+    paddingRight: 18,
   },
 
   eyebrow: {
@@ -452,6 +660,18 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
+  secondaryJournalButton: {
+    alignItems: "center",
+    paddingVertical: 13,
+    marginTop: 5,
+  },
+
+  secondaryJournalText: {
+    color: "#B8A5DC",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
   statsRow: {
     flexDirection: "row",
     gap: 10,
@@ -484,6 +704,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
+  loadingText: {
+    color: "#83798D",
+    textAlign: "center",
+    paddingVertical: 30,
+  },
+
   emptyState: {
     backgroundColor: "#121020",
     borderRadius: 20,
@@ -511,6 +737,53 @@ const styles = StyleSheet.create({
     marginTop: 8,
     lineHeight: 20,
     maxWidth: 360,
+  },
+
+  recentList: {
+    gap: 12,
+  },
+
+  recentCard: {
+    backgroundColor: "#151126",
+    borderRadius: 18,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: "#29213D",
+  },
+
+  recentDate: {
+    color: "#81758F",
+    fontSize: 12,
+  },
+
+  recentTitle: {
+    color: "#EFE8FA",
+    fontSize: 18,
+    fontWeight: "700",
+    marginTop: 5,
+  },
+
+  recentPreview: {
+    color: "#948A9F",
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 7,
+  },
+
+  recentMetadata: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 12,
+  },
+
+  recentChip: {
+    color: "#B5A4D3",
+    backgroundColor: "#211A35",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    fontSize: 12,
   },
 
   logoutButton: {

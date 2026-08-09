@@ -120,3 +120,99 @@ export async function deleteJournalEntry(id: string) {
     throw error;
   }
 } 
+
+export async function getRecentJournalEntries(limit = 3) {
+  const { data, error } = await supabase
+    .from("journal_entries")
+    .select("*")
+    .order("entry_date", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw error;
+  }
+
+  return data as JournalEntry[];
+}
+
+export async function getJournalEntryCount() {
+  const { count, error } = await supabase
+    .from("journal_entries")
+    .select("*", {
+      count: "exact",
+      head: true,
+    });
+
+  if (error) {
+    throw error;
+  }
+
+  return count ?? 0;
+}
+
+export async function getTodayJournalEntry() {
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data, error } = await supabase
+    .from("journal_entries")
+    .select("*")
+    .eq("entry_date", today)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as JournalEntry | null;
+} 
+
+export async function getJournalStreak() {
+  const { data, error } = await supabase
+    .from("journal_entries")
+    .select("entry_date")
+    .order("entry_date", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  const uniqueDates = [
+    ...new Set(data.map((item) => item.entry_date)),
+  ];
+
+  if (uniqueDates.length === 0) {
+    return 0;
+  }
+
+  const dateSet = new Set(uniqueDates);
+
+  const today = new Date();
+  const current = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
+
+  const formatDate = (date: Date) =>
+    `${date.getFullYear()}-${String(
+      date.getMonth() + 1
+    ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+  // If there isn't an entry today, allow the streak to
+  // continue from yesterday.
+  if (!dateSet.has(formatDate(current))) {
+    current.setDate(current.getDate() - 1);
+  }
+
+  let streak = 0;
+
+  while (dateSet.has(formatDate(current))) {
+    streak += 1;
+    current.setDate(current.getDate() - 1);
+  }
+
+  return streak;
+} 
