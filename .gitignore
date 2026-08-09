@@ -47,3 +47,6 @@ example
 
 # Local AI tooling
 .claude/
+
+AGENTS.md
+CLAUDE.md
