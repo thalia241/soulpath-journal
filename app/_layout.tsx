@@ -13,7 +13,10 @@ import {
 } from "../src/context/AuthContext";
 
 function RootNavigator() {
-  const { session, loading } = useAuth();
+  const {
+    session,
+    loading,
+  } = useAuth();
 
   if (loading) {
     return (
@@ -56,6 +59,11 @@ function RootNavigator() {
         <Stack.Screen name="experiences/new" />
         <Stack.Screen name="experiences/[id]" />
         <Stack.Screen name="experiences/edit/[id]" />
+
+        <Stack.Screen name="settings/profile" />
+        <Stack.Screen name="settings/privacy" />
+        <Stack.Screen name="settings/data" />
+        <Stack.Screen name="settings/about" />
       </Stack.Protected>
     </Stack>
   );
