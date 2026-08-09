@@ -1,5 +1,6 @@
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+
 import {
   ActivityIndicator,
   Pressable,
@@ -7,6 +8,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 
@@ -15,19 +17,57 @@ import {
   JournalEntry,
 } from "../../src/services/journalService";
 
+type MoodFilter =
+  | "all"
+  | "Peaceful"
+  | "Happy"
+  | "Reflective"
+  | "Neutral"
+  | "Anxious"
+  | "Sad"
+  | "Overwhelmed";
+
+type DateFilter =
+  | "all"
+  | "7"
+  | "30";
+
+const moodFilters: MoodFilter[] = [
+  "all",
+  "Peaceful",
+  "Happy",
+  "Reflective",
+  "Neutral",
+  "Anxious",
+  "Sad",
+  "Overwhelmed",
+];
+
 export default function JournalScreen() {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
+  const [searchText, setSearchText] = useState("");
+  const [moodFilter, setMoodFilter] =
+    useState<MoodFilter>("all");
+  const [dateFilter, setDateFilter] =
+    useState<DateFilter>("all");
+
   const loadEntries = useCallback(async () => {
     try {
+      setLoading(true);
       setErrorMessage("");
 
       const data = await getJournalEntries();
 
       setEntries(data);
     } catch (error) {
+      console.error(
+        "Unable to load journal entries:",
+        error
+      );
+
       setErrorMessage(
         error instanceof Error
           ? error.message
@@ -40,14 +80,80 @@ export default function JournalScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      setLoading(true);
       loadEntries();
     }, [loadEntries])
   );
 
+  const filteredEntries = useMemo(() => {
+    const normalizedSearch =
+      searchText.trim().toLowerCase();
+
+    const now = new Date();
+
+    return entries.filter((entry) => {
+      const matchesSearch =
+        !normalizedSearch ||
+        entry.title
+          .toLowerCase()
+          .includes(normalizedSearch) ||
+        entry.content
+          .toLowerCase()
+          .includes(normalizedSearch);
+
+      const matchesMood =
+        moodFilter === "all" ||
+        entry.mood === moodFilter;
+
+      let matchesDate = true;
+
+      if (dateFilter !== "all") {
+        const days = Number(dateFilter);
+
+        const startDate = new Date(now);
+        startDate.setHours(0, 0, 0, 0);
+        startDate.setDate(
+          startDate.getDate() - (days - 1)
+        );
+
+        const entryDate = new Date(
+          `${entry.entry_date}T00:00:00`
+        );
+
+        matchesDate =
+          entryDate >= startDate;
+      }
+
+      return (
+        matchesSearch &&
+        matchesMood &&
+        matchesDate
+      );
+    });
+  }, [
+    entries,
+    searchText,
+    moodFilter,
+    dateFilter,
+  ]);
+
+  const hasActiveFilters =
+    searchText.trim().length > 0 ||
+    moodFilter !== "all" ||
+    dateFilter !== "all";
+
+  function clearFilters() {
+    setSearchText("");
+    setMoodFilter("all");
+    setDateFilter("all");
+  }
+
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.header}>
           <View>
             <Text style={styles.eyebrow}>
@@ -61,16 +167,151 @@ export default function JournalScreen() {
 
           <Pressable
             style={styles.newButton}
-            onPress={() => router.push("/journal/new")}
+            onPress={() =>
+              router.push("/journal/new")
+            }
           >
-            <Text style={styles.newButtonText}>＋</Text>
+            <Text style={styles.newButtonText}>
+              ＋
+            </Text>
           </Pressable>
+        </View>
+
+        <View style={styles.searchBox}>
+          <Text style={styles.searchIcon}>
+            ⌕
+          </Text>
+
+          <TextInput
+            style={styles.searchInput}
+            value={searchText}
+            onChangeText={setSearchText}
+            placeholder="Search reflections..."
+            placeholderTextColor="#70677F"
+          />
+
+          {searchText.length > 0 ? (
+            <Pressable
+              onPress={() =>
+                setSearchText("")
+              }
+            >
+              <Text style={styles.clearSearch}>
+                ×
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+
+        <Text style={styles.filterLabel}>
+          Time
+        </Text>
+
+        <View style={styles.filterRow}>
+          {(
+            [
+              ["all", "All"],
+              ["7", "7 Days"],
+              ["30", "30 Days"],
+            ] as [
+              DateFilter,
+              string
+            ][]
+          ).map(([value, label]) => {
+            const selected =
+              dateFilter === value;
+
+            return (
+              <Pressable
+                key={value}
+                style={[
+                  styles.filterChip,
+                  selected &&
+                    styles.filterChipSelected,
+                ]}
+                onPress={() =>
+                  setDateFilter(value)
+                }
+              >
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    selected &&
+                      styles.filterChipTextSelected,
+                  ]}
+                >
+                  {label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <Text style={styles.filterLabel}>
+          Mood
+        </Text>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={
+            styles.horizontalFilters
+          }
+        >
+          {moodFilters.map((mood) => {
+            const selected =
+              moodFilter === mood;
+
+            return (
+              <Pressable
+                key={mood}
+                style={[
+                  styles.filterChip,
+                  selected &&
+                    styles.filterChipSelected,
+                ]}
+                onPress={() =>
+                  setMoodFilter(mood)
+                }
+              >
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    selected &&
+                      styles.filterChipTextSelected,
+                  ]}
+                >
+                  {mood === "all"
+                    ? "All moods"
+                    : mood}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
+        <View style={styles.resultHeader}>
+          <Text style={styles.resultText}>
+            {filteredEntries.length}{" "}
+            {filteredEntries.length === 1
+              ? "reflection"
+              : "reflections"}
+          </Text>
+
+          {hasActiveFilters ? (
+            <Pressable onPress={clearFilters}>
+              <Text style={styles.clearFilters}>
+                Clear filters
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
 
         {loading ? (
           <ActivityIndicator
             size="large"
             color="#CDB9FF"
+            style={styles.loader}
           />
         ) : null}
 
@@ -80,75 +321,124 @@ export default function JournalScreen() {
           </Text>
         ) : null}
 
-        {!loading && entries.length === 0 ? (
+        {!loading &&
+        filteredEntries.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyMoon}>☾</Text>
+            <Text style={styles.emptyMoon}>
+              ☾
+            </Text>
 
             <Text style={styles.emptyTitle}>
-              Your journal is waiting
+              {hasActiveFilters
+                ? "No reflections match"
+                : "Your journal is waiting"}
             </Text>
 
             <Text style={styles.emptyText}>
-              Write your first reflection whenever
-              something feels worth remembering.
+              {hasActiveFilters
+                ? "Try changing your search or filters."
+                : "Write your first reflection whenever something feels worth remembering."}
             </Text>
 
-            <Pressable
-              style={styles.createButton}
-              onPress={() => router.push("/journal/new")}
-            >
-              <Text style={styles.createButtonText}>
-                Write First Entry
-              </Text>
-            </Pressable>
-          </View>
-        ) : null}
-
-        <View style={styles.entries}>
-          {entries.map((entry) => (
-            <Pressable
-              key={entry.id}
-              style={styles.entryCard}
-              onPress={() =>
-                router.push({
-                  pathname: "/journal/[id]",
-                  params: {
-                    id: entry.id,
-                  },
-                })
-              }
-            >
-              <Text style={styles.entryDate}>
-                {entry.entry_date}
-              </Text>
-
-              <Text style={styles.entryTitle}>
-                {entry.title}
-              </Text>
-
-              <Text
-                style={styles.preview}
-                numberOfLines={3}
+            {hasActiveFilters ? (
+              <Pressable
+                style={styles.secondaryButton}
+                onPress={clearFilters}
               >
-                {entry.content}
-              </Text>
-
-              <View style={styles.metadata}>
-                {entry.mood ? (
-                  <Text style={styles.metadataText}>
-                    {entry.mood}
+                <Text
+                  style={
+                    styles.secondaryButtonText
+                  }
+                >
+                  Clear Filters
+                </Text>
+              </Pressable>
+            ) : (
+              <Pressable
+                style={styles.createButton}
+                onPress={() =>
+                  router.push(
+                    "/journal/new"
+                  )
+                }
+              >
+                <Text
+                  style={
+                    styles.createButtonText
+                  }
+                >
+                  Write First Entry
+                </Text>
+              </Pressable>
+            )}
+          </View>
+        ) : (
+          <View style={styles.entries}>
+            {filteredEntries.map(
+              (entry) => (
+                <Pressable
+                  key={entry.id}
+                  style={styles.entryCard}
+                  onPress={() =>
+                    router.push({
+                      pathname:
+                        "/journal/[id]",
+                      params: {
+                        id: entry.id,
+                      },
+                    })
+                  }
+                >
+                  <Text
+                    style={styles.entryDate}
+                  >
+                    {entry.entry_date}
                   </Text>
-                ) : null}
 
-                {entry.energy_level ? (
-                  <Text style={styles.metadataText}>
-                    Energy {entry.energy_level}/5
+                  <Text
+                    style={
+                      styles.entryTitle
+                    }
+                  >
+                    {entry.title}
                   </Text>
-                ) : null}
-              </View>
-            </Pressable>
-          ))}
-        </View>
+
+                  <Text
+                    style={styles.preview}
+                    numberOfLines={3}
+                  >
+                    {entry.content}
+                  </Text>
+
+                  <View
+                    style={styles.metadata}
+                  >
+                    {entry.mood ? (
+                      <Text
+                        style={
+                          styles.metadataText
+                        }
+                      >
+                        {entry.mood}
+                      </Text>
+                    ) : null}
+
+                    {entry.energy_level ? (
+                      <Text
+                        style={
+                          styles.metadataText
+                        }
+                      >
+                        Energy{" "}
+                        {entry.energy_level}/5
+                      </Text>
+                    ) : null}
+                  </View>
+                </Pressable>
+              )
+            )}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -166,14 +456,14 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     paddingHorizontal: 24,
     paddingTop: 30,
-    paddingBottom: 60,
+    paddingBottom: 110,
   },
 
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 30,
+    marginBottom: 24,
   },
 
   eyebrow: {
@@ -202,6 +492,100 @@ const styles = StyleSheet.create({
   newButtonText: {
     color: "#FFFFFF",
     fontSize: 26,
+  },
+
+  searchBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#151126",
+    borderWidth: 1,
+    borderColor: "#302847",
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    marginBottom: 20,
+  },
+
+  searchIcon: {
+    color: "#8E819F",
+    fontSize: 20,
+    marginRight: 9,
+  },
+
+  searchInput: {
+    flex: 1,
+    color: "#F2EDFA",
+    fontSize: 15,
+    paddingVertical: 14,
+  },
+
+  clearSearch: {
+    color: "#A998BD",
+    fontSize: 22,
+    paddingHorizontal: 4,
+  },
+
+  filterLabel: {
+    color: "#8F84A0",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    marginBottom: 9,
+  },
+
+  filterRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 18,
+  },
+
+  horizontalFilters: {
+    gap: 8,
+    paddingBottom: 20,
+  },
+
+  filterChip: {
+    backgroundColor: "#151126",
+    borderWidth: 1,
+    borderColor: "#302847",
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+
+  filterChipSelected: {
+    backgroundColor: "#5E489D",
+    borderColor: "#8F74D2",
+  },
+
+  filterChipText: {
+    color: "#A89DBB",
+    fontSize: 12,
+  },
+
+  filterChipTextSelected: {
+    color: "#FFFFFF",
+  },
+
+  resultHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+
+  resultText: {
+    color: "#81778D",
+    fontSize: 12,
+  },
+
+  clearFilters: {
+    color: "#A98BE0",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+
+  loader: {
+    marginTop: 30,
   },
 
   entries: {
@@ -236,6 +620,7 @@ const styles = StyleSheet.create({
 
   metadata: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 9,
     marginTop: 15,
   },
@@ -253,6 +638,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#151126",
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#29213D",
     padding: 34,
   },
 
@@ -285,6 +672,20 @@ const styles = StyleSheet.create({
 
   createButtonText: {
     color: "#FFFFFF",
+    fontWeight: "700",
+  },
+
+  secondaryButton: {
+    borderWidth: 1,
+    borderColor: "#5B477D",
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    marginTop: 20,
+  },
+
+  secondaryButtonText: {
+    color: "#C9B6E8",
     fontWeight: "700",
   },
 
