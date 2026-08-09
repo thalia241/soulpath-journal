@@ -1,82 +1,56 @@
-# SoulPath Journal
+# Welcome to your Expo app 👋
 
-> A private space for the journey within.
+This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
-SoulPath Journal is a privacy-focused mobile application for recording spiritual practices, moods, energy, dreams, synchronicities, and personal insights. It is designed as a focused portfolio application demonstrating secure full-stack product development without making medical, psychological, or predictive claims.
+## Get started
 
-## Portfolio Highlights
+1. Install dependencies
 
-- React Native and Expo mobile development
-- TypeScript architecture
-- Supabase authentication and PostgreSQL
-- Row Level Security for private user data
-- Relational database design
-- CRUD operations and form validation
-- Search, filters, and reusable query services
-- Data visualization and weekly summaries
-- PDF and text export
-- Automated testing and continuous integration
-- Accessible, responsive product design
+   ```bash
+   npm install
+   ```
 
-## Planned MVP
+2. Start the app
 
-- Secure registration, login, logout, and password recovery
-- Daily journal entries
-- Mood and energy tracking
-- Spiritual practice selection
-- Dream and synchronicity logs
-- Search and filtering
-- Weekly reflection summaries
-- PDF and text export
-- Account deletion and privacy controls
+   ```bash
+   npx expo start
+   ```
 
-## Technology Stack
+In the output, you'll find options to open the app in a
 
-| Area | Technology |
-|---|---|
-| Mobile | React Native, Expo, Expo Router |
-| Language | TypeScript |
-| Backend | Supabase |
-| Database | PostgreSQL |
-| Authentication | Supabase Auth |
-| Validation | React Hook Form, Zod |
-| Secure storage | Expo SecureStore |
-| Testing | Jest, React Native Testing Library |
-| CI | GitHub Actions |
+- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
+- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
+- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
+- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
 
-## Project Status
+You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 
-**Current milestone:** Foundation and authentication
+## Get a fresh project
 
-See [ROADMAP.md](ROADMAP.md) for planned releases.
-
-## Local Development
+When you're ready, run:
 
 ```bash
-npm install
-cp .env.example .env
-npx expo start
+npm run reset-project
 ```
 
-Add your Supabase project values to `.env`:
+This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
 
-```env
-EXPO_PUBLIC_SUPABASE_URL=
-EXPO_PUBLIC_SUPABASE_ANON_KEY=
-```
+### Other setup steps
 
-## Privacy
+- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
+- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
+- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
 
-SoulPath is designed around private-by-default data. Every user-owned database table uses Supabase Row Level Security so authenticated users can only access their own records.
+## Learn more
 
-SoulPath Journal is intended for personal reflection and wellness tracking. It does not provide medical, psychological, divinatory, or professional advice.
+To learn more about developing your project with Expo, look at the following resources:
 
-## Author
+- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
+- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
 
-**Charity Deel**  
-Computer Science student and full-stack developer  
-GitHub: [thalia241](https://github.com/thalia241)
+## Join the community
 
-## License
+Join our community of developers creating universal apps.
 
-This project is licensed under the MIT License.
+- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
+- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
