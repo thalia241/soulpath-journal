@@ -1,5 +1,13 @@
-import { router, useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import {
+  router,
+  useFocusEffect,
+} from "expo-router";
+
+import {
+  useCallback,
+  useState,
+} from "react";
+
 import {
   Pressable,
   SafeAreaView,
@@ -9,8 +17,13 @@ import {
   View,
 } from "react-native";
 
-import { useAuth } from "../src/context/AuthContext";
-import { supabase } from "../src/lib/supabase";
+import {
+  useAuth,
+} from "../src/context/AuthContext";
+
+import {
+  supabase,
+} from "../src/lib/supabase";
 
 import {
   getJournalEntryCount,
@@ -20,61 +33,105 @@ import {
   JournalEntry,
 } from "../src/services/journalService";
 
-const practices = [
-  "Meditation",
-  "Prayer",
-  "Tarot",
-  "Astrology",
-  "Breathwork",
-];
+import {
+  getTodayPractices,
+  getUniquePracticeCount,
+  Practice,
+} from "../src/services/practiceService";
 
 export default function HomeScreen() {
   const { session } = useAuth();
 
   const displayName =
-    session?.user.user_metadata?.display_name || "Traveler";
+    session?.user.user_metadata
+      ?.display_name ||
+    "Traveler";
 
-  const [entryCount, setEntryCount] = useState(0);
-  const [streak, setStreak] = useState(0);
+  const [entryCount, setEntryCount] =
+    useState(0);
 
-  const [todayEntry, setTodayEntry] =
-    useState<JournalEntry | null>(null);
+  const [streak, setStreak] =
+    useState(0);
 
-  const [recentEntries, setRecentEntries] =
-    useState<JournalEntry[]>([]);
+  const [
+    practiceCount,
+    setPracticeCount,
+  ] = useState(0);
 
-  const [dashboardLoading, setDashboardLoading] =
-    useState(true);
+  const [
+    todayEntry,
+    setTodayEntry,
+  ] =
+    useState<JournalEntry | null>(
+      null
+    );
 
-  const loadDashboard = useCallback(async () => {
-    try {
-      setDashboardLoading(true);
+  const [
+    todayPractices,
+    setTodayPractices,
+  ] = useState<Practice[]>([]);
 
-      const [
-        count,
-        journalStreak,
-        todaysEntry,
-        recent,
-      ] = await Promise.all([
-        getJournalEntryCount(),
-        getJournalStreak(),
-        getTodayJournalEntry(),
-        getRecentJournalEntries(3),
-      ]);
+  const [
+    recentEntries,
+    setRecentEntries,
+  ] = useState<JournalEntry[]>([]);
 
-      setEntryCount(count);
-      setStreak(journalStreak);
-      setTodayEntry(todaysEntry);
-      setRecentEntries(recent);
-    } catch (error) {
-      console.error(
-        "Unable to load SoulPath dashboard:",
-        error
-      );
-    } finally {
-      setDashboardLoading(false);
-    }
-  }, []);
+  const [
+    dashboardLoading,
+    setDashboardLoading,
+  ] = useState(true);
+
+  const loadDashboard =
+    useCallback(async () => {
+      try {
+        setDashboardLoading(true);
+
+        const [
+          count,
+          journalStreak,
+          todaysEntry,
+          recent,
+          practices,
+          uniquePracticeCount,
+        ] = await Promise.all([
+          getJournalEntryCount(),
+          getJournalStreak(),
+          getTodayJournalEntry(),
+          getRecentJournalEntries(3),
+          getTodayPractices(),
+          getUniquePracticeCount(),
+        ]);
+
+        setEntryCount(count);
+
+        setStreak(
+          journalStreak
+        );
+
+        setTodayEntry(
+          todaysEntry
+        );
+
+        setRecentEntries(
+          recent
+        );
+
+        setTodayPractices(
+          practices
+        );
+
+        setPracticeCount(
+          uniquePracticeCount
+        );
+      } catch (error) {
+        console.error(
+          "Unable to load SoulPath dashboard:",
+          error
+        );
+      } finally {
+        setDashboardLoading(false);
+      }
+    }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -85,42 +142,60 @@ export default function HomeScreen() {
   function openTodayEntry() {
     if (todayEntry) {
       router.push({
-        pathname: "/journal/[id]",
+        pathname:
+          "/journal/[id]",
         params: {
           id: todayEntry.id,
         },
       });
-    } else {
-      router.push("/journal/new");
+
+      return;
     }
+
+    router.push("/journal/new");
   }
 
   function editTodayEntry() {
     if (todayEntry) {
       router.push({
-        pathname: "/journal/edit/[id]",
+        pathname:
+          "/journal/edit/[id]",
         params: {
           id: todayEntry.id,
         },
       });
-    } else {
-      router.push("/journal/new");
+
+      return;
     }
+
+    router.push("/journal/new");
   }
 
   async function handleLogout() {
-    const { error } = await supabase.auth.signOut();
+    const { error } =
+      await supabase.auth.signOut();
 
-    if (!error) {
-      router.replace("/");
+    if (error) {
+      console.error(
+        "Unable to sign out:",
+        error
+      );
+
+      return;
     }
+
+    router.replace("/");
   }
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+        contentContainerStyle={
+          styles.scrollContent
+        }
+        showsVerticalScrollIndicator={
+          false
+        }
       >
         {/* Header */}
         <View style={styles.header}>
@@ -130,11 +205,13 @@ export default function HomeScreen() {
             </Text>
 
             <Text style={styles.greeting}>
-              Welcome back, {displayName}
+              Welcome back,{" "}
+              {displayName}
             </Text>
 
             <Text style={styles.dateText}>
-              A quiet space for today's reflection.
+              A quiet space for today's
+              reflection.
             </Text>
           </View>
 
@@ -142,28 +219,34 @@ export default function HomeScreen() {
             style={styles.profileButton}
             onPress={handleLogout}
           >
-            <Text style={styles.profileButtonText}>
+            <Text
+              style={
+                styles.profileButtonText
+              }
+            >
               ☾
             </Text>
           </Pressable>
         </View>
 
-        {/* Reflection prompt */}
+        {/* Prompt */}
         <View style={styles.quoteCard}>
           <Text style={styles.quoteSymbol}>
             ✦
           </Text>
 
           <Text style={styles.quote}>
-            “What is asking for your attention today?”
+            “What is asking for your
+            attention today?”
           </Text>
 
           <Text style={styles.quoteHint}>
-            Begin with awareness. The rest can follow.
+            Begin with awareness. The rest
+            can follow.
           </Text>
         </View>
 
-        {/* Mood + Energy */}
+        {/* Mood + energy */}
         <Text style={styles.sectionTitle}>
           How are you feeling?
         </Text>
@@ -173,18 +256,31 @@ export default function HomeScreen() {
             style={styles.trackingCard}
             onPress={editTodayEntry}
           >
-            <Text style={styles.trackingIcon}>
+            <Text
+              style={
+                styles.trackingIcon
+              }
+            >
               ◉
             </Text>
 
-            <Text style={styles.trackingLabel}>
+            <Text
+              style={
+                styles.trackingLabel
+              }
+            >
               Mood
             </Text>
 
-            <Text style={styles.trackingValue}>
+            <Text
+              style={
+                styles.trackingValue
+              }
+            >
               {dashboardLoading
                 ? "..."
-                : todayEntry?.mood ?? "Check in"}
+                : todayEntry?.mood ??
+                  "Check in"}
             </Text>
           </Pressable>
 
@@ -192,18 +288,31 @@ export default function HomeScreen() {
             style={styles.trackingCard}
             onPress={editTodayEntry}
           >
-            <Text style={styles.trackingIcon}>
+            <Text
+              style={
+                styles.trackingIcon
+              }
+            >
               ✧
             </Text>
 
-            <Text style={styles.trackingLabel}>
+            <Text
+              style={
+                styles.trackingLabel
+              }
+            >
               Energy
             </Text>
 
-            <Text style={styles.trackingValue}>
+            <Text
+              style={
+                styles.trackingValue
+              }
+            >
               {dashboardLoading
                 ? "..."
-                : todayEntry?.energy_level
+                : todayEntry
+                    ?.energy_level
                   ? `${todayEntry.energy_level} / 5`
                   : "Check in"}
             </Text>
@@ -211,61 +320,170 @@ export default function HomeScreen() {
         </View>
 
         {/* Practices */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>
+        <View
+          style={
+            styles.sectionHeader
+          }
+        >
+          <Text
+            style={
+              styles.sectionTitle
+            }
+          >
             Today's practices
           </Text>
 
-          <Text style={styles.sectionAction}>
-            Edit
-          </Text>
+          <Pressable
+            onPress={editTodayEntry}
+          >
+            <Text
+              style={
+                styles.sectionAction
+              }
+            >
+              {todayEntry
+                ? "Edit"
+                : "Add"}
+            </Text>
+          </Pressable>
         </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={
-            styles.practiceContainer
-          }
-        >
-          {practices.map((practice) => (
-            <Pressable
-              key={practice}
-              style={styles.practiceChip}
+        {dashboardLoading ? (
+          <Text
+            style={
+              styles.practiceLoadingText
+            }
+          >
+            Loading practices...
+          </Text>
+        ) : todayPractices.length ===
+          0 ? (
+          <Pressable
+            style={
+              styles.practiceEmpty
+            }
+            onPress={editTodayEntry}
+          >
+            <Text
+              style={
+                styles.practiceEmptySymbol
+              }
             >
-              <Text style={styles.practiceText}>
-                {practice}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+              ✦
+            </Text>
 
-        {/* Daily reflection */}
+            <View
+              style={
+                styles.practiceEmptyContent
+              }
+            >
+              <Text
+                style={
+                  styles.practiceEmptyTitle
+                }
+              >
+                No practices recorded yet
+              </Text>
+
+              <Text
+                style={
+                  styles.practiceEmptyText
+                }
+              >
+                Tap to add today's
+                spiritual practice.
+              </Text>
+            </View>
+          </Pressable>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={
+              false
+            }
+            contentContainerStyle={
+              styles.practiceContainer
+            }
+          >
+            {todayPractices.map(
+              (practice) => (
+                <Pressable
+                  key={practice.id}
+                  style={
+                    styles.practiceChip
+                  }
+                  onPress={
+                    editTodayEntry
+                  }
+                >
+                  <Text
+                    style={
+                      styles.practiceText
+                    }
+                  >
+                    {practice.name}
+                  </Text>
+                </Pressable>
+              )
+            )}
+          </ScrollView>
+        )}
+
+        {/* Reflection card */}
         <View style={styles.journalCard}>
-          <View style={styles.journalTopRow}>
-            <Text style={styles.journalSymbol}>
+          <View
+            style={
+              styles.journalTopRow
+            }
+          >
+            <Text
+              style={
+                styles.journalSymbol
+              }
+            >
               ✎
             </Text>
 
-            <Text style={styles.journalLabel}>
+            <Text
+              style={
+                styles.journalLabel
+              }
+            >
               DAILY REFLECTION
             </Text>
           </View>
 
-          <Text style={styles.journalTitle}>
-            What's moving through you today?
+          <Text
+            style={
+              styles.journalTitle
+            }
+          >
+            What's moving through you
+            today?
           </Text>
 
-          <Text style={styles.journalDescription}>
-            Capture a thought, realization, emotion,
-            dream, or moment that feels meaningful.
+          <Text
+            style={
+              styles.journalDescription
+            }
+          >
+            Capture a thought,
+            realization, emotion, dream,
+            or moment that feels
+            meaningful.
           </Text>
 
           <Pressable
-            style={styles.primaryButton}
+            style={
+              styles.primaryButton
+            }
             onPress={openTodayEntry}
           >
-            <Text style={styles.primaryButtonText}>
+            <Text
+              style={
+                styles.primaryButtonText
+              }
+            >
               {todayEntry
                 ? "View Today's Reflection"
                 : "Write Today's Entry"}
@@ -273,10 +491,18 @@ export default function HomeScreen() {
           </Pressable>
 
           <Pressable
-            style={styles.secondaryJournalButton}
-            onPress={() => router.push("/journal")}
+            style={
+              styles.secondaryJournalButton
+            }
+            onPress={() =>
+              router.push("/journal")
+            }
           >
-            <Text style={styles.secondaryJournalText}>
+            <Text
+              style={
+                styles.secondaryJournalText
+              }
+            >
               View Journal
             </Text>
           </Pressable>
@@ -289,54 +515,99 @@ export default function HomeScreen() {
 
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>
+            <Text
+              style={
+                styles.statNumber
+              }
+            >
               {dashboardLoading
                 ? "—"
                 : entryCount}
             </Text>
 
-            <Text style={styles.statLabel}>
+            <Text
+              style={
+                styles.statLabel
+              }
+            >
               Entries
             </Text>
           </View>
 
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>
+            <Text
+              style={
+                styles.statNumber
+              }
+            >
               {dashboardLoading
                 ? "—"
                 : streak}
             </Text>
 
-            <Text style={styles.statLabel}>
+            <Text
+              style={
+                styles.statLabel
+              }
+            >
               Day streak
             </Text>
           </View>
 
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>
-              0
+            <Text
+              style={
+                styles.statNumber
+              }
+            >
+              {dashboardLoading
+                ? "—"
+                : practiceCount}
             </Text>
 
-            <Text style={styles.statLabel}>
+            <Text
+              style={
+                styles.statLabel
+              }
+            >
               Practices
             </Text>
           </View>
         </View>
 
         {/* Recent reflections */}
-        <View style={styles.recentSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
+        <View
+          style={
+            styles.recentSection
+          }
+        >
+          <View
+            style={
+              styles.sectionHeader
+            }
+          >
+            <Text
+              style={
+                styles.sectionTitle
+              }
+            >
               Recent reflections
             </Text>
 
-            {recentEntries.length > 0 ? (
+            {recentEntries.length >
+            0 ? (
               <Pressable
                 onPress={() =>
-                  router.push("/journal")
+                  router.push(
+                    "/journal"
+                  )
                 }
               >
-                <Text style={styles.sectionAction}>
+                <Text
+                  style={
+                    styles.sectionAction
+                  }
+                >
                   View all
                 </Text>
               </Pressable>
@@ -344,97 +615,143 @@ export default function HomeScreen() {
           </View>
 
           {dashboardLoading ? (
-            <Text style={styles.loadingText}>
-              Gathering your reflections...
+            <Text
+              style={
+                styles.loadingText
+              }
+            >
+              Gathering your
+              reflections...
             </Text>
-          ) : recentEntries.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptySymbol}>
+          ) : recentEntries.length ===
+            0 ? (
+            <View
+              style={
+                styles.emptyState
+              }
+            >
+              <Text
+                style={
+                  styles.emptySymbol
+                }
+              >
                 ☾
               </Text>
 
-              <Text style={styles.emptyTitle}>
+              <Text
+                style={
+                  styles.emptyTitle
+                }
+              >
                 Your journal is waiting
               </Text>
 
               <Text
-                style={styles.emptyDescription}
+                style={
+                  styles.emptyDescription
+                }
               >
-                Your most recent reflections will
-                appear here once you begin writing.
+                Your most recent
+                reflections will appear
+                here once you begin
+                writing.
               </Text>
             </View>
           ) : (
-            <View style={styles.recentList}>
-              {recentEntries.map((entry) => (
-                <Pressable
-                  key={entry.id}
-                  style={styles.recentCard}
-                  onPress={() =>
-                    router.push({
-                      pathname:
-                        "/journal/[id]",
-                      params: {
-                        id: entry.id,
-                      },
-                    })
-                  }
-                >
-                  <Text style={styles.recentDate}>
-                    {entry.entry_date}
-                  </Text>
-
-                  <Text
-                    style={styles.recentTitle}
-                  >
-                    {entry.title}
-                  </Text>
-
-                  <Text
-                    style={styles.recentPreview}
-                    numberOfLines={2}
-                  >
-                    {entry.content}
-                  </Text>
-
-                  <View
+            <View
+              style={
+                styles.recentList
+              }
+            >
+              {recentEntries.map(
+                (entry) => (
+                  <Pressable
+                    key={entry.id}
                     style={
-                      styles.recentMetadata
+                      styles.recentCard
+                    }
+                    onPress={() =>
+                      router.push({
+                        pathname:
+                          "/journal/[id]",
+                        params: {
+                          id: entry.id,
+                        },
+                      })
                     }
                   >
-                    {entry.mood ? (
-                      <Text
-                        style={
-                          styles.recentChip
-                        }
-                      >
-                        {entry.mood}
-                      </Text>
-                    ) : null}
+                    <Text
+                      style={
+                        styles.recentDate
+                      }
+                    >
+                      {
+                        entry.entry_date
+                      }
+                    </Text>
 
-                    {entry.energy_level ? (
-                      <Text
-                        style={
-                          styles.recentChip
-                        }
-                      >
-                        Energy{" "}
-                        {entry.energy_level}/5
-                      </Text>
-                    ) : null}
-                  </View>
-                </Pressable>
-              ))}
+                    <Text
+                      style={
+                        styles.recentTitle
+                      }
+                    >
+                      {entry.title}
+                    </Text>
+
+                    <Text
+                      style={
+                        styles.recentPreview
+                      }
+                      numberOfLines={2}
+                    >
+                      {entry.content}
+                    </Text>
+
+                    <View
+                      style={
+                        styles.recentMetadata
+                      }
+                    >
+                      {entry.mood ? (
+                        <Text
+                          style={
+                            styles.recentChip
+                          }
+                        >
+                          {entry.mood}
+                        </Text>
+                      ) : null}
+
+                      {entry.energy_level ? (
+                        <Text
+                          style={
+                            styles.recentChip
+                          }
+                        >
+                          Energy{" "}
+                          {
+                            entry.energy_level
+                          }
+                          /5
+                        </Text>
+                      ) : null}
+                    </View>
+                  </Pressable>
+                )
+              )}
             </View>
           )}
         </View>
 
-        {/* Logout */}
         <Pressable
           style={styles.logoutButton}
           onPress={handleLogout}
         >
-          <Text style={styles.logoutText}>
+          <Text
+            style={
+              styles.logoutText
+            }
+          >
             Sign Out
           </Text>
         </Pressable>
@@ -603,6 +920,45 @@ const styles = StyleSheet.create({
   practiceText: {
     color: "#C8B7E8",
     fontSize: 14,
+  },
+
+  practiceLoadingText: {
+    color: "#7E758C",
+    fontSize: 13,
+    marginBottom: 34,
+  },
+
+  practiceEmpty: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    backgroundColor: "#151126",
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: "#29213D",
+    padding: 17,
+    marginBottom: 34,
+  },
+
+  practiceEmptyContent: {
+    flex: 1,
+  },
+
+  practiceEmptySymbol: {
+    color: "#A98DE3",
+    fontSize: 21,
+  },
+
+  practiceEmptyTitle: {
+    color: "#D9D0E8",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
+  practiceEmptyText: {
+    color: "#7E758C",
+    fontSize: 13,
+    marginTop: 3,
   },
 
   journalCard: {

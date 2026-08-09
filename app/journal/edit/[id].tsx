@@ -2,7 +2,12 @@ import {
   router,
   useLocalSearchParams,
 } from "expo-router";
-import { useEffect, useState } from "react";
+
+import {
+  useEffect,
+  useState,
+} from "react";
+
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -22,6 +27,13 @@ import {
   updateJournalEntry,
 } from "../../../src/services/journalService";
 
+import {
+  getEntryPractices,
+  getPractices,
+  Practice,
+  setEntryPractices,
+} from "../../../src/services/practiceService";
+
 const moods = [
   "Peaceful",
   "Happy",
@@ -35,17 +47,44 @@ const moods = [
 const energyLevels = [1, 2, 3, 4, 5];
 
 export default function EditJournalEntryScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id } =
+    useLocalSearchParams<{
+      id: string;
+    }>();
 
-  const [entry, setEntry] = useState<JournalEntry | null>(null);
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [mood, setMood] = useState<string | null>(null);
-  const [energy, setEnergy] = useState<number | null>(null);
+  const [entry, setEntry] =
+    useState<JournalEntry | null>(
+      null
+    );
 
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [title, setTitle] =
+    useState("");
+
+  const [content, setContent] =
+    useState("");
+
+  const [mood, setMood] =
+    useState<string | null>(null);
+
+  const [energy, setEnergy] =
+    useState<number | null>(null);
+
+  const [practices, setPractices] =
+    useState<Practice[]>([]);
+
+  const [
+    selectedPracticeIds,
+    setSelectedPracticeIds,
+  ] = useState<string[]>([]);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [saving, setSaving] =
+    useState(false);
+
+  const [errorMessage, setErrorMessage] =
+    useState("");
 
   useEffect(() => {
     if (!id) {
@@ -54,14 +93,38 @@ export default function EditJournalEntryScreen() {
 
     async function loadEntry() {
       try {
-        const data = await getJournalEntry(id);
+        setLoading(true);
+
+        const [
+          data,
+          allPractices,
+          currentPractices,
+        ] = await Promise.all([
+          getJournalEntry(id),
+          getPractices(),
+          getEntryPractices(id),
+        ]);
 
         setEntry(data);
         setTitle(data.title);
         setContent(data.content);
         setMood(data.mood);
         setEnergy(data.energy_level);
+
+        setPractices(allPractices);
+
+        setSelectedPracticeIds(
+          currentPractices.map(
+            (item) =>
+              item.practice_id
+          )
+        );
       } catch (error) {
+        console.error(
+          "Unable to load reflection:",
+          error
+        );
+
         setErrorMessage(
           error instanceof Error
             ? error.message
@@ -75,6 +138,28 @@ export default function EditJournalEntryScreen() {
     loadEntry();
   }, [id]);
 
+  function togglePractice(
+    practiceId: string
+  ) {
+    setSelectedPracticeIds(
+      (current) => {
+        if (
+          current.includes(practiceId)
+        ) {
+          return current.filter(
+            (id) =>
+              id !== practiceId
+          );
+        }
+
+        return [
+          ...current,
+          practiceId,
+        ];
+      }
+    );
+  }
+
   async function handleSave() {
     if (!entry) {
       return;
@@ -83,24 +168,36 @@ export default function EditJournalEntryScreen() {
     setErrorMessage("");
 
     if (!title.trim()) {
-      setErrorMessage("Your reflection needs a title.");
+      setErrorMessage(
+        "Your reflection needs a title."
+      );
       return;
     }
 
     if (!content.trim()) {
-      setErrorMessage("Your reflection cannot be empty.");
+      setErrorMessage(
+        "Your reflection cannot be empty."
+      );
       return;
     }
 
     try {
       setSaving(true);
 
-      await updateJournalEntry(entry.id, {
-        title: title.trim(),
-        content: content.trim(),
-        mood,
-        energy_level: energy,
-      });
+      await updateJournalEntry(
+        entry.id,
+        {
+          title: title.trim(),
+          content: content.trim(),
+          mood,
+          energy_level: energy,
+        }
+      );
+
+      await setEntryPractices(
+        entry.id,
+        selectedPracticeIds
+      );
 
       router.replace({
         pathname: "/journal/[id]",
@@ -109,6 +206,11 @@ export default function EditJournalEntryScreen() {
         },
       });
     } catch (error) {
+      console.error(
+        "Unable to update reflection:",
+        error
+      );
+
       setErrorMessage(
         error instanceof Error
           ? error.message
@@ -121,11 +223,40 @@ export default function EditJournalEntryScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView
+        style={styles.loadingContainer}
+      >
         <ActivityIndicator
           size="large"
           color="#CDB9FF"
         />
+
+        <Text style={styles.loadingText}>
+          Opening your reflection...
+        </Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (!entry) {
+    return (
+      <SafeAreaView
+        style={styles.loadingContainer}
+      >
+        <Text style={styles.errorText}>
+          {errorMessage ||
+            "Reflection not found."}
+        </Text>
+
+        <Pressable
+          onPress={() =>
+            router.replace("/journal")
+          }
+        >
+          <Text style={styles.backText}>
+            Return to Journal
+          </Text>
+        </Pressable>
       </SafeAreaView>
     );
   }
@@ -134,23 +265,43 @@ export default function EditJournalEntryScreen() {
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={
+          Platform.OS === "ios"
+            ? "padding"
+            : undefined
+        }
       >
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={
+            styles.content
+          }
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <Pressable onPress={() => router.back()}>
-            <Text style={styles.backText}>‹ Back</Text>
+          <Pressable
+            onPress={() => router.back()}
+          >
+            <Text style={styles.backText}>
+              ‹ Back
+            </Text>
           </Pressable>
 
-          <Text style={styles.eyebrow}>EDIT REFLECTION</Text>
+          <Text style={styles.eyebrow}>
+            EDIT REFLECTION
+          </Text>
 
           <Text style={styles.heading}>
             Refine what you captured
           </Text>
 
-          <Text style={styles.label}>Title</Text>
+          <Text style={styles.subheading}>
+            Your reflections can evolve
+            with you.
+          </Text>
+
+          <Text style={styles.label}>
+            Title
+          </Text>
 
           <TextInput
             style={styles.input}
@@ -160,10 +311,15 @@ export default function EditJournalEntryScreen() {
             placeholderTextColor="#70677F"
           />
 
-          <Text style={styles.label}>Your reflection</Text>
+          <Text style={styles.label}>
+            Your reflection
+          </Text>
 
           <TextInput
-            style={[styles.input, styles.journalInput]}
+            style={[
+              styles.input,
+              styles.journalInput,
+            ]}
             value={content}
             onChangeText={setContent}
             placeholder="Write freely..."
@@ -178,23 +334,30 @@ export default function EditJournalEntryScreen() {
 
           <View style={styles.wrapRow}>
             {moods.map((item) => {
-              const selected = mood === item;
+              const selected =
+                mood === item;
 
               return (
                 <Pressable
                   key={item}
                   style={[
                     styles.choice,
-                    selected && styles.choiceSelected,
+                    selected &&
+                      styles.choiceSelected,
                   ]}
                   onPress={() =>
-                    setMood(selected ? null : item)
+                    setMood(
+                      selected
+                        ? null
+                        : item
+                    )
                   }
                 >
                   <Text
                     style={[
                       styles.choiceText,
-                      selected && styles.choiceTextSelected,
+                      selected &&
+                        styles.choiceTextSelected,
                     ]}
                   >
                     {item}
@@ -210,23 +373,30 @@ export default function EditJournalEntryScreen() {
 
           <View style={styles.energyRow}>
             {energyLevels.map((level) => {
-              const selected = energy === level;
+              const selected =
+                energy === level;
 
               return (
                 <Pressable
                   key={level}
                   style={[
                     styles.energyButton,
-                    selected && styles.energySelected,
+                    selected &&
+                      styles.energySelected,
                   ]}
                   onPress={() =>
-                    setEnergy(selected ? null : level)
+                    setEnergy(
+                      selected
+                        ? null
+                        : level
+                    )
                   }
                 >
                   <Text
                     style={[
                       styles.energyText,
-                      selected && styles.energyTextSelected,
+                      selected &&
+                        styles.energyTextSelected,
                     ]}
                   >
                     {level}
@@ -236,24 +406,79 @@ export default function EditJournalEntryScreen() {
             })}
           </View>
 
+          <Text style={styles.sectionTitle}>
+            Spiritual practices
+          </Text>
+
+          <Text style={styles.practiceHint}>
+            Update the practices connected
+            with this reflection.
+          </Text>
+
+          <View style={styles.wrapRow}>
+            {practices.map(
+              (practice) => {
+                const selected =
+                  selectedPracticeIds.includes(
+                    practice.id
+                  );
+
+                return (
+                  <Pressable
+                    key={practice.id}
+                    style={[
+                      styles.choice,
+                      selected &&
+                        styles.choiceSelected,
+                    ]}
+                    onPress={() =>
+                      togglePractice(
+                        practice.id
+                      )
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.choiceText,
+                        selected &&
+                          styles.choiceTextSelected,
+                      ]}
+                    >
+                      {practice.name}
+                    </Text>
+                  </Pressable>
+                );
+              }
+            )}
+          </View>
+
           {errorMessage ? (
-            <Text style={styles.errorText}>
-              {errorMessage}
-            </Text>
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>
+                {errorMessage}
+              </Text>
+            </View>
           ) : null}
 
           <Pressable
             style={[
               styles.saveButton,
-              saving && styles.disabledButton,
+              saving &&
+                styles.disabledButton,
             ]}
             onPress={handleSave}
             disabled={saving}
           >
             {saving ? (
-              <ActivityIndicator color="#FFFFFF" />
+              <ActivityIndicator
+                color="#FFFFFF"
+              />
             ) : (
-              <Text style={styles.saveButtonText}>
+              <Text
+                style={
+                  styles.saveButtonText
+                }
+              >
                 Save Changes
               </Text>
             )}
@@ -268,6 +493,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#0C0A18",
+  },
+
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: "#0C0A18",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+
+  loadingText: {
+    color: "#8E859F",
+    marginTop: 14,
   },
 
   content: {
@@ -297,7 +535,13 @@ const styles = StyleSheet.create({
     fontSize: 31,
     fontWeight: "700",
     marginTop: 8,
-    marginBottom: 24,
+  },
+
+  subheading: {
+    color: "#8D859A",
+    fontSize: 15,
+    marginTop: 8,
+    marginBottom: 30,
   },
 
   label: {
@@ -330,6 +574,13 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginTop: 28,
     marginBottom: 12,
+  },
+
+  practiceHint: {
+    color: "#847B95",
+    fontSize: 13,
+    marginTop: -5,
+    marginBottom: 13,
   },
 
   wrapRow: {
@@ -378,6 +629,7 @@ const styles = StyleSheet.create({
 
   energySelected: {
     backgroundColor: "#7357C7",
+    borderColor: "#8F74D2",
   },
 
   energyText: {
@@ -389,9 +641,19 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
 
+  errorBox: {
+    backgroundColor: "#2A151E",
+    borderWidth: 1,
+    borderColor: "#683248",
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 24,
+  },
+
   errorText: {
     color: "#F1A7B9",
-    marginTop: 20,
+    lineHeight: 20,
+    textAlign: "center",
   },
 
   saveButton: {
