@@ -19,7 +19,9 @@ import {
 
 import {
   getSoulPathInsights,
+  PracticeObservation,
   SoulPathInsights,
+  TrendPeriod,
 } from "../../src/services/insightService";
 
 export default function InsightsScreen() {
@@ -31,18 +33,27 @@ export default function InsightsScreen() {
       null
     );
 
-  const [loading, setLoading] =
-    useState(true);
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
 
   const [
     errorMessage,
     setErrorMessage,
   ] = useState("");
 
+  const [
+    trendView,
+    setTrendView,
+  ] =
+    useState<7 | 30>(7);
+
   const loadInsights =
     useCallback(async () => {
       try {
         setLoading(true);
+
         setErrorMessage("");
 
         const data =
@@ -74,7 +85,9 @@ export default function InsightsScreen() {
   if (loading) {
     return (
       <SafeAreaView
-        style={styles.loadingContainer}
+        style={
+          styles.loadingContainer
+        }
       >
         <ActivityIndicator
           size="large"
@@ -84,7 +97,8 @@ export default function InsightsScreen() {
         <Text
           style={styles.loadingText}
         >
-          Discovering your patterns...
+          Discovering your
+          patterns...
         </Text>
       </SafeAreaView>
     );
@@ -93,9 +107,13 @@ export default function InsightsScreen() {
   if (!insights) {
     return (
       <SafeAreaView
-        style={styles.loadingContainer}
+        style={
+          styles.loadingContainer
+        }
       >
-        <Text style={styles.errorText}>
+        <Text
+          style={styles.errorText}
+        >
           {errorMessage ||
             "Unable to load insights."}
         </Text>
@@ -114,26 +132,26 @@ export default function InsightsScreen() {
     );
   }
 
-  const maxMoodCount = Math.max(
-    ...insights.moodDistribution.map(
-      (item) => item.count
-    ),
-    1
-  );
+  const activeTrend =
+    trendView === 7
+      ? insights.sevenDayTrend
+      : insights.thirtyDayTrend;
 
-  const maxEnergyCount = Math.max(
-    ...insights.energyDistribution.map(
-      (item) => item.count
-    ),
-    1
-  );
+  const maxTrendMood =
+    Math.max(
+      ...activeTrend.moodDistribution.map(
+        (item) => item.count
+      ),
+      1
+    );
 
-  const maxPracticeCount = Math.max(
-    ...insights.practiceUsage.map(
-      (item) => item.count
-    ),
-    1
-  );
+  const maxPracticeCount =
+    Math.max(
+      ...insights.practiceUsage.map(
+        (item) => item.count
+      ),
+      1
+    );
 
   return (
     <SafeAreaView
@@ -155,14 +173,18 @@ export default function InsightsScreen() {
           Insights
         </Text>
 
-        <Text style={styles.subtitle}>
-          A reflection of the patterns
-          appearing across the information
-          you've chosen to record.
+        <Text
+          style={styles.subtitle}
+        >
+          See how the patterns in your
+          recorded reflections change
+          over time.
         </Text>
 
         {errorMessage ? (
-          <View style={styles.errorBox}>
+          <View
+            style={styles.errorBox}
+          >
             <Text
               style={styles.errorText}
             >
@@ -171,21 +193,21 @@ export default function InsightsScreen() {
           </View>
         ) : null}
 
-        {/* Overview */}
+        {/* Overall Summary */}
         <Text
           style={styles.sectionTitle}
         >
           Your path at a glance
         </Text>
 
-        <View style={styles.summaryGrid}>
+        <View
+          style={styles.summaryGrid}
+        >
           <View
             style={styles.summaryCard}
           >
             <Text
-              style={
-                styles.summarySymbol
-              }
+              style={styles.summaryIcon}
             >
               ✎
             </Text>
@@ -211,9 +233,7 @@ export default function InsightsScreen() {
             style={styles.summaryCard}
           >
             <Text
-              style={
-                styles.summarySymbol
-              }
+              style={styles.summaryIcon}
             >
               ✧
             </Text>
@@ -240,9 +260,7 @@ export default function InsightsScreen() {
             style={styles.summaryCard}
           >
             <Text
-              style={
-                styles.summarySymbol
-              }
+              style={styles.summaryIcon}
             >
               ◉
             </Text>
@@ -267,10 +285,12 @@ export default function InsightsScreen() {
           </View>
         </View>
 
-        {/* Mood Distribution */}
-        <View style={styles.dataCard}>
+        {/* Trend period */}
+        <View style={styles.trendCard}>
           <View
-            style={styles.cardHeadingRow}
+            style={
+              styles.trendHeading
+            }
           >
             <View>
               <Text
@@ -278,42 +298,106 @@ export default function InsightsScreen() {
                   styles.cardEyebrow
                 }
               >
-                EMOTIONAL PATTERNS
+                RECENT TRENDS
               </Text>
 
               <Text
-                style={
-                  styles.cardTitle
-                }
+                style={styles.cardTitle}
               >
-                Recorded moods
+                Reflection window
               </Text>
             </View>
 
             <Text
-              style={styles.cardSymbol}
+              style={styles.cardIcon}
             >
-              ◉
+              ◌
             </Text>
           </View>
 
-          {insights.moodDistribution
-            .length === 0 ? (
+          <View
+            style={
+              styles.periodSelector
+            }
+          >
+            <Pressable
+              style={[
+                styles.periodButton,
+
+                trendView === 7 &&
+                  styles.periodButtonSelected,
+              ]}
+              onPress={() =>
+                setTrendView(7)
+              }
+            >
+              <Text
+                style={[
+                  styles.periodText,
+
+                  trendView === 7 &&
+                    styles.periodTextSelected,
+                ]}
+              >
+                7 Days
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={[
+                styles.periodButton,
+
+                trendView === 30 &&
+                  styles.periodButtonSelected,
+              ]}
+              onPress={() =>
+                setTrendView(30)
+              }
+            >
+              <Text
+                style={[
+                  styles.periodText,
+
+                  trendView === 30 &&
+                    styles.periodTextSelected,
+                ]}
+              >
+                30 Days
+              </Text>
+            </Pressable>
+          </View>
+
+          <TrendSummary
+            trend={activeTrend}
+          />
+
+          <View
+            style={styles.divider}
+          />
+
+          <Text
+            style={styles.chartTitle}
+          >
+            Mood frequency
+          </Text>
+
+          {activeTrend
+            .moodDistribution.length ===
+          0 ? (
             <Text
               style={styles.emptyText}
             >
-              Mood patterns will appear
-              after you begin recording
-              moods in your reflections.
+              No moods were recorded
+              during this period.
             </Text>
           ) : (
             <View
               style={styles.barList}
             >
-              {insights.moodDistribution.map(
-                (item) => (
+              {activeTrend.moodDistribution.map(
+                (mood) => (
                   <View
-                    key={item.mood}
+                    key={mood.mood}
                     style={
                       styles.barItem
                     }
@@ -328,7 +412,7 @@ export default function InsightsScreen() {
                           styles.barLabel
                         }
                       >
-                        {item.mood}
+                        {mood.mood}
                       </Text>
 
                       <Text
@@ -336,7 +420,7 @@ export default function InsightsScreen() {
                           styles.barValue
                         }
                       >
-                        {item.count}
+                        {mood.count}
                       </Text>
                     </View>
 
@@ -351,9 +435,10 @@ export default function InsightsScreen() {
 
                           {
                             width: `${Math.max(
-                              10,
-                              (item.count /
-                                maxMoodCount) *
+                              8,
+
+                              (mood.count /
+                                maxTrendMood) *
                                 100
                             )}%`,
                           },
@@ -367,130 +452,79 @@ export default function InsightsScreen() {
           )}
         </View>
 
-        {/* Energy */}
-        <View style={styles.dataCard}>
-          <View
-            style={styles.cardHeadingRow}
-          >
-            <View>
-              <Text
-                style={
-                  styles.cardEyebrow
-                }
-              >
-                ENERGY
-              </Text>
+        {/* 7 vs 30 comparison */}
+        <Text
+          style={styles.sectionTitle}
+        >
+          7-day vs. 30-day
+        </Text>
 
-              <Text
-                style={
-                  styles.cardTitle
-                }
-              >
-                Energy distribution
-              </Text>
-            </View>
-
-            <Text
-              style={styles.cardSymbol}
-            >
-              ✧
-            </Text>
-          </View>
+        <View
+          style={
+            styles.comparisonCard
+          }
+        >
+          <ComparisonRow
+            label="Reflections"
+            seven={
+              insights.sevenDayTrend
+                .entryCount
+            }
+            thirty={
+              insights.thirtyDayTrend
+                .entryCount
+            }
+          />
 
           <View
             style={
-              styles.energyChart
+              styles.comparisonDivider
             }
-          >
-            {insights.energyDistribution.map(
-              (item) => {
-                const percentage =
-                  item.count === 0
-                    ? 0
-                    : Math.max(
-                        12,
-                        (item.count /
-                          maxEnergyCount) *
-                          100
-                      );
+          />
 
-                return (
-                  <View
-                    key={item.level}
-                    style={
-                      styles.energyColumn
-                    }
-                  >
-                    <Text
-                      style={
-                        styles.energyCount
-                      }
-                    >
-                      {item.count}
-                    </Text>
-
-                    <View
-                      style={
-                        styles.energyBarArea
-                      }
-                    >
-                      <View
-                        style={[
-                          styles.energyBar,
-
-                          {
-                            height: `${percentage}%`,
-                          },
-                        ]}
-                      />
-                    </View>
-
-                    <Text
-                      style={
-                        styles.energyLevel
-                      }
-                    >
-                      {item.level}
-                    </Text>
-                  </View>
-                );
-              }
-            )}
-          </View>
+          <ComparisonRow
+            label="Avg. energy"
+            seven={
+              insights.sevenDayTrend
+                .averageEnergy ?? "—"
+            }
+            thirty={
+              insights.thirtyDayTrend
+                .averageEnergy ?? "—"
+            }
+          />
 
           <View
-            style={styles.chartLabels}
-          >
-            <Text
-              style={
-                styles.chartHint
-              }
-            >
-              Lower
-            </Text>
+            style={
+              styles.comparisonDivider
+            }
+          />
 
-            <Text
-              style={
-                styles.chartHint
-              }
-            >
-              Energy level
-            </Text>
-
-            <Text
-              style={
-                styles.chartHint
-              }
-            >
-              Higher
-            </Text>
-          </View>
+          <ComparisonRow
+            label="Top mood"
+            seven={
+              insights.sevenDayTrend
+                .mostCommonMood ?? "—"
+            }
+            thirty={
+              insights.thirtyDayTrend
+                .mostCommonMood ?? "—"
+            }
+          />
         </View>
 
-        {/* Practice usage */}
+        {/* Practices */}
+        <Text
+          style={styles.sectionTitle}
+        >
+          Spiritual practices
+        </Text>
+
         <View style={styles.dataCard}>
           <View
-            style={styles.cardHeadingRow}
+            style={
+              styles.cardHeading
+            }
           >
             <View>
               <Text
@@ -498,20 +532,18 @@ export default function InsightsScreen() {
                   styles.cardEyebrow
                 }
               >
-                SPIRITUAL PRACTICE
+                PRACTICE FREQUENCY
               </Text>
 
               <Text
-                style={
-                  styles.cardTitle
-                }
+                style={styles.cardTitle}
               >
-                Practice frequency
+                Your recorded practices
               </Text>
             </View>
 
             <Text
-              style={styles.cardSymbol}
+              style={styles.cardIcon}
             >
               ✦
             </Text>
@@ -522,10 +554,10 @@ export default function InsightsScreen() {
             <Text
               style={styles.emptyText}
             >
-              Your spiritual practice
-              patterns will appear after
-              you connect practices to
-              journal entries.
+              Practice patterns will
+              appear after you connect
+              practices to your journal
+              entries.
             </Text>
           ) : (
             <View
@@ -534,7 +566,9 @@ export default function InsightsScreen() {
               {insights.practiceUsage.map(
                 (practice) => (
                   <View
-                    key={practice.id}
+                    key={
+                      practice.id
+                    }
                     style={
                       styles.barItem
                     }
@@ -549,7 +583,9 @@ export default function InsightsScreen() {
                           styles.barLabel
                         }
                       >
-                        {practice.name}
+                        {
+                          practice.name
+                        }
                       </Text>
 
                       <Text
@@ -557,7 +593,9 @@ export default function InsightsScreen() {
                           styles.barValue
                         }
                       >
-                        {practice.count}
+                        {
+                          practice.count
+                        }
                       </Text>
                     </View>
 
@@ -572,7 +610,8 @@ export default function InsightsScreen() {
 
                           {
                             width: `${Math.max(
-                              10,
+                              8,
+
                               (practice.count /
                                 maxPracticeCount) *
                                 100
@@ -588,7 +627,65 @@ export default function InsightsScreen() {
           )}
         </View>
 
-        {/* Dreams + Signs */}
+        {/* Practice observations */}
+        <Text
+          style={styles.sectionTitle}
+        >
+          Practice observations
+        </Text>
+
+        {insights.practiceObservations
+          .length === 0 ? (
+          <View
+            style={styles.emptyCard}
+          >
+            <Text
+              style={
+                styles.emptySymbol
+              }
+            >
+              ✦
+            </Text>
+
+            <Text
+              style={
+                styles.emptyTitle
+              }
+            >
+              More entries needed
+            </Text>
+
+            <Text
+              style={styles.emptyText}
+            >
+              Record spiritual practices
+              alongside mood and energy
+              to begin seeing
+              observations here.
+            </Text>
+          </View>
+        ) : (
+          <View
+            style={
+              styles.practiceObservationList
+            }
+          >
+            {insights.practiceObservations.map(
+              (practice) => (
+                <PracticeObservationCard
+                  key={
+                    practice.practiceId
+                  }
+                  practice={
+                    practice
+                  }
+                />
+              )
+            )}
+          </View>
+        )}
+
+        {/* Dreams + signs */}
         <Text
           style={styles.sectionTitle}
         >
@@ -597,17 +694,17 @@ export default function InsightsScreen() {
 
         <View
           style={
-            styles.experienceStats
+            styles.experienceRow
           }
         >
           <View
             style={
-              styles.experienceStatCard
+              styles.experienceCard
             }
           >
             <Text
               style={
-                styles.experienceSymbol
+                styles.experienceIcon
               }
             >
               ☾
@@ -626,18 +723,18 @@ export default function InsightsScreen() {
                 styles.experienceLabel
               }
             >
-              Dreams recorded
+              Dreams
             </Text>
           </View>
 
           <View
             style={
-              styles.experienceStatCard
+              styles.experienceCard
             }
           >
             <Text
               style={
-                styles.experienceSymbol
+                styles.experienceIcon
               }
             >
               ✦
@@ -666,17 +763,17 @@ export default function InsightsScreen() {
         {/* Observations */}
         <View
           style={
-            styles.observationCard
+            styles.observationsCard
           }
         >
           <View
             style={
-              styles.observationHeader
+              styles.observationsHeader
             }
           >
             <Text
               style={
-                styles.observationSymbol
+                styles.observationIcon
               }
             >
               ✦
@@ -685,7 +782,7 @@ export default function InsightsScreen() {
             <View>
               <Text
                 style={
-                  styles.observationEyebrow
+                  styles.cardEyebrow
                 }
               >
                 SOULPATH OBSERVATIONS
@@ -693,7 +790,7 @@ export default function InsightsScreen() {
 
               <Text
                 style={
-                  styles.observationTitle
+                  styles.observationsTitle
                 }
               >
                 What your records show
@@ -702,7 +799,10 @@ export default function InsightsScreen() {
           </View>
 
           {insights.observations.map(
-            (observation, index) => (
+            (
+              observation,
+              index
+            ) => (
               <View
                 key={`${observation}-${index}`}
                 style={
@@ -729,30 +829,308 @@ export default function InsightsScreen() {
           )}
         </View>
 
-        {/* Disclaimer */}
-        <View style={styles.noticeCard}>
+        <View
+          style={styles.noticeCard}
+        >
           <Text
-            style={
-              styles.noticeTitle
-            }
+            style={styles.noticeTitle}
           >
-            Observational insights
+            Observational, not causal
           </Text>
 
           <Text
             style={styles.noticeText}
           >
-            These insights summarize
-            patterns in information you
-            choose to record. They do not
-            establish cause and effect and
-            are not medical,
-            psychological, divinatory, or
-            professional advice.
+            SoulPath compares patterns in
+            information you choose to
+            record. A difference between
+            practice days and other days
+            does not mean that the
+            practice caused the
+            difference.
           </Text>
         </View>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function TrendSummary({
+  trend,
+}: {
+  trend: TrendPeriod;
+}) {
+  return (
+    <View
+      style={styles.trendStats}
+    >
+      <View
+        style={styles.trendStat}
+      >
+        <Text
+          style={
+            styles.trendNumber
+          }
+        >
+          {trend.entryCount}
+        </Text>
+
+        <Text
+          style={styles.trendLabel}
+        >
+          Reflections
+        </Text>
+      </View>
+
+      <View
+        style={styles.trendStat}
+      >
+        <Text
+          style={
+            styles.trendNumber
+          }
+        >
+          {trend.averageEnergy ??
+            "—"}
+        </Text>
+
+        <Text
+          style={styles.trendLabel}
+        >
+          Avg. energy
+        </Text>
+      </View>
+
+      <View
+        style={styles.trendStat}
+      >
+        <Text
+          style={
+            styles.trendMood
+          }
+          numberOfLines={1}
+        >
+          {trend.mostCommonMood ??
+            "—"}
+        </Text>
+
+        <Text
+          style={styles.trendLabel}
+        >
+          Top mood
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function ComparisonRow({
+  label,
+  seven,
+  thirty,
+}: {
+  label: string;
+
+  seven: string | number;
+
+  thirty: string | number;
+}) {
+  return (
+    <View
+      style={styles.comparisonRow}
+    >
+      <Text
+        style={
+          styles.comparisonLabel
+        }
+      >
+        {label}
+      </Text>
+
+      <View
+        style={styles.comparisonValues}
+      >
+        <View
+          style={styles.comparisonValue}
+        >
+          <Text
+            style={
+              styles.comparisonNumber
+            }
+          >
+            {seven}
+          </Text>
+
+          <Text
+            style={
+              styles.comparisonPeriod
+            }
+          >
+            7 days
+          </Text>
+        </View>
+
+        <View
+          style={styles.comparisonValue}
+        >
+          <Text
+            style={
+              styles.comparisonNumber
+            }
+          >
+            {thirty}
+          </Text>
+
+          <Text
+            style={
+              styles.comparisonPeriod
+            }
+          >
+            30 days
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function PracticeObservationCard({
+  practice,
+}: {
+  practice: PracticeObservation;
+}) {
+  let differenceText =
+    "Not enough energy data to compare.";
+
+  if (
+    practice.energyDifferenceFromOverall !==
+    null
+  ) {
+    const difference =
+      practice.energyDifferenceFromOverall;
+
+    if (difference > 0) {
+      differenceText = `Recorded energy on these entries averages ${difference.toFixed(
+        1
+      )} points above your overall average.`;
+    } else if (
+      difference < 0
+    ) {
+      differenceText = `Recorded energy on these entries averages ${Math.abs(
+        difference
+      ).toFixed(
+        1
+      )} points below your overall average.`;
+    } else {
+      differenceText =
+        "Recorded energy on these entries matches your overall average.";
+    }
+  }
+
+  return (
+    <View
+      style={
+        styles.practiceObservationCard
+      }
+    >
+      <View
+        style={
+          styles.practiceObservationHeader
+        }
+      >
+        <Text
+          style={
+            styles.practiceObservationIcon
+          }
+        >
+          ✦
+        </Text>
+
+        <View style={{ flex: 1 }}>
+          <Text
+            style={
+              styles.practiceObservationTitle
+            }
+          >
+            {practice.practiceName}
+          </Text>
+
+          <Text
+            style={
+              styles.practiceObservationCount
+            }
+          >
+            Recorded in{" "}
+            {practice.timesRecorded}{" "}
+            {practice.timesRecorded ===
+            1
+              ? "reflection"
+              : "reflections"}
+          </Text>
+        </View>
+      </View>
+
+      <View
+        style={
+          styles.practiceMetrics
+        }
+      >
+        <View
+          style={
+            styles.practiceMetric
+          }
+        >
+          <Text
+            style={
+              styles.practiceMetricValue
+            }
+          >
+            {practice.averageEnergy ??
+              "—"}
+          </Text>
+
+          <Text
+            style={
+              styles.practiceMetricLabel
+            }
+          >
+            Avg. energy
+          </Text>
+        </View>
+
+        <View
+          style={
+            styles.practiceMetric
+          }
+        >
+          <Text
+            style={
+              styles.practiceMoodValue
+            }
+            numberOfLines={1}
+          >
+            {practice.mostCommonMood ??
+              "—"}
+          </Text>
+
+          <Text
+            style={
+              styles.practiceMetricLabel
+            }
+          >
+            Common mood
+          </Text>
+        </View>
+      </View>
+
+      <Text
+        style={
+          styles.practiceObservationText
+        }
+      >
+        {differenceText}
+      </Text>
+    </View>
   );
 }
 
@@ -804,7 +1182,6 @@ const styles = StyleSheet.create({
     lineHeight: 23,
     marginTop: 10,
     marginBottom: 30,
-    maxWidth: 570,
   },
 
   sectionTitle: {
@@ -812,6 +1189,7 @@ const styles = StyleSheet.create({
     fontSize: 19,
     fontWeight: "700",
     marginBottom: 14,
+    marginTop: 12,
   },
 
   summaryGrid: {
@@ -826,15 +1204,15 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: "#29213D",
-    paddingVertical: 20,
-    paddingHorizontal: 12,
+    paddingVertical: 19,
+    paddingHorizontal: 10,
     alignItems: "center",
   },
 
-  summarySymbol: {
+  summaryIcon: {
     color: "#D4B866",
-    fontSize: 19,
-    marginBottom: 8,
+    fontSize: 18,
+    marginBottom: 7,
   },
 
   summaryNumber: {
@@ -845,7 +1223,7 @@ const styles = StyleSheet.create({
 
   summaryWord: {
     color: "#EFE7FF",
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: "700",
     maxWidth: "100%",
   },
@@ -854,23 +1232,28 @@ const styles = StyleSheet.create({
     color: "#80768C",
     fontSize: 11,
     marginTop: 5,
-    textAlign: "center",
   },
 
-  dataCard: {
+  trendCard: {
     backgroundColor: "#151126",
     borderWidth: 1,
     borderColor: "#29213D",
     borderRadius: 21,
     padding: 20,
-    marginBottom: 16,
+    marginBottom: 26,
   },
 
-  cardHeadingRow: {
+  trendHeading: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 22,
+  },
+
+  cardHeading: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 21,
   },
 
   cardEyebrow: {
@@ -887,13 +1270,89 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  cardSymbol: {
+  cardIcon: {
     color: "#D4B866",
-    fontSize: 22,
+    fontSize: 21,
+  },
+
+  periodSelector: {
+    flexDirection: "row",
+    backgroundColor: "#100D1B",
+    borderRadius: 13,
+    padding: 4,
+    marginTop: 20,
+    marginBottom: 22,
+  },
+
+  periodButton: {
+    flex: 1,
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+
+  periodButtonSelected: {
+    backgroundColor: "#5E489D",
+  },
+
+  periodText: {
+    color: "#80758D",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+
+  periodTextSelected: {
+    color: "#FFFFFF",
+  },
+
+  trendStats: {
+    flexDirection: "row",
+    gap: 8,
+  },
+
+  trendStat: {
+    flex: 1,
+    alignItems: "center",
+    backgroundColor: "#1A152A",
+    borderRadius: 14,
+    paddingVertical: 15,
+    paddingHorizontal: 6,
+  },
+
+  trendNumber: {
+    color: "#EDE4FA",
+    fontSize: 21,
+    fontWeight: "700",
+  },
+
+  trendMood: {
+    color: "#EDE4FA",
+    fontSize: 14,
+    fontWeight: "700",
+    maxWidth: "100%",
+  },
+
+  trendLabel: {
+    color: "#776E82",
+    fontSize: 10,
+    marginTop: 4,
+  },
+
+  divider: {
+    height: 1,
+    backgroundColor: "#29213D",
+    marginVertical: 22,
+  },
+
+  chartTitle: {
+    color: "#CFC3DD",
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 16,
   },
 
   barList: {
-    gap: 17,
+    gap: 16,
   },
 
   barItem: {
@@ -935,122 +1394,193 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
 
-  energyChart: {
-    height: 175,
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-around",
-    gap: 12,
+  comparisonCard: {
+    backgroundColor: "#151126",
+    borderWidth: 1,
+    borderColor: "#29213D",
+    borderRadius: 20,
+    paddingHorizontal: 18,
+    marginBottom: 28,
   },
 
-  energyColumn: {
+  comparisonRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 17,
+  },
+
+  comparisonLabel: {
     flex: 1,
-    height: "100%",
+    color: "#BDB1CC",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+
+  comparisonValues: {
+    flexDirection: "row",
+    width: "55%",
+  },
+
+  comparisonValue: {
+    flex: 1,
     alignItems: "center",
   },
 
-  energyCount: {
-    color: "#8E849B",
-    fontSize: 11,
-    marginBottom: 6,
+  comparisonNumber: {
+    color: "#EEE5FA",
+    fontSize: 15,
+    fontWeight: "700",
   },
 
-  energyBarArea: {
-    flex: 1,
-    width: "70%",
-    justifyContent: "flex-end",
-    backgroundColor: "#211B31",
-    borderRadius: 7,
-    overflow: "hidden",
+  comparisonPeriod: {
+    color: "#70677C",
+    fontSize: 9,
+    marginTop: 3,
   },
 
-  energyBar: {
-    width: "100%",
-    backgroundColor: "#7357C7",
-    borderRadius: 7,
-    minHeight: 2,
+  comparisonDivider: {
+    height: 1,
+    backgroundColor: "#29213D",
   },
 
-  energyLevel: {
-    color: "#BFB2D1",
-    fontSize: 12,
-    fontWeight: "600",
-    marginTop: 8,
+  dataCard: {
+    backgroundColor: "#151126",
+    borderWidth: 1,
+    borderColor: "#29213D",
+    borderRadius: 21,
+    padding: 20,
+    marginBottom: 28,
   },
 
-  chartLabels: {
+  practiceObservationList: {
+    gap: 12,
+    marginBottom: 28,
+  },
+
+  practiceObservationCard: {
+    backgroundColor: "#151126",
+    borderWidth: 1,
+    borderColor: "#302745",
+    borderRadius: 19,
+    padding: 19,
+  },
+
+  practiceObservationHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 10,
+    alignItems: "center",
+    gap: 11,
   },
 
-  chartHint: {
-    color: "#665E70",
+  practiceObservationIcon: {
+    color: "#D4B866",
+    fontSize: 20,
+  },
+
+  practiceObservationTitle: {
+    color: "#EEE5FA",
+    fontSize: 17,
+    fontWeight: "700",
+  },
+
+  practiceObservationCount: {
+    color: "#7F758B",
+    fontSize: 11,
+    marginTop: 3,
+  },
+
+  practiceMetrics: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 17,
+  },
+
+  practiceMetric: {
+    flex: 1,
+    backgroundColor: "#1D172D",
+    borderRadius: 13,
+    padding: 13,
+  },
+
+  practiceMetricValue: {
+    color: "#E7DCFA",
+    fontSize: 20,
+    fontWeight: "700",
+  },
+
+  practiceMoodValue: {
+    color: "#E7DCFA",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+
+  practiceMetricLabel: {
+    color: "#756B80",
     fontSize: 10,
+    marginTop: 4,
   },
 
-  experienceStats: {
+  practiceObservationText: {
+    color: "#998EA5",
+    fontSize: 12,
+    lineHeight: 19,
+    marginTop: 15,
+  },
+
+  experienceRow: {
     flexDirection: "row",
     gap: 12,
     marginBottom: 28,
   },
 
-  experienceStatCard: {
+  experienceCard: {
     flex: 1,
     backgroundColor: "#151126",
     borderWidth: 1,
     borderColor: "#29213D",
     borderRadius: 19,
-    padding: 20,
+    padding: 19,
   },
 
-  experienceSymbol: {
+  experienceIcon: {
     color: "#D4B866",
-    fontSize: 23,
+    fontSize: 21,
   },
 
   experienceNumber: {
     color: "#F0E8FF",
-    fontSize: 28,
+    fontSize: 27,
     fontWeight: "700",
-    marginTop: 10,
+    marginTop: 9,
   },
 
   experienceLabel: {
     color: "#81778D",
-    fontSize: 12,
+    fontSize: 11,
     marginTop: 4,
   },
 
-  observationCard: {
+  observationsCard: {
     backgroundColor: "#1A1430",
     borderWidth: 1,
     borderColor: "#3A2C62",
     borderRadius: 22,
-    padding: 22,
+    padding: 21,
     marginBottom: 16,
   },
 
-  observationHeader: {
+  observationsHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    marginBottom: 19,
+    gap: 11,
+    marginBottom: 18,
   },
 
-  observationSymbol: {
+  observationIcon: {
     color: "#D8BA69",
-    fontSize: 22,
+    fontSize: 21,
   },
 
-  observationEyebrow: {
-    color: "#9A82CB",
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 1.4,
-  },
-
-  observationTitle: {
+  observationsTitle: {
     color: "#F0E8FA",
     fontSize: 18,
     fontWeight: "700",
@@ -1060,7 +1590,7 @@ const styles = StyleSheet.create({
   observationRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    marginBottom: 11,
+    marginBottom: 10,
   },
 
   observationBullet: {
@@ -1098,10 +1628,33 @@ const styles = StyleSheet.create({
     marginTop: 7,
   },
 
+  emptyCard: {
+    backgroundColor: "#151126",
+    borderWidth: 1,
+    borderColor: "#29213D",
+    borderRadius: 19,
+    padding: 24,
+    alignItems: "center",
+    marginBottom: 28,
+  },
+
+  emptySymbol: {
+    color: "#A88AD3",
+    fontSize: 25,
+  },
+
+  emptyTitle: {
+    color: "#DAD0E7",
+    fontSize: 16,
+    fontWeight: "700",
+    marginTop: 10,
+  },
+
   emptyText: {
     color: "#80778B",
     fontSize: 13,
-    lineHeight: 21,
+    lineHeight: 20,
+    marginTop: 7,
   },
 
   errorBox: {
