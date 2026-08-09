@@ -42,6 +42,11 @@ function RootNavigator() {
 
       <Stack.Protected guard={!!session}>
         <Stack.Screen name="home" />
+
+        <Stack.Screen name="journal/index" />
+        <Stack.Screen name="journal/new" />
+        <Stack.Screen name="journal/[id]" />
+        <Stack.Screen name="journal/edit/[id]" />
       </Stack.Protected>
     </Stack>
   );

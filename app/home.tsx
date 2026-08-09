@@ -160,11 +160,14 @@ export default function HomeScreen() {
             dream, or moment that feels meaningful.
           </Text>
 
-          <Pressable style={styles.primaryButton}>
-            <Text style={styles.primaryButtonText}>
-              Write Today's Entry
-            </Text>
-          </Pressable>
+            <Pressable
+                style={styles.primaryButton}
+                onPress={() => router.push("/journal")}
+            >
+                <Text style={styles.primaryButtonText}>
+                    Write Today's Entry
+                </Text>
+            </Pressable>
         </View>
 
         <Text style={styles.sectionTitle}>
