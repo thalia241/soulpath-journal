@@ -9,18 +9,32 @@ import {
   View,
 } from "react-native";
 
-import { useAuth } from "../../src/context/AuthContext";
-import { supabase } from "../../src/lib/supabase";
+import {
+  useAuth,
+} from "../../src/context/AuthContext";
+
+import {
+  supabase,
+} from "../../src/lib/supabase";
+
+import {
+  colors,
+  fonts,
+  radius,
+} from "../../src/theme";
 
 export default function SettingsScreen() {
-  const { session } = useAuth();
+  const { session } =
+    useAuth();
 
   const displayName =
-    session?.user.user_metadata?.display_name ||
+    session?.user.user_metadata
+      ?.display_name ||
     "Traveler";
 
   const email =
-    session?.user.email || "";
+    session?.user.email ||
+    "";
 
   async function handleLogout() {
     const { error } =
@@ -41,113 +55,202 @@ export default function SettingsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={styles.container}
+    >
       <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
+        contentContainerStyle={
+          styles.content
+        }
+        showsVerticalScrollIndicator={
+          false
+        }
       >
-        <Text style={styles.eyebrow}>
-          YOUR SPACE
-        </Text>
-
-        <Text style={styles.title}>
+        <Text
+          style={styles.title}
+        >
           Settings
         </Text>
 
-        <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
+        <Text
+          style={styles.subtitle}
+        >
+          Tend to the quieter,
+          practical parts of your
+          SoulPath.
+        </Text>
+
+        <View
+          style={styles.profileCard}
+        >
+          <View
+            style={styles.avatar}
+          >
+            <Text
+              style={
+                styles.avatarText
+              }
+            >
               ☾
             </Text>
           </View>
 
-          <View style={styles.profileInfo}>
-            <Text style={styles.name}>
+          <View
+            style={
+              styles.profileInfo
+            }
+          >
+            <Text
+              style={styles.name}
+            >
               {displayName}
             </Text>
 
-            <Text style={styles.email}>
+            <Text
+              style={styles.email}
+            >
               {email}
             </Text>
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>
-          Account
+        <Text
+          style={
+            styles.groupTitle
+          }
+        >
+          Your account
         </Text>
 
-        <View style={styles.settingsGroup}>
+        <View
+          style={
+            styles.settingsGroup
+          }
+        >
           <SettingsRow
+            symbol="✦"
             title="Profile"
-            subtitle="Name and account information"
+            subtitle="How your name appears in SoulPath"
             onPress={() =>
-              router.push("/settings/profile")
+              router.push(
+                "/settings/profile"
+              )
             }
           />
 
-          <View style={styles.divider} />
+          <View
+            style={styles.divider}
+          />
 
           <SettingsRow
+            symbol="◌"
             title="Privacy & Security"
-            subtitle="Password, sessions, and privacy"
+            subtitle="Password and session controls"
             onPress={() =>
-              router.push("/settings/privacy")
+              router.push(
+                "/settings/privacy"
+              )
             }
           />
         </View>
 
-        <Text style={styles.sectionTitle}>
-          Your data
+        <Text
+          style={
+            styles.groupTitle
+          }
+        >
+          What belongs to you
         </Text>
 
-        <View style={styles.settingsGroup}>
+        <View
+          style={
+            styles.settingsGroup
+          }
+        >
           <SettingsRow
+            symbol="⇩"
             title="Data & Export"
-            subtitle="PDF, text, JSON, and data management"
+            subtitle="Keep a copy or clear your records"
             onPress={() =>
-              router.push("/settings/data")
+              router.push(
+                "/settings/data"
+              )
             }
           />
         </View>
 
-        <Text style={styles.sectionTitle}>
-          SoulPath
+        <Text
+          style={
+            styles.groupTitle
+          }
+        >
+          About this space
         </Text>
 
-        <View style={styles.settingsGroup}>
+        <View
+          style={
+            styles.settingsGroup
+          }
+        >
           <SettingsRow
+            symbol="☾"
             title="About SoulPath"
-            subtitle="Purpose, privacy, and app information"
+            subtitle="Purpose, privacy, and philosophy"
             onPress={() =>
-              router.push("/settings/about")
+              router.push(
+                "/settings/about"
+              )
             }
           />
         </View>
 
-        <View style={styles.privacyCard}>
-          <Text style={styles.privacySymbol}>
+        <View
+          style={
+            styles.quietCard
+          }
+        >
+          <Text
+            style={
+              styles.quietSymbol
+            }
+          >
             ✦
           </Text>
 
-          <View style={styles.privacyContent}>
-            <Text style={styles.privacyTitle}>
-              Your inner world stays yours
-            </Text>
+          <Text
+            style={
+              styles.quietTitle
+            }
+          >
+            Your inner world stays yours.
+          </Text>
 
-            <Text style={styles.privacyText}>
-              SoulPath is designed around private,
-              account-specific reflection data and
-              user-controlled exports.
-            </Text>
-          </View>
+          <Text
+            style={
+              styles.quietText
+            }
+          >
+            SoulPath is built around
+            private, account-specific
+            reflection and user-controlled
+            data exports.
+          </Text>
         </View>
 
         <Pressable
-          style={styles.signOutButton}
-          onPress={handleLogout}
+          style={
+            styles.signOutButton
+          }
+          onPress={
+            handleLogout
+          }
         >
-          <Text style={styles.signOutText}>
-            Sign Out
+          <Text
+            style={
+              styles.signOutText
+            }
+          >
+            Sign out
           </Text>
         </Pressable>
       </ScrollView>
@@ -156,10 +259,12 @@ export default function SettingsScreen() {
 }
 
 function SettingsRow({
+  symbol,
   title,
   subtitle,
   onPress,
 }: {
+  symbol: string;
   title: string;
   subtitle: string;
   onPress: () => void;
@@ -167,201 +272,233 @@ function SettingsRow({
   return (
     <Pressable
       style={({ pressed }) => [
-        styles.settingsRow,
-        pressed && styles.rowPressed,
+        styles.row,
+        pressed &&
+          styles.pressed,
       ]}
       onPress={onPress}
     >
-      <View style={styles.rowContent}>
-        <Text style={styles.rowTitle}>
+      <Text
+        style={styles.rowSymbol}
+      >
+        {symbol}
+      </Text>
+
+      <View
+        style={styles.rowContent}
+      >
+        <Text
+          style={styles.rowTitle}
+        >
           {title}
         </Text>
 
-        <Text style={styles.rowSubtitle}>
+        <Text
+          style={
+            styles.rowSubtitle
+          }
+        >
           {subtitle}
         </Text>
       </View>
 
-      <Text style={styles.chevron}>
+      <Text
+        style={styles.chevron}
+      >
         ›
       </Text>
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0C0A18",
-  },
+const styles =
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor:
+        colors.background,
+    },
 
-  content: {
-    width: "100%",
-    maxWidth: 720,
-    alignSelf: "center",
-    paddingHorizontal: 24,
-    paddingTop: 32,
-    paddingBottom: 110,
-  },
+    content: {
+      width: "100%",
+      maxWidth: 700,
+      alignSelf: "center",
+      paddingHorizontal: 24,
+      paddingTop: 34,
+      paddingBottom: 115,
+    },
 
-  eyebrow: {
-    color: "#8873B8",
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 2,
-  },
+    title: {
+      color: colors.text,
+      fontFamily: fonts.display,
+      fontSize: 40,
+    },
 
-  title: {
-    color: "#F5F0FF",
-    fontSize: 34,
-    fontWeight: "700",
-    marginTop: 5,
-    marginBottom: 26,
-  },
+    subtitle: {
+      color:
+        colors.textMuted,
+      fontFamily:
+        fonts.displayItalic,
+      fontSize: 17,
+      marginTop: 2,
+      marginBottom: 29,
+    },
 
-  profileCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#151126",
-    borderWidth: 1,
-    borderColor: "#29213D",
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 30,
-  },
+    profileCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor:
+        colors.surface,
+      borderWidth: 1,
+      borderColor:
+        colors.border,
+      borderRadius:
+        radius.xl,
+      padding: 19,
+      marginBottom: 31,
+    },
 
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "#211A35",
-    justifyContent: "center",
-    alignItems: "center",
-  },
+    avatar: {
+      width: 57,
+      height: 57,
+      borderRadius: 29,
+      backgroundColor:
+        colors.surfaceRaised,
+      justifyContent:
+        "center",
+      alignItems: "center",
+    },
 
-  avatarText: {
-    color: "#D9C6FF",
-    fontSize: 27,
-  },
+    avatarText: {
+      color: colors.gold,
+      fontSize: 27,
+    },
 
-  profileInfo: {
-    flex: 1,
-    marginLeft: 15,
-  },
+    profileInfo: {
+      flex: 1,
+      marginLeft: 14,
+    },
 
-  name: {
-    color: "#EEE7F8",
-    fontSize: 18,
-    fontWeight: "700",
-  },
+    name: {
+      color: colors.text,
+      fontFamily: fonts.display,
+      fontSize: 22,
+    },
 
-  email: {
-    color: "#847B91",
-    fontSize: 13,
-    marginTop: 4,
-  },
+    email: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 11,
+      marginTop: 2,
+    },
 
-  sectionTitle: {
-    color: "#DCD2EA",
-    fontSize: 15,
-    fontWeight: "700",
-    marginBottom: 10,
-  },
+    groupTitle: {
+      color: colors.textSoft,
+      fontFamily: fonts.display,
+      fontSize: 20,
+      marginBottom: 9,
+    },
 
-  settingsGroup: {
-    backgroundColor: "#151126",
-    borderWidth: 1,
-    borderColor: "#29213D",
-    borderRadius: 18,
-    overflow: "hidden",
-    marginBottom: 28,
-  },
+    settingsGroup: {
+      backgroundColor:
+        colors.surface,
+      borderWidth: 1,
+      borderColor:
+        colors.border,
+      borderRadius:
+        radius.lg,
+      overflow: "hidden",
+      marginBottom: 28,
+    },
 
-  settingsRow: {
-    minHeight: 78,
-    paddingHorizontal: 18,
-    paddingVertical: 15,
-    flexDirection: "row",
-    alignItems: "center",
-  },
+    row: {
+      minHeight: 76,
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 17,
+      paddingVertical: 14,
+    },
 
-  rowPressed: {
-    opacity: 0.7,
-  },
+    pressed: {
+      opacity: 0.72,
+    },
 
-  rowContent: {
-    flex: 1,
-    paddingRight: 14,
-  },
+    rowSymbol: {
+      color: colors.gold,
+      width: 29,
+      fontSize: 16,
+    },
 
-  rowTitle: {
-    color: "#EAE2F5",
-    fontSize: 15,
-    fontWeight: "600",
-  },
+    rowContent: {
+      flex: 1,
+    },
 
-  rowSubtitle: {
-    color: "#81788E",
-    fontSize: 12,
-    marginTop: 4,
-    lineHeight: 18,
-  },
+    rowTitle: {
+      color: colors.textSoft,
+      fontFamily:
+        fonts.bodySemiBold,
+      fontSize: 14,
+    },
 
-  chevron: {
-    color: "#81719B",
-    fontSize: 26,
-  },
+    rowSubtitle: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 10,
+      marginTop: 3,
+    },
 
-  divider: {
-    height: 1,
-    backgroundColor: "#29213D",
-    marginLeft: 18,
-  },
+    chevron: {
+      color: colors.lavender,
+      fontSize: 23,
+    },
 
-  privacyCard: {
-    flexDirection: "row",
-    backgroundColor: "#181329",
-    borderWidth: 1,
-    borderColor: "#34294D",
-    borderRadius: 17,
-    padding: 18,
-  },
+    divider: {
+      height: 1,
+      backgroundColor:
+        colors.border,
+      marginLeft: 46,
+    },
 
-  privacySymbol: {
-    color: "#D4B866",
-    fontSize: 19,
-    marginRight: 12,
-  },
+    quietCard: {
+      paddingHorizontal: 14,
+      paddingVertical: 21,
+      alignItems: "center",
+    },
 
-  privacyContent: {
-    flex: 1,
-  },
+    quietSymbol: {
+      color: colors.gold,
+      fontSize: 16,
+    },
 
-  privacyTitle: {
-    color: "#CFC1DF",
-    fontSize: 14,
-    fontWeight: "700",
-  },
+    quietTitle: {
+      color: colors.textSoft,
+      fontFamily:
+        fonts.displayItalic,
+      fontSize: 20,
+      marginTop: 8,
+      textAlign: "center",
+    },
 
-  privacyText: {
-    color: "#81778D",
-    fontSize: 12,
-    lineHeight: 19,
-    marginTop: 5,
-  },
+    quietText: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 10,
+      lineHeight: 17,
+      textAlign: "center",
+      maxWidth: 400,
+      marginTop: 6,
+    },
 
-  signOutButton: {
-    borderWidth: 1,
-    borderColor: "#553041",
-    borderRadius: 15,
-    paddingVertical: 15,
-    alignItems: "center",
-    marginTop: 28,
-  },
+    signOutButton: {
+      alignSelf: "center",
+      padding: 17,
+      marginTop: 8,
+    },
 
-  signOutText: {
-    color: "#D68DA3",
-    fontSize: 15,
-    fontWeight: "700",
-  },
-}); 
+    signOutText: {
+      color: colors.danger,
+      fontFamily:
+        fonts.bodySemiBold,
+      fontSize: 12,
+    },
+  }); 

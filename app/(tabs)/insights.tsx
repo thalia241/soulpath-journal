@@ -17,6 +17,15 @@ import {
   View,
 } from "react-native";
 
+import SoulCard from "../../src/components/SoulCard";
+import SectionHeading from "../../src/components/SectionHeading";
+
+import {
+  colors,
+  fonts,
+  radius,
+} from "../../src/theme";
+
 import {
   getSoulPathInsights,
   PracticeObservation,
@@ -53,7 +62,6 @@ export default function InsightsScreen() {
     useCallback(async () => {
       try {
         setLoading(true);
-
         setErrorMessage("");
 
         const data =
@@ -69,7 +77,7 @@ export default function InsightsScreen() {
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : "Unable to load your insights."
+            : "Unable to read your patterns."
         );
       } finally {
         setLoading(false);
@@ -86,19 +94,29 @@ export default function InsightsScreen() {
     return (
       <SafeAreaView
         style={
-          styles.loadingContainer
+          styles.centered
         }
       >
+        <Text
+          style={
+            styles.loadingSymbol
+          }
+        >
+          ✦
+        </Text>
+
         <ActivityIndicator
-          size="large"
-          color="#CDB9FF"
+          color={
+            colors.lavender
+          }
         />
 
         <Text
-          style={styles.loadingText}
+          style={
+            styles.loadingText
+          }
         >
-          Discovering your
-          patterns...
+          Listening for patterns...
         </Text>
       </SafeAreaView>
     );
@@ -108,24 +126,39 @@ export default function InsightsScreen() {
     return (
       <SafeAreaView
         style={
-          styles.loadingContainer
+          styles.centered
         }
       >
         <Text
-          style={styles.errorText}
+          style={
+            styles.errorTitle
+          }
         >
-          {errorMessage ||
-            "Unable to load insights."}
+          The patterns are quiet.
+        </Text>
+
+        <Text
+          style={
+            styles.errorText
+          }
+        >
+          {errorMessage}
         </Text>
 
         <Pressable
-          style={styles.retryButton}
-          onPress={loadInsights}
+          style={
+            styles.retryButton
+          }
+          onPress={
+            loadInsights
+          }
         >
           <Text
-            style={styles.retryText}
+            style={
+              styles.retryText
+            }
           >
-            Try Again
+            Try again
           </Text>
         </Pressable>
       </SafeAreaView>
@@ -137,18 +170,10 @@ export default function InsightsScreen() {
       ? insights.sevenDayTrend
       : insights.thirtyDayTrend;
 
-  const maxTrendMood =
+  const maxMoodCount =
     Math.max(
       ...activeTrend.moodDistribution.map(
-        (item) => item.count
-      ),
-      1
-    );
-
-  const maxPracticeCount =
-    Math.max(
-      ...insights.practiceUsage.map(
-        (item) => item.count
+        (mood) => mood.count
       ),
       1
     );
@@ -165,206 +190,111 @@ export default function InsightsScreen() {
           false
         }
       >
-        <Text style={styles.eyebrow}>
-          YOUR PATTERNS
-        </Text>
-
-        <Text style={styles.title}>
+        <Text
+          style={styles.title}
+        >
           Insights
         </Text>
 
         <Text
           style={styles.subtitle}
         >
-          See how the patterns in your
-          recorded reflections change
-          over time.
+          Patterns along your path,
+          drawn only from what you've
+          chosen to record.
         </Text>
 
-        {errorMessage ? (
-          <View
-            style={styles.errorBox}
-          >
-            <Text
-              style={styles.errorText}
-            >
-              {errorMessage}
-            </Text>
-          </View>
-        ) : null}
-
-        {/* Overall Summary */}
-        <Text
-          style={styles.sectionTitle}
-        >
-          Your path at a glance
-        </Text>
+        <SectionHeading
+          title="Your path at a glance"
+        />
 
         <View
-          style={styles.summaryGrid}
+          style={styles.summaryRow}
         >
-          <View
-            style={styles.summaryCard}
-          >
-            <Text
-              style={styles.summaryIcon}
-            >
-              ✎
-            </Text>
+          <SummaryCard
+            symbol="✎"
+            value={
+              insights.totalEntries
+            }
+            label="reflections"
+          />
 
-            <Text
-              style={
-                styles.summaryNumber
-              }
-            >
-              {insights.totalEntries}
-            </Text>
+          <SummaryCard
+            symbol="✧"
+            value={
+              insights.averageEnergy ??
+              "—"
+            }
+            label="avg. energy"
+          />
 
-            <Text
-              style={
-                styles.summaryLabel
-              }
-            >
-              Reflections
-            </Text>
-          </View>
-
-          <View
-            style={styles.summaryCard}
-          >
-            <Text
-              style={styles.summaryIcon}
-            >
-              ✧
-            </Text>
-
-            <Text
-              style={
-                styles.summaryNumber
-              }
-            >
-              {insights.averageEnergy ??
-                "—"}
-            </Text>
-
-            <Text
-              style={
-                styles.summaryLabel
-              }
-            >
-              Avg. energy
-            </Text>
-          </View>
-
-          <View
-            style={styles.summaryCard}
-          >
-            <Text
-              style={styles.summaryIcon}
-            >
-              ◉
-            </Text>
-
-            <Text
-              style={
-                styles.summaryWord
-              }
-              numberOfLines={1}
-            >
-              {insights.mostCommonMood ??
-                "—"}
-            </Text>
-
-            <Text
-              style={
-                styles.summaryLabel
-              }
-            >
-              Top mood
-            </Text>
-          </View>
+          <SummaryCard
+            symbol="◉"
+            value={
+              insights.mostCommonMood ??
+              "—"
+            }
+            label="common mood"
+            small
+          />
         </View>
 
-        {/* Trend period */}
-        <View style={styles.trendCard}>
-          <View
+        <SoulCard
+          style={
+            styles.trendCard
+          }
+        >
+          <Text
             style={
-              styles.trendHeading
+              styles.cardSymbol
             }
           >
-            <View>
-              <Text
-                style={
-                  styles.cardEyebrow
-                }
-              >
-                RECENT TRENDS
-              </Text>
+            ☾
+          </Text>
 
-              <Text
-                style={styles.cardTitle}
-              >
-                Reflection window
-              </Text>
-            </View>
+          <Text
+            style={
+              styles.cardTitle
+            }
+          >
+            A recent stretch of your
+            path
+          </Text>
 
-            <Text
-              style={styles.cardIcon}
-            >
-              ◌
-            </Text>
-          </View>
+          <Text
+            style={
+              styles.cardSubtitle
+            }
+          >
+            Choose how much of the
+            recent past you want to
+            look at.
+          </Text>
 
           <View
             style={
               styles.periodSelector
             }
           >
-            <Pressable
-              style={[
-                styles.periodButton,
-
-                trendView === 7 &&
-                  styles.periodButtonSelected,
-              ]}
+            <PeriodButton
+              label="7 days"
+              selected={
+                trendView === 7
+              }
               onPress={() =>
                 setTrendView(7)
               }
-            >
-              <Text
-                style={[
-                  styles.periodText,
+            />
 
-                  trendView === 7 &&
-                    styles.periodTextSelected,
-                ]}
-              >
-                7 Days
-              </Text>
-            </Pressable>
-
-            <Pressable
-              style={[
-                styles.periodButton,
-
-                trendView === 30 &&
-                  styles.periodButtonSelected,
-              ]}
+            <PeriodButton
+              label="30 days"
+              selected={
+                trendView === 30
+              }
               onPress={() =>
                 setTrendView(30)
               }
-            >
-              <Text
-                style={[
-                  styles.periodText,
-
-                  trendView === 30 &&
-                    styles.periodTextSelected,
-                ]}
-              >
-                30 Days
-              </Text>
-            </Pressable>
+            />
           </View>
 
           <TrendSummary
@@ -376,19 +306,22 @@ export default function InsightsScreen() {
           />
 
           <Text
-            style={styles.chartTitle}
+            style={
+              styles.softHeading
+            }
           >
-            Mood frequency
+            Moods that surfaced
           </Text>
 
-          {activeTrend
-            .moodDistribution.length ===
-          0 ? (
+          {activeTrend.moodDistribution
+            .length === 0 ? (
             <Text
-              style={styles.emptyText}
+              style={
+                styles.mutedText
+              }
             >
               No moods were recorded
-              during this period.
+              during this window.
             </Text>
           ) : (
             <View
@@ -397,7 +330,9 @@ export default function InsightsScreen() {
               {activeTrend.moodDistribution.map(
                 (mood) => (
                   <View
-                    key={mood.mood}
+                    key={
+                      mood.mood
+                    }
                     style={
                       styles.barItem
                     }
@@ -417,7 +352,7 @@ export default function InsightsScreen() {
 
                       <Text
                         style={
-                          styles.barValue
+                          styles.barCount
                         }
                       >
                         {mood.count}
@@ -432,13 +367,11 @@ export default function InsightsScreen() {
                       <View
                         style={[
                           styles.barFill,
-
                           {
                             width: `${Math.max(
                               8,
-
                               (mood.count /
-                                maxTrendMood) *
+                                maxMoodCount) *
                                 100
                             )}%`,
                           },
@@ -450,16 +383,14 @@ export default function InsightsScreen() {
               )}
             </View>
           )}
-        </View>
+        </SoulCard>
 
-        {/* 7 vs 30 comparison */}
-        <Text
-          style={styles.sectionTitle}
-        >
-          7-day vs. 30-day
-        </Text>
+        <SectionHeading
+          title="Near & farther"
+          subtitle="A small comparison between your recent week and month."
+        />
 
-        <View
+        <SoulCard
           style={
             styles.comparisonCard
           }
@@ -477,202 +408,79 @@ export default function InsightsScreen() {
           />
 
           <View
-            style={
-              styles.comparisonDivider
-            }
+            style={styles.divider}
           />
 
           <ComparisonRow
-            label="Avg. energy"
+            label="Average energy"
             seven={
               insights.sevenDayTrend
-                .averageEnergy ?? "—"
+                .averageEnergy ??
+              "—"
             }
             thirty={
               insights.thirtyDayTrend
-                .averageEnergy ?? "—"
+                .averageEnergy ??
+              "—"
             }
           />
 
           <View
-            style={
-              styles.comparisonDivider
-            }
+            style={styles.divider}
           />
 
           <ComparisonRow
-            label="Top mood"
+            label="Mood seen most"
             seven={
               insights.sevenDayTrend
-                .mostCommonMood ?? "—"
+                .mostCommonMood ??
+              "—"
             }
             thirty={
               insights.thirtyDayTrend
-                .mostCommonMood ?? "—"
+                .mostCommonMood ??
+              "—"
             }
           />
-        </View>
+        </SoulCard>
 
-        {/* Practices */}
-        <Text
-          style={styles.sectionTitle}
-        >
-          Spiritual practices
-        </Text>
-
-        <View style={styles.dataCard}>
-          <View
-            style={
-              styles.cardHeading
-            }
-          >
-            <View>
-              <Text
-                style={
-                  styles.cardEyebrow
-                }
-              >
-                PRACTICE FREQUENCY
-              </Text>
-
-              <Text
-                style={styles.cardTitle}
-              >
-                Your recorded practices
-              </Text>
-            </View>
-
-            <Text
-              style={styles.cardIcon}
-            >
-              ✦
-            </Text>
-          </View>
-
-          {insights.practiceUsage
-            .length === 0 ? (
-            <Text
-              style={styles.emptyText}
-            >
-              Practice patterns will
-              appear after you connect
-              practices to your journal
-              entries.
-            </Text>
-          ) : (
-            <View
-              style={styles.barList}
-            >
-              {insights.practiceUsage.map(
-                (practice) => (
-                  <View
-                    key={
-                      practice.id
-                    }
-                    style={
-                      styles.barItem
-                    }
-                  >
-                    <View
-                      style={
-                        styles.barHeader
-                      }
-                    >
-                      <Text
-                        style={
-                          styles.barLabel
-                        }
-                      >
-                        {
-                          practice.name
-                        }
-                      </Text>
-
-                      <Text
-                        style={
-                          styles.barValue
-                        }
-                      >
-                        {
-                          practice.count
-                        }
-                      </Text>
-                    </View>
-
-                    <View
-                      style={
-                        styles.barTrack
-                      }
-                    >
-                      <View
-                        style={[
-                          styles.practiceBarFill,
-
-                          {
-                            width: `${Math.max(
-                              8,
-
-                              (practice.count /
-                                maxPracticeCount) *
-                                100
-                            )}%`,
-                          },
-                        ]}
-                      />
-                    </View>
-                  </View>
-                )
-              )}
-            </View>
-          )}
-        </View>
-
-        {/* Practice observations */}
-        <Text
-          style={styles.sectionTitle}
-        >
-          Practice observations
-        </Text>
+        <SectionHeading
+          title="Practices along the way"
+          subtitle="Not causes. Just patterns worth noticing."
+        />
 
         {insights.practiceObservations
           .length === 0 ? (
-          <View
-            style={styles.emptyCard}
-          >
-            <Text
-              style={
-                styles.emptySymbol
-              }
-            >
-              ✦
-            </Text>
-
+          <SoulCard>
             <Text
               style={
                 styles.emptyTitle
               }
             >
-              More entries needed
+              This part needs a little
+              more history.
             </Text>
 
             <Text
-              style={styles.emptyText}
+              style={
+                styles.mutedText
+              }
             >
-              Record spiritual practices
-              alongside mood and energy
-              to begin seeing
-              observations here.
+              Record practices alongside
+              mood and energy and
+              observations will begin to
+              gather here.
             </Text>
-          </View>
+          </SoulCard>
         ) : (
           <View
             style={
-              styles.practiceObservationList
+              styles.practiceList
             }
           >
             {insights.practiceObservations.map(
               (practice) => (
-                <PracticeObservationCard
+                <PracticeCard
                   key={
                     practice.practiceId
                   }
@@ -685,173 +493,193 @@ export default function InsightsScreen() {
           </View>
         )}
 
-        {/* Dreams + signs */}
-        <Text
-          style={styles.sectionTitle}
-        >
-          Dreams & signs
-        </Text>
+        <SectionHeading
+          title="Dreams & signs"
+        />
 
         <View
           style={
             styles.experienceRow
           }
         >
-          <View
-            style={
-              styles.experienceCard
+          <SummaryCard
+            symbol="☾"
+            value={
+              insights.dreamCount
             }
-          >
-            <Text
-              style={
-                styles.experienceIcon
-              }
-            >
-              ☾
-            </Text>
+            label="dreams"
+          />
 
-            <Text
-              style={
-                styles.experienceNumber
-              }
-            >
-              {insights.dreamCount}
-            </Text>
-
-            <Text
-              style={
-                styles.experienceLabel
-              }
-            >
-              Dreams
-            </Text>
-          </View>
-
-          <View
-            style={
-              styles.experienceCard
+          <SummaryCard
+            symbol="✦"
+            value={
+              insights.synchronicityCount
             }
-          >
-            <Text
-              style={
-                styles.experienceIcon
-              }
-            >
-              ✦
-            </Text>
-
-            <Text
-              style={
-                styles.experienceNumber
-              }
-            >
-              {
-                insights.synchronicityCount
-              }
-            </Text>
-
-            <Text
-              style={
-                styles.experienceLabel
-              }
-            >
-              Synchronicities
-            </Text>
-          </View>
+            label="signs"
+          />
         </View>
 
-        {/* Observations */}
-        <View
+        <SoulCard
           style={
-            styles.observationsCard
+            styles.observationCard
           }
         >
-          <View
+          <Text
             style={
-              styles.observationsHeader
+              styles.cardSymbol
             }
           >
-            <Text
-              style={
-                styles.observationIcon
-              }
-            >
-              ✦
-            </Text>
-
-            <View>
-              <Text
-                style={
-                  styles.cardEyebrow
-                }
-              >
-                SOULPATH OBSERVATIONS
-              </Text>
-
-              <Text
-                style={
-                  styles.observationsTitle
-                }
-              >
-                What your records show
-              </Text>
-            </View>
-          </View>
-
-          {insights.observations.map(
-            (
-              observation,
-              index
-            ) => (
-              <View
-                key={`${observation}-${index}`}
-                style={
-                  styles.observationRow
-                }
-              >
-                <Text
-                  style={
-                    styles.observationBullet
-                  }
-                >
-                  ·
-                </Text>
-
-                <Text
-                  style={
-                    styles.observationText
-                  }
-                >
-                  {observation}
-                </Text>
-              </View>
-            )
-          )}
-        </View>
-
-        <View
-          style={styles.noticeCard}
-        >
-          <Text
-            style={styles.noticeTitle}
-          >
-            Observational, not causal
+            ✦
           </Text>
 
           <Text
+            style={
+              styles.observationTitle
+            }
+          >
+            What your records seem to
+            be saying
+          </Text>
+
+          <Text
+            style={
+              styles.observationIntro
+            }
+          >
+            These are gentle
+            observations, not
+            conclusions.
+          </Text>
+
+          <View
+            style={
+              styles.observationList
+            }
+          >
+            {insights.observations.map(
+              (
+                observation,
+                index
+              ) => (
+                <View
+                  key={index}
+                  style={
+                    styles.observationRow
+                  }
+                >
+                  <Text
+                    style={
+                      styles.observationBullet
+                    }
+                  >
+                    ✦
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.observationText
+                    }
+                  >
+                    {observation}
+                  </Text>
+                </View>
+              )
+            )}
+          </View>
+        </SoulCard>
+
+        <View
+          style={styles.notice}
+        >
+          <Text
             style={styles.noticeText}
           >
-            SoulPath compares patterns in
-            information you choose to
-            record. A difference between
-            practice days and other days
-            does not mean that the
-            practice caused the
-            difference.
+            SoulPath reflects patterns
+            in the information you
+            record. It does not claim
+            that a practice, mood,
+            dream, or experience caused
+            another outcome.
           </Text>
         </View>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function SummaryCard({
+  symbol,
+  value,
+  label,
+  small = false,
+}: {
+  symbol: string;
+  value: string | number;
+  label: string;
+  small?: boolean;
+}) {
+  return (
+    <View
+      style={styles.summaryCard}
+    >
+      <Text
+        style={
+          styles.summarySymbol
+        }
+      >
+        {symbol}
+      </Text>
+
+      <Text
+        style={[
+          styles.summaryValue,
+          small &&
+            styles.summaryValueSmall,
+        ]}
+        numberOfLines={1}
+      >
+        {value}
+      </Text>
+
+      <Text
+        style={
+          styles.summaryLabel
+        }
+      >
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+function PeriodButton({
+  label,
+  selected,
+  onPress,
+}: {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      style={[
+        styles.periodButton,
+        selected &&
+          styles.periodButtonSelected,
+      ]}
+      onPress={onPress}
+    >
+      <Text
+        style={[
+          styles.periodText,
+          selected &&
+            styles.periodTextSelected,
+        ]}
+      >
+        {label}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -862,32 +690,40 @@ function TrendSummary({
 }) {
   return (
     <View
-      style={styles.trendStats}
+      style={
+        styles.trendSummary
+      }
     >
       <View
-        style={styles.trendStat}
+        style={
+          styles.trendStat
+        }
       >
         <Text
           style={
-            styles.trendNumber
+            styles.trendValue
           }
         >
           {trend.entryCount}
         </Text>
 
         <Text
-          style={styles.trendLabel}
+          style={
+            styles.trendLabel
+          }
         >
-          Reflections
+          reflections
         </Text>
       </View>
 
       <View
-        style={styles.trendStat}
+        style={
+          styles.trendStat
+        }
       >
         <Text
           style={
-            styles.trendNumber
+            styles.trendValue
           }
         >
           {trend.averageEnergy ??
@@ -895,14 +731,18 @@ function TrendSummary({
         </Text>
 
         <Text
-          style={styles.trendLabel}
+          style={
+            styles.trendLabel
+          }
         >
-          Avg. energy
+          avg. energy
         </Text>
       </View>
 
       <View
-        style={styles.trendStat}
+        style={
+          styles.trendStat
+        }
       >
         <Text
           style={
@@ -915,9 +755,11 @@ function TrendSummary({
         </Text>
 
         <Text
-          style={styles.trendLabel}
+          style={
+            styles.trendLabel
+          }
         >
-          Top mood
+          common mood
         </Text>
       </View>
     </View>
@@ -930,14 +772,14 @@ function ComparisonRow({
   thirty,
 }: {
   label: string;
-
   seven: string | number;
-
   thirty: string | number;
 }) {
   return (
     <View
-      style={styles.comparisonRow}
+      style={
+        styles.comparisonRow
+      }
     >
       <Text
         style={
@@ -948,59 +790,59 @@ function ComparisonRow({
       </Text>
 
       <View
-        style={styles.comparisonValues}
+        style={
+          styles.comparisonValue
+        }
       >
-        <View
-          style={styles.comparisonValue}
+        <Text
+          style={
+            styles.comparisonNumber
+          }
         >
-          <Text
-            style={
-              styles.comparisonNumber
-            }
-          >
-            {seven}
-          </Text>
+          {seven}
+        </Text>
 
-          <Text
-            style={
-              styles.comparisonPeriod
-            }
-          >
-            7 days
-          </Text>
-        </View>
-
-        <View
-          style={styles.comparisonValue}
+        <Text
+          style={
+            styles.comparisonPeriod
+          }
         >
-          <Text
-            style={
-              styles.comparisonNumber
-            }
-          >
-            {thirty}
-          </Text>
+          7 days
+        </Text>
+      </View>
 
-          <Text
-            style={
-              styles.comparisonPeriod
-            }
-          >
-            30 days
-          </Text>
-        </View>
+      <View
+        style={
+          styles.comparisonValue
+        }
+      >
+        <Text
+          style={
+            styles.comparisonNumber
+          }
+        >
+          {thirty}
+        </Text>
+
+        <Text
+          style={
+            styles.comparisonPeriod
+          }
+        >
+          30 days
+        </Text>
       </View>
     </View>
   );
 }
 
-function PracticeObservationCard({
+function PracticeCard({
   practice,
 }: {
   practice: PracticeObservation;
 }) {
-  let differenceText =
-    "Not enough energy data to compare.";
+  let observation =
+    "There isn't enough energy information to compare yet.";
 
   if (
     practice.energyDifferenceFromOverall !==
@@ -1010,65 +852,55 @@ function PracticeObservationCard({
       practice.energyDifferenceFromOverall;
 
     if (difference > 0) {
-      differenceText = `Recorded energy on these entries averages ${difference.toFixed(
-        1
-      )} points above your overall average.`;
+      observation =
+        `On entries where this practice was recorded, energy averaged ${difference.toFixed(
+          1
+        )} points above your overall recorded average.`;
     } else if (
       difference < 0
     ) {
-      differenceText = `Recorded energy on these entries averages ${Math.abs(
-        difference
-      ).toFixed(
-        1
-      )} points below your overall average.`;
+      observation =
+        `On entries where this practice was recorded, energy averaged ${Math.abs(
+          difference
+        ).toFixed(
+          1
+        )} points below your overall recorded average.`;
     } else {
-      differenceText =
-        "Recorded energy on these entries matches your overall average.";
+      observation =
+        "Energy on these entries matches your overall recorded average.";
     }
   }
 
   return (
-    <View
-      style={
-        styles.practiceObservationCard
-      }
-    >
-      <View
+    <SoulCard>
+      <Text
         style={
-          styles.practiceObservationHeader
+          styles.practiceSymbol
         }
       >
-        <Text
-          style={
-            styles.practiceObservationIcon
-          }
-        >
-          ✦
-        </Text>
+        ✦
+      </Text>
 
-        <View style={{ flex: 1 }}>
-          <Text
-            style={
-              styles.practiceObservationTitle
-            }
-          >
-            {practice.practiceName}
-          </Text>
+      <Text
+        style={
+          styles.practiceTitle
+        }
+      >
+        {practice.practiceName}
+      </Text>
 
-          <Text
-            style={
-              styles.practiceObservationCount
-            }
-          >
-            Recorded in{" "}
-            {practice.timesRecorded}{" "}
-            {practice.timesRecorded ===
-            1
-              ? "reflection"
-              : "reflections"}
-          </Text>
-        </View>
-      </View>
+      <Text
+        style={
+          styles.practiceCount
+        }
+      >
+        Appears in{" "}
+        {practice.timesRecorded}{" "}
+        {practice.timesRecorded ===
+        1
+          ? "reflection"
+          : "reflections"}
+      </Text>
 
       <View
         style={
@@ -1077,12 +909,12 @@ function PracticeObservationCard({
       >
         <View
           style={
-            styles.practiceMetric
+            styles.metric
           }
         >
           <Text
             style={
-              styles.practiceMetricValue
+              styles.metricValue
             }
           >
             {practice.averageEnergy ??
@@ -1091,21 +923,21 @@ function PracticeObservationCard({
 
           <Text
             style={
-              styles.practiceMetricLabel
+              styles.metricLabel
             }
           >
-            Avg. energy
+            avg. energy
           </Text>
         </View>
 
         <View
           style={
-            styles.practiceMetric
+            styles.metric
           }
         >
           <Text
             style={
-              styles.practiceMoodValue
+              styles.metricMood
             }
             numberOfLines={1}
           >
@@ -1115,573 +947,486 @@ function PracticeObservationCard({
 
           <Text
             style={
-              styles.practiceMetricLabel
+              styles.metricLabel
             }
           >
-            Common mood
+            common mood
           </Text>
         </View>
       </View>
 
       <Text
         style={
-          styles.practiceObservationText
+          styles.practiceObservation
         }
       >
-        {differenceText}
+        {observation}
       </Text>
-    </View>
+    </SoulCard>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0C0A18",
-  },
-
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: "#0C0A18",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-
-  loadingText: {
-    color: "#8E859F",
-    marginTop: 14,
-  },
-
-  content: {
-    width: "100%",
-    maxWidth: 760,
-    alignSelf: "center",
-    paddingHorizontal: 24,
-    paddingTop: 32,
-    paddingBottom: 115,
-  },
-
-  eyebrow: {
-    color: "#8873B8",
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 2,
-  },
-
-  title: {
-    color: "#F5F0FF",
-    fontSize: 34,
-    fontWeight: "700",
-    marginTop: 5,
-  },
-
-  subtitle: {
-    color: "#8D859A",
-    fontSize: 15,
-    lineHeight: 23,
-    marginTop: 10,
-    marginBottom: 30,
-  },
-
-  sectionTitle: {
-    color: "#E9E1F7",
-    fontSize: 19,
-    fontWeight: "700",
-    marginBottom: 14,
-    marginTop: 12,
-  },
-
-  summaryGrid: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 30,
-  },
-
-  summaryCard: {
-    flex: 1,
-    backgroundColor: "#151126",
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "#29213D",
-    paddingVertical: 19,
-    paddingHorizontal: 10,
-    alignItems: "center",
-  },
-
-  summaryIcon: {
-    color: "#D4B866",
-    fontSize: 18,
-    marginBottom: 7,
-  },
-
-  summaryNumber: {
-    color: "#EFE7FF",
-    fontSize: 25,
-    fontWeight: "700",
-  },
-
-  summaryWord: {
-    color: "#EFE7FF",
-    fontSize: 16,
-    fontWeight: "700",
-    maxWidth: "100%",
-  },
-
-  summaryLabel: {
-    color: "#80768C",
-    fontSize: 11,
-    marginTop: 5,
-  },
-
-  trendCard: {
-    backgroundColor: "#151126",
-    borderWidth: 1,
-    borderColor: "#29213D",
-    borderRadius: 21,
-    padding: 20,
-    marginBottom: 26,
-  },
-
-  trendHeading: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-
-  cardHeading: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 21,
-  },
-
-  cardEyebrow: {
-    color: "#8873B8",
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 1.4,
-  },
-
-  cardTitle: {
-    color: "#EEE6F9",
-    fontSize: 19,
-    fontWeight: "700",
-    marginTop: 4,
-  },
-
-  cardIcon: {
-    color: "#D4B866",
-    fontSize: 21,
-  },
-
-  periodSelector: {
-    flexDirection: "row",
-    backgroundColor: "#100D1B",
-    borderRadius: 13,
-    padding: 4,
-    marginTop: 20,
-    marginBottom: 22,
-  },
-
-  periodButton: {
-    flex: 1,
-    borderRadius: 10,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-
-  periodButtonSelected: {
-    backgroundColor: "#5E489D",
-  },
-
-  periodText: {
-    color: "#80758D",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-
-  periodTextSelected: {
-    color: "#FFFFFF",
-  },
-
-  trendStats: {
-    flexDirection: "row",
-    gap: 8,
-  },
-
-  trendStat: {
-    flex: 1,
-    alignItems: "center",
-    backgroundColor: "#1A152A",
-    borderRadius: 14,
-    paddingVertical: 15,
-    paddingHorizontal: 6,
-  },
-
-  trendNumber: {
-    color: "#EDE4FA",
-    fontSize: 21,
-    fontWeight: "700",
-  },
-
-  trendMood: {
-    color: "#EDE4FA",
-    fontSize: 14,
-    fontWeight: "700",
-    maxWidth: "100%",
-  },
-
-  trendLabel: {
-    color: "#776E82",
-    fontSize: 10,
-    marginTop: 4,
-  },
-
-  divider: {
-    height: 1,
-    backgroundColor: "#29213D",
-    marginVertical: 22,
-  },
-
-  chartTitle: {
-    color: "#CFC3DD",
-    fontSize: 14,
-    fontWeight: "700",
-    marginBottom: 16,
-  },
-
-  barList: {
-    gap: 16,
-  },
-
-  barItem: {
-    gap: 7,
-  },
-
-  barHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-
-  barLabel: {
-    color: "#CFC4DE",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-
-  barValue: {
-    color: "#887B98",
-    fontSize: 12,
-  },
-
-  barTrack: {
-    height: 8,
-    backgroundColor: "#211B31",
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-
-  barFill: {
-    height: "100%",
-    backgroundColor: "#7357C7",
-    borderRadius: 4,
-  },
-
-  practiceBarFill: {
-    height: "100%",
-    backgroundColor: "#8C6ACA",
-    borderRadius: 4,
-  },
-
-  comparisonCard: {
-    backgroundColor: "#151126",
-    borderWidth: 1,
-    borderColor: "#29213D",
-    borderRadius: 20,
-    paddingHorizontal: 18,
-    marginBottom: 28,
-  },
-
-  comparisonRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 17,
-  },
-
-  comparisonLabel: {
-    flex: 1,
-    color: "#BDB1CC",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-
-  comparisonValues: {
-    flexDirection: "row",
-    width: "55%",
-  },
-
-  comparisonValue: {
-    flex: 1,
-    alignItems: "center",
-  },
-
-  comparisonNumber: {
-    color: "#EEE5FA",
-    fontSize: 15,
-    fontWeight: "700",
-  },
-
-  comparisonPeriod: {
-    color: "#70677C",
-    fontSize: 9,
-    marginTop: 3,
-  },
-
-  comparisonDivider: {
-    height: 1,
-    backgroundColor: "#29213D",
-  },
-
-  dataCard: {
-    backgroundColor: "#151126",
-    borderWidth: 1,
-    borderColor: "#29213D",
-    borderRadius: 21,
-    padding: 20,
-    marginBottom: 28,
-  },
-
-  practiceObservationList: {
-    gap: 12,
-    marginBottom: 28,
-  },
-
-  practiceObservationCard: {
-    backgroundColor: "#151126",
-    borderWidth: 1,
-    borderColor: "#302745",
-    borderRadius: 19,
-    padding: 19,
-  },
-
-  practiceObservationHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 11,
-  },
-
-  practiceObservationIcon: {
-    color: "#D4B866",
-    fontSize: 20,
-  },
-
-  practiceObservationTitle: {
-    color: "#EEE5FA",
-    fontSize: 17,
-    fontWeight: "700",
-  },
-
-  practiceObservationCount: {
-    color: "#7F758B",
-    fontSize: 11,
-    marginTop: 3,
-  },
-
-  practiceMetrics: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 17,
-  },
-
-  practiceMetric: {
-    flex: 1,
-    backgroundColor: "#1D172D",
-    borderRadius: 13,
-    padding: 13,
-  },
-
-  practiceMetricValue: {
-    color: "#E7DCFA",
-    fontSize: 20,
-    fontWeight: "700",
-  },
-
-  practiceMoodValue: {
-    color: "#E7DCFA",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-
-  practiceMetricLabel: {
-    color: "#756B80",
-    fontSize: 10,
-    marginTop: 4,
-  },
-
-  practiceObservationText: {
-    color: "#998EA5",
-    fontSize: 12,
-    lineHeight: 19,
-    marginTop: 15,
-  },
-
-  experienceRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 28,
-  },
-
-  experienceCard: {
-    flex: 1,
-    backgroundColor: "#151126",
-    borderWidth: 1,
-    borderColor: "#29213D",
-    borderRadius: 19,
-    padding: 19,
-  },
-
-  experienceIcon: {
-    color: "#D4B866",
-    fontSize: 21,
-  },
-
-  experienceNumber: {
-    color: "#F0E8FF",
-    fontSize: 27,
-    fontWeight: "700",
-    marginTop: 9,
-  },
-
-  experienceLabel: {
-    color: "#81778D",
-    fontSize: 11,
-    marginTop: 4,
-  },
-
-  observationsCard: {
-    backgroundColor: "#1A1430",
-    borderWidth: 1,
-    borderColor: "#3A2C62",
-    borderRadius: 22,
-    padding: 21,
-    marginBottom: 16,
-  },
-
-  observationsHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 11,
-    marginBottom: 18,
-  },
-
-  observationIcon: {
-    color: "#D8BA69",
-    fontSize: 21,
-  },
-
-  observationsTitle: {
-    color: "#F0E8FA",
-    fontSize: 18,
-    fontWeight: "700",
-    marginTop: 3,
-  },
-
-  observationRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 10,
-  },
-
-  observationBullet: {
-    color: "#B79BE7",
-    fontSize: 22,
-    lineHeight: 20,
-    width: 18,
-  },
-
-  observationText: {
-    flex: 1,
-    color: "#B3A8C1",
-    fontSize: 14,
-    lineHeight: 21,
-  },
-
-  noticeCard: {
-    backgroundColor: "#121020",
-    borderWidth: 1,
-    borderColor: "#29213D",
-    borderRadius: 17,
-    padding: 18,
-  },
-
-  noticeTitle: {
-    color: "#C8BAD8",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-
-  noticeText: {
-    color: "#7D7488",
-    fontSize: 12,
-    lineHeight: 19,
-    marginTop: 7,
-  },
-
-  emptyCard: {
-    backgroundColor: "#151126",
-    borderWidth: 1,
-    borderColor: "#29213D",
-    borderRadius: 19,
-    padding: 24,
-    alignItems: "center",
-    marginBottom: 28,
-  },
-
-  emptySymbol: {
-    color: "#A88AD3",
-    fontSize: 25,
-  },
-
-  emptyTitle: {
-    color: "#DAD0E7",
-    fontSize: 16,
-    fontWeight: "700",
-    marginTop: 10,
-  },
-
-  emptyText: {
-    color: "#80778B",
-    fontSize: 13,
-    lineHeight: 20,
-    marginTop: 7,
-  },
-
-  errorBox: {
-    backgroundColor: "#2A151E",
-    borderWidth: 1,
-    borderColor: "#683248",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 22,
-  },
-
-  errorText: {
-    color: "#F1A7B9",
-    textAlign: "center",
-    lineHeight: 20,
-  },
-
-  retryButton: {
-    backgroundColor: "#7357C7",
-    borderRadius: 14,
-    paddingHorizontal: 20,
-    paddingVertical: 13,
-    marginTop: 18,
-  },
-
-  retryText: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-  },
-}); 
+const styles =
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor:
+        colors.background,
+    },
+
+    centered: {
+      flex: 1,
+      backgroundColor:
+        colors.background,
+      justifyContent:
+        "center",
+      alignItems: "center",
+      padding: 24,
+    },
+
+    content: {
+      width: "100%",
+      maxWidth: 720,
+      alignSelf: "center",
+      paddingHorizontal: 24,
+      paddingTop: 34,
+      paddingBottom: 115,
+    },
+
+    title: {
+      color: colors.text,
+      fontFamily: fonts.display,
+      fontSize: 40,
+    },
+
+    subtitle: {
+      color:
+        colors.textMuted,
+      fontFamily:
+        fonts.displayItalic,
+      fontSize: 17,
+      lineHeight: 23,
+      marginTop: 3,
+      marginBottom: 34,
+      maxWidth: 520,
+    },
+
+    summaryRow: {
+      flexDirection: "row",
+      gap: 10,
+      marginBottom: 34,
+    },
+
+    summaryCard: {
+      flex: 1,
+      backgroundColor:
+        colors.surface,
+      borderWidth: 1,
+      borderColor:
+        colors.border,
+      borderRadius:
+        radius.lg,
+      padding: 15,
+      alignItems: "center",
+    },
+
+    summarySymbol: {
+      color: colors.gold,
+      fontSize: 16,
+    },
+
+    summaryValue: {
+      color: colors.text,
+      fontFamily: fonts.display,
+      fontSize: 28,
+      marginTop: 4,
+    },
+
+    summaryValueSmall: {
+      fontSize: 18,
+    },
+
+    summaryLabel: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 9,
+    },
+
+    trendCard: {
+      marginBottom: 34,
+    },
+
+    cardSymbol: {
+      color: colors.gold,
+      fontSize: 18,
+      marginBottom: 9,
+    },
+
+    cardTitle: {
+      color: colors.text,
+      fontFamily: fonts.display,
+      fontSize: 27,
+    },
+
+    cardSubtitle: {
+      color:
+        colors.textMuted,
+      fontFamily: fonts.body,
+      fontSize: 12,
+      lineHeight: 18,
+      marginTop: 5,
+    },
+
+    periodSelector: {
+      flexDirection: "row",
+      backgroundColor:
+        colors.backgroundSoft,
+      borderRadius:
+        radius.md,
+      padding: 4,
+      marginTop: 20,
+    },
+
+    periodButton: {
+      flex: 1,
+      paddingVertical: 9,
+      alignItems: "center",
+      borderRadius:
+        radius.sm,
+    },
+
+    periodButtonSelected: {
+      backgroundColor:
+        colors.purpleDark,
+    },
+
+    periodText: {
+      color: colors.textDim,
+      fontFamily:
+        fonts.bodySemiBold,
+      fontSize: 11,
+    },
+
+    periodTextSelected: {
+      color: colors.white,
+    },
+
+    trendSummary: {
+      flexDirection: "row",
+      gap: 8,
+      marginTop: 20,
+    },
+
+    trendStat: {
+      flex: 1,
+      backgroundColor:
+        colors.surfaceRaised,
+      borderRadius:
+        radius.md,
+      padding: 13,
+      alignItems: "center",
+    },
+
+    trendValue: {
+      color: colors.text,
+      fontFamily: fonts.display,
+      fontSize: 24,
+    },
+
+    trendMood: {
+      color: colors.text,
+      fontFamily:
+        fonts.bodySemiBold,
+      fontSize: 13,
+    },
+
+    trendLabel: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 9,
+      marginTop: 2,
+    },
+
+    divider: {
+      height: 1,
+      backgroundColor:
+        colors.border,
+      marginVertical: 20,
+    },
+
+    softHeading: {
+      color: colors.textSoft,
+      fontFamily: fonts.display,
+      fontSize: 20,
+      marginBottom: 14,
+    },
+
+    barList: {
+      gap: 15,
+    },
+
+    barItem: {
+      gap: 6,
+    },
+
+    barHeader: {
+      flexDirection: "row",
+      justifyContent:
+        "space-between",
+    },
+
+    barLabel: {
+      color: colors.textSoft,
+      fontFamily: fonts.body,
+      fontSize: 11,
+    },
+
+    barCount: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 10,
+    },
+
+    barTrack: {
+      height: 7,
+      backgroundColor:
+        colors.surfaceRaised,
+      borderRadius: 7,
+      overflow: "hidden",
+    },
+
+    barFill: {
+      height: "100%",
+      backgroundColor:
+        colors.purple,
+      borderRadius: 7,
+    },
+
+    comparisonCard: {
+      marginBottom: 34,
+    },
+
+    comparisonRow: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+
+    comparisonLabel: {
+      flex: 1,
+      color: colors.textSoft,
+      fontFamily: fonts.body,
+      fontSize: 11,
+    },
+
+    comparisonValue: {
+      width: 76,
+      alignItems: "center",
+    },
+
+    comparisonNumber: {
+      color: colors.text,
+      fontFamily:
+        fonts.bodySemiBold,
+      fontSize: 13,
+    },
+
+    comparisonPeriod: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 8,
+      marginTop: 2,
+    },
+
+    practiceList: {
+      gap: 12,
+      marginBottom: 34,
+    },
+
+    practiceSymbol: {
+      color: colors.gold,
+      fontSize: 16,
+    },
+
+    practiceTitle: {
+      color: colors.text,
+      fontFamily: fonts.display,
+      fontSize: 24,
+      marginTop: 5,
+    },
+
+    practiceCount: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 10,
+      marginTop: 2,
+    },
+
+    practiceMetrics: {
+      flexDirection: "row",
+      gap: 8,
+      marginTop: 15,
+    },
+
+    metric: {
+      flex: 1,
+      backgroundColor:
+        colors.surfaceRaised,
+      borderRadius:
+        radius.md,
+      padding: 12,
+    },
+
+    metricValue: {
+      color: colors.text,
+      fontFamily: fonts.display,
+      fontSize: 23,
+    },
+
+    metricMood: {
+      color: colors.text,
+      fontFamily:
+        fonts.bodySemiBold,
+      fontSize: 13,
+    },
+
+    metricLabel: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 9,
+      marginTop: 2,
+    },
+
+    practiceObservation: {
+      color:
+        colors.textMuted,
+      fontFamily: fonts.body,
+      fontSize: 11,
+      lineHeight: 18,
+      marginTop: 14,
+    },
+
+    experienceRow: {
+      flexDirection: "row",
+      gap: 10,
+      marginBottom: 34,
+    },
+
+    observationCard: {
+      borderColor:
+        colors.borderStrong,
+      backgroundColor:
+        "#18122B",
+    },
+
+    observationTitle: {
+      color: colors.text,
+      fontFamily:
+        fonts.displayItalic,
+      fontSize: 25,
+      lineHeight: 30,
+    },
+
+    observationIntro: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 11,
+      marginTop: 5,
+      marginBottom: 17,
+    },
+
+    observationList: {
+      gap: 12,
+    },
+
+    observationRow: {
+      flexDirection: "row",
+      alignItems:
+        "flex-start",
+      gap: 9,
+    },
+
+    observationBullet: {
+      color: colors.gold,
+      fontSize: 10,
+      marginTop: 5,
+    },
+
+    observationText: {
+      flex: 1,
+      color:
+        colors.textMuted,
+      fontFamily: fonts.body,
+      fontSize: 12,
+      lineHeight: 19,
+    },
+
+    notice: {
+      paddingHorizontal: 8,
+      paddingVertical: 18,
+    },
+
+    noticeText: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 10,
+      lineHeight: 16,
+      textAlign: "center",
+    },
+
+    mutedText: {
+      color: colors.textMuted,
+      fontFamily: fonts.body,
+      fontSize: 12,
+      lineHeight: 19,
+      marginTop: 6,
+    },
+
+    emptyTitle: {
+      color: colors.text,
+      fontFamily: fonts.display,
+      fontSize: 22,
+    },
+
+    loadingSymbol: {
+      color: colors.gold,
+      fontSize: 26,
+      marginBottom: 18,
+    },
+
+    loadingText: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 12,
+      marginTop: 12,
+    },
+
+    errorTitle: {
+      color: colors.text,
+      fontFamily: fonts.display,
+      fontSize: 25,
+    },
+
+    errorText: {
+      color: colors.errorText,
+      fontFamily: fonts.body,
+      fontSize: 12,
+      marginTop: 8,
+      textAlign: "center",
+    },
+
+    retryButton: {
+      backgroundColor:
+        colors.purple,
+      paddingHorizontal: 19,
+      paddingVertical: 11,
+      borderRadius:
+        radius.md,
+      marginTop: 20,
+    },
+
+    retryText: {
+      color: colors.white,
+      fontFamily:
+        fonts.bodySemiBold,
+    },
+  }); 

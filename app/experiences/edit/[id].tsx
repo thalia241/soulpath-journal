@@ -10,45 +10,36 @@ import {
 
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 
+import SoulButton from "../../../src/components/SoulButton";
+import SoulInput from "../../../src/components/SoulInput";
+import FeedbackMessage from "../../../src/components/FeedbackMessage";
+import SectionHeading from "../../../src/components/SectionHeading";
+
 import {
-  Experience,
+  colors,
+  fonts,
+  radius,
+} from "../../../src/theme";
+
+import {
   ExperienceType,
   getExperience,
   updateExperience,
 } from "../../../src/services/experienceService";
-
-const significanceLevels = [
-  1,
-  2,
-  3,
-  4,
-  5,
-];
 
 export default function EditExperienceScreen() {
   const { id } =
     useLocalSearchParams<{
       id: string;
     }>();
-
-  const [
-    experience,
-    setExperience,
-  ] =
-    useState<Experience | null>(
-      null
-    );
 
   const [
     experienceType,
@@ -90,99 +81,92 @@ export default function EditExperienceScreen() {
     setErrorMessage,
   ] = useState("");
 
-  const isDream =
-    experienceType === "dream";
-
   useEffect(() => {
+    loadExperience();
+  }, [id]);
+
+  async function loadExperience() {
     if (!id) {
       return;
     }
 
-    async function loadExperience() {
-      try {
-        setLoading(true);
+    try {
+      setLoading(true);
 
-        const data =
-          await getExperience(id);
+      const experience =
+        await getExperience(id);
 
-        setExperience(data);
+      setExperienceType(
+        experience.experience_type
+      );
 
-        setExperienceType(
-          data.experience_type
-        );
+      setTitle(
+        experience.title
+      );
 
-        setTitle(data.title);
+      setDescription(
+        experience.description
+      );
 
-        setDescription(
-          data.description
-        );
+      setInterpretation(
+        experience.interpretation ??
+          ""
+      );
 
-        setInterpretation(
-          data.interpretation ?? ""
-        );
-
-        setSignificance(
-          data.significance_level
-        );
-      } catch (error) {
-        console.error(
-          "Unable to load experience:",
-          error
-        );
-
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "Unable to load this experience."
-        );
-      } finally {
-        setLoading(false);
-      }
+      setSignificance(
+        experience.significance_level
+      );
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to open this memory."
+      );
+    } finally {
+      setLoading(false);
     }
+  }
 
-    loadExperience();
-  }, [id]);
-
-  async function handleSave() {
-    if (!experience) {
+  async function saveChanges() {
+    if (!id) {
       return;
     }
 
-    setErrorMessage("");
+    const cleanTitle =
+      title.trim();
 
-    if (!title.trim()) {
+    const cleanDescription =
+      description.trim();
+
+    if (!cleanTitle) {
       setErrorMessage(
-        isDream
-          ? "Give your dream a title."
-          : "Give this synchronicity a title."
+        "This memory still needs a title."
       );
-
       return;
     }
 
-    if (!description.trim()) {
+    if (!cleanDescription) {
       setErrorMessage(
-        isDream
-          ? "Describe what you remember from the dream."
-          : "Describe what happened."
+        "Write a little of what happened."
       );
-
       return;
     }
 
     try {
       setSaving(true);
+      setErrorMessage("");
 
       await updateExperience(
-        experience.id,
+        id,
         {
           experience_type:
             experienceType,
 
-          title: title.trim(),
+          title:
+            cleanTitle,
 
           description:
-            description.trim(),
+            cleanDescription,
 
           interpretation:
             interpretation.trim() ||
@@ -197,19 +181,14 @@ export default function EditExperienceScreen() {
         pathname:
           "/experiences/[id]",
         params: {
-          id: experience.id,
+          id,
         },
       });
     } catch (error) {
-      console.error(
-        "Unable to update experience:",
-        error
-      );
-
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Unable to update this experience."
+          : "Unable to save your changes."
       );
     } finally {
       setSaving(false);
@@ -219,576 +198,331 @@ export default function EditExperienceScreen() {
   if (loading) {
     return (
       <SafeAreaView
-        style={
-          styles.loadingContainer
-        }
+        style={styles.centered}
       >
         <ActivityIndicator
-          size="large"
-          color="#CDB9FF"
+          color={colors.lavender}
         />
-
-        <Text
-          style={styles.loadingText}
-        >
-          Opening your experience...
-        </Text>
-      </SafeAreaView>
-    );
-  }
-
-  if (!experience) {
-    return (
-      <SafeAreaView
-        style={
-          styles.loadingContainer
-        }
-      >
-        <Text
-          style={styles.errorText}
-        >
-          {errorMessage ||
-            "Experience not found."}
-        </Text>
-
-        <Pressable
-          onPress={() =>
-            router.replace(
-              "/experiences"
-            )
-          }
-        >
-          <Text
-            style={styles.backText}
-          >
-            Return to Experiences
-          </Text>
-        </Pressable>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView
-      style={styles.container}
-    >
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={
-          Platform.OS === "ios"
-            ? "padding"
-            : undefined
-        }
+    <SafeAreaView style={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          contentContainerStyle={
-            styles.content
-          }
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={
-            false
+        <Pressable
+          style={styles.back}
+          onPress={() =>
+            router.back()
           }
         >
-          <Pressable
+          <Text style={styles.backText}>
+            ‹ Memory
+          </Text>
+        </Pressable>
+
+        <Text style={styles.title}>
+          Return to the memory
+        </Text>
+
+        <Text style={styles.subtitle}>
+          What we remember — and what it means to us —
+          can change with time.
+        </Text>
+
+        <SectionHeading
+          title="What kind of moment?"
+        />
+
+        <View style={styles.typeRow}>
+          <TypeButton
+            symbol="☾"
+            label="Dream"
+            selected={
+              experienceType ===
+              "dream"
+            }
             onPress={() =>
-              router.back()
+              setExperienceType(
+                "dream"
+              )
             }
-          >
-            <Text
-              style={styles.backText}
-            >
-              ‹ Back
-            </Text>
-          </Pressable>
-
-          <Text
-            style={styles.eyebrow}
-          >
-            EDIT EXPERIENCE
-          </Text>
-
-          <Text
-            style={styles.heading}
-          >
-            Refine what you remember
-          </Text>
-
-          <Text
-            style={styles.subheading}
-          >
-            You can revisit the details
-            and your interpretation at
-            any time.
-          </Text>
-
-          <Text
-            style={
-              styles.sectionTitle
-            }
-          >
-            Experience type
-          </Text>
-
-          <View
-            style={styles.typeRow}
-          >
-            <Pressable
-              style={[
-                styles.typeCard,
-
-                isDream &&
-                  styles.typeCardSelected,
-              ]}
-              onPress={() =>
-                setExperienceType(
-                  "dream"
-                )
-              }
-            >
-              <Text
-                style={styles.typeIcon}
-              >
-                ☾
-              </Text>
-
-              <Text
-                style={[
-                  styles.typeTitle,
-
-                  isDream &&
-                    styles.typeTextSelected,
-                ]}
-              >
-                Dream
-              </Text>
-            </Pressable>
-
-            <Pressable
-              style={[
-                styles.typeCard,
-
-                !isDream &&
-                  styles.typeCardSelected,
-              ]}
-              onPress={() =>
-                setExperienceType(
-                  "synchronicity"
-                )
-              }
-            >
-              <Text
-                style={styles.typeIcon}
-              >
-                ✦
-              </Text>
-
-              <Text
-                style={[
-                  styles.typeTitle,
-
-                  !isDream &&
-                    styles.typeTextSelected,
-                ]}
-              >
-                Synchronicity
-              </Text>
-            </Pressable>
-          </View>
-
-          <Text style={styles.label}>
-            Title
-          </Text>
-
-          <TextInput
-            style={styles.input}
-            value={title}
-            onChangeText={setTitle}
-            placeholder="Experience title"
-            placeholderTextColor="#70677F"
           />
 
-          <Text style={styles.label}>
-            {isDream
-              ? "What happened in the dream?"
-              : "What happened?"}
-          </Text>
+          <TypeButton
+            symbol="✦"
+            label="Sign"
+            selected={
+              experienceType ===
+              "synchronicity"
+            }
+            onPress={() =>
+              setExperienceType(
+                "synchronicity"
+              )
+            }
+          />
+        </View>
 
-          <TextInput
-            style={[
-              styles.input,
-              styles.largeInput,
-            ]}
+        <View style={styles.form}>
+          <SoulInput
+            label="Title"
+            value={title}
+            onChangeText={setTitle}
+            maxLength={120}
+          />
+
+          <SoulInput
+            label="What happened?"
             value={description}
             onChangeText={
               setDescription
             }
-            placeholder={
-              isDream
-                ? "Write everything you remember..."
-                : "Describe the coincidence, pattern, or moment..."
-            }
-            placeholderTextColor="#70677F"
             multiline
             textAlignVertical="top"
+            style={styles.largeInput}
           />
 
-          <Text style={styles.label}>
-            Personal reflection
-          </Text>
-
-          <TextInput
-            style={[
-              styles.input,
-              styles.interpretationInput,
-            ]}
+          <SoulInput
+            label="What does it bring up for you?"
             value={interpretation}
             onChangeText={
               setInterpretation
             }
-            placeholder={
-              isDream
-                ? "What might this dream mean to you?"
-                : "Why did this feel meaningful to you?"
-            }
-            placeholderTextColor="#70677F"
             multiline
             textAlignVertical="top"
+            style={styles.reflectionInput}
           />
+        </View>
 
-          <Text
-            style={
-              styles.sectionTitle
-            }
-          >
-            Significance
-          </Text>
+        <SectionHeading
+          title="How deeply does it stay with you?"
+        />
 
-          <Text
-            style={
-              styles.significanceHint
-            }
-          >
-            How meaningful does this feel
-            to you now?
-          </Text>
+        <View style={styles.levelRow}>
+          {[1, 2, 3, 4, 5].map(
+            (level) => {
+              const selected =
+                significance ===
+                level;
 
-          <View
-            style={styles.levelRow}
-          >
-            {significanceLevels.map(
-              (level) => {
-                const selected =
-                  significance ===
-                  level;
-
-                return (
-                  <Pressable
-                    key={level}
+              return (
+                <Pressable
+                  key={level}
+                  style={[
+                    styles.level,
+                    selected &&
+                      styles.levelSelected,
+                  ]}
+                  onPress={() =>
+                    setSignificance(
+                      selected
+                        ? null
+                        : level
+                    )
+                  }
+                >
+                  <Text
                     style={[
-                      styles.levelButton,
-
+                      styles.levelText,
                       selected &&
-                        styles.levelSelected,
+                        styles.levelTextSelected,
                     ]}
-                    onPress={() =>
-                      setSignificance(
-                        selected
-                          ? null
-                          : level
-                      )
-                    }
                   >
-                    <Text
-                      style={[
-                        styles.levelText,
-
-                        selected &&
-                          styles.levelTextSelected,
-                      ]}
-                    >
-                      {level}
-                    </Text>
-                  </Pressable>
-                );
-              }
-            )}
-          </View>
-
-          <View
-            style={
-              styles.significanceLabels
+                    {level}
+                  </Text>
+                </Pressable>
+              );
             }
-          >
-            <Text
-              style={
-                styles.significanceLabel
-              }
-            >
-              Subtle
-            </Text>
+          )}
+        </View>
 
-            <Text
-              style={
-                styles.significanceLabel
-              }
-            >
-              Profound
-            </Text>
-          </View>
+        {errorMessage ? (
+          <FeedbackMessage
+            type="error"
+            message={errorMessage}
+          />
+        ) : null}
 
-          {errorMessage ? (
-            <View
-              style={styles.errorBox}
-            >
-              <Text
-                style={
-                  styles.errorText
-                }
-              >
-                {errorMessage}
-              </Text>
-            </View>
-          ) : null}
-
-          <Pressable
-            style={[
-              styles.saveButton,
-
-              saving &&
-                styles.disabledButton,
-            ]}
-            onPress={handleSave}
-            disabled={saving}
-          >
-            {saving ? (
-              <ActivityIndicator
-                color="#FFFFFF"
-              />
-            ) : (
-              <Text
-                style={
-                  styles.saveButtonText
-                }
-              >
-                Save Changes
-              </Text>
-            )}
-          </Pressable>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        <SoulButton
+          title="Save what changed"
+          loading={saving}
+          onPress={saveChanges}
+        />
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
-const styles =
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: "#0C0A18",
-    },
+function TypeButton({
+  symbol,
+  label,
+  selected,
+  onPress,
+}: {
+  symbol: string;
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      style={[
+        styles.typeButton,
+        selected &&
+          styles.typeSelected,
+      ]}
+      onPress={onPress}
+    >
+      <Text style={styles.typeSymbol}>
+        {symbol}
+      </Text>
 
-    loadingContainer: {
-      flex: 1,
-      backgroundColor: "#0C0A18",
-      justifyContent: "center",
-      alignItems: "center",
-      padding: 24,
-    },
+      <Text
+        style={[
+          styles.typeText,
+          selected &&
+            styles.typeTextSelected,
+        ]}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
 
-    loadingText: {
-      color: "#8E859F",
-      marginTop: 14,
-    },
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
 
-    content: {
-      width: "100%",
-      maxWidth: 700,
-      alignSelf: "center",
-      paddingHorizontal: 24,
-      paddingTop: 26,
-      paddingBottom: 60,
-    },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    backgroundColor: colors.background,
+  },
 
-    backText: {
-      color: "#B9AED0",
-      fontSize: 16,
-      marginBottom: 28,
-    },
+  content: {
+    width: "100%",
+    maxWidth: 680,
+    alignSelf: "center",
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 65,
+  },
 
-    eyebrow: {
-      color: "#8F77BF",
-      fontSize: 11,
-      fontWeight: "700",
-      letterSpacing: 2,
-    },
+  back: {
+    alignSelf: "flex-start",
+    paddingVertical: 8,
+  },
 
-    heading: {
-      color: "#F5F0FF",
-      fontSize: 31,
-      fontWeight: "700",
-      marginTop: 8,
-    },
+  backText: {
+    color: colors.lavender,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 12,
+  },
 
-    subheading: {
-      color: "#8D859A",
-      fontSize: 15,
-      lineHeight: 22,
-      marginTop: 8,
-      marginBottom: 24,
-    },
+  title: {
+    color: colors.text,
+    fontFamily: fonts.display,
+    fontSize: 38,
+    lineHeight: 42,
+    marginTop: 22,
+  },
 
-    sectionTitle: {
-      color: "#E5DCF4",
-      fontSize: 17,
-      fontWeight: "600",
-      marginTop: 24,
-      marginBottom: 12,
-    },
+  subtitle: {
+    color: colors.textMuted,
+    fontFamily: fonts.displayItalic,
+    fontSize: 17,
+    lineHeight: 23,
+    marginTop: 3,
+    marginBottom: 30,
+  },
 
-    typeRow: {
-      flexDirection: "row",
-      gap: 12,
-    },
+  typeRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 30,
+  },
 
-    typeCard: {
-      flex: 1,
-      backgroundColor: "#151126",
-      borderWidth: 1,
-      borderColor: "#302847",
-      borderRadius: 18,
-      padding: 17,
-      minHeight: 100,
-    },
+  typeButton: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    paddingVertical: 17,
+    alignItems: "center",
+  },
 
-    typeCardSelected: {
-      backgroundColor: "#21183A",
-      borderColor: "#7459BC",
-    },
+  typeSelected: {
+    backgroundColor: colors.surfaceRaised,
+    borderColor: colors.lavenderStrong,
+  },
 
-    typeIcon: {
-      color: "#D4B866",
-      fontSize: 24,
-      marginBottom: 9,
-    },
+  typeSymbol: {
+    color: colors.gold,
+    fontSize: 20,
+  },
 
-    typeTitle: {
-      color: "#BEB4CE",
-      fontSize: 16,
-      fontWeight: "700",
-    },
+  typeText: {
+    color: colors.textMuted,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 11,
+    marginTop: 5,
+  },
 
-    typeTextSelected: {
-      color: "#F3EAFF",
-    },
+  typeTextSelected: {
+    color: colors.lavender,
+  },
 
-    label: {
-      color: "#D8C9F1",
-      fontSize: 14,
-      fontWeight: "600",
-      marginBottom: 9,
-      marginTop: 23,
-    },
+  form: {
+    gap: 17,
+    marginBottom: 30,
+  },
 
-    input: {
-      backgroundColor: "#171329",
-      color: "#F2EDFA",
-      borderRadius: 15,
-      borderWidth: 1,
-      borderColor: "#332A49",
-      paddingHorizontal: 16,
-      paddingVertical: 14,
-      fontSize: 16,
-    },
+  largeInput: {
+    minHeight: 150,
+  },
 
-    largeInput: {
-      minHeight: 190,
-      lineHeight: 24,
-    },
+  reflectionInput: {
+    minHeight: 120,
+  },
 
-    interpretationInput: {
-      minHeight: 130,
-      lineHeight: 22,
-    },
+  levelRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 29,
+  },
 
-    significanceHint: {
-      color: "#847B95",
-      fontSize: 13,
-      marginTop: -5,
-      marginBottom: 13,
-    },
+  level: {
+    flex: 1,
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    justifyContent: "center",
+    alignItems: "center",
+  },
 
-    levelRow: {
-      flexDirection: "row",
-      gap: 10,
-    },
+  levelSelected: {
+    backgroundColor: colors.purpleDark,
+    borderColor: colors.lavenderStrong,
+  },
 
-    levelButton: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      backgroundColor: "#151126",
-      borderWidth: 1,
-      borderColor: "#312847",
-      justifyContent: "center",
-      alignItems: "center",
-    },
+  levelText: {
+    color: colors.textMuted,
+    fontFamily: fonts.display,
+    fontSize: 21,
+  },
 
-    levelSelected: {
-      backgroundColor: "#7357C7",
-      borderColor: "#8F74D2",
-    },
-
-    levelText: {
-      color: "#A89DBB",
-      fontWeight: "700",
-    },
-
-    levelTextSelected: {
-      color: "#FFFFFF",
-    },
-
-    significanceLabels: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      maxWidth: 280,
-      marginTop: 8,
-    },
-
-    significanceLabel: {
-      color: "#6F677C",
-      fontSize: 11,
-    },
-
-    errorBox: {
-      backgroundColor: "#2A151E",
-      borderWidth: 1,
-      borderColor: "#683248",
-      borderRadius: 12,
-      padding: 12,
-      marginTop: 24,
-    },
-
-    errorText: {
-      color: "#F1A7B9",
-      lineHeight: 20,
-      textAlign: "center",
-    },
-
-    saveButton: {
-      backgroundColor: "#7357C7",
-      borderRadius: 16,
-      paddingVertical: 17,
-      alignItems: "center",
-      marginTop: 34,
-    },
-
-    saveButtonText: {
-      color: "#FFFFFF",
-      fontSize: 16,
-      fontWeight: "700",
-    },
-
-    disabledButton: {
-      opacity: 0.6,
-    },
-  }); 
+  levelTextSelected: {
+    color: colors.white,
+  },
+}); 

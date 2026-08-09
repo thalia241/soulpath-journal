@@ -1,5 +1,13 @@
-import { router, useFocusEffect } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import {
+  router,
+  useFocusEffect,
+} from "expo-router";
+
+import {
+  useCallback,
+  useMemo,
+  useState,
+} from "react";
 
 import {
   ActivityIndicator,
@@ -11,6 +19,16 @@ import {
   TextInput,
   View,
 } from "react-native";
+
+import EmptyState from "../../src/components/EmptyState";
+import SectionHeading from "../../src/components/SectionHeading";
+
+import {
+  colors,
+  fonts,
+  radius,
+  spacing,
+} from "../../src/theme";
 
 import {
   getJournalEntries,
@@ -44,39 +62,64 @@ const moodFilters: MoodFilter[] = [
 ];
 
 export default function JournalScreen() {
-  const [entries, setEntries] = useState<JournalEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [
+    entries,
+    setEntries,
+  ] =
+    useState<JournalEntry[]>([]);
 
-  const [searchText, setSearchText] = useState("");
-  const [moodFilter, setMoodFilter] =
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
+
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState("");
+
+  const [
+    searchText,
+    setSearchText,
+  ] = useState("");
+
+  const [
+    moodFilter,
+    setMoodFilter,
+  ] =
     useState<MoodFilter>("all");
-  const [dateFilter, setDateFilter] =
+
+  const [
+    dateFilter,
+    setDateFilter,
+  ] =
     useState<DateFilter>("all");
 
-  const loadEntries = useCallback(async () => {
-    try {
-      setLoading(true);
-      setErrorMessage("");
+  const loadEntries =
+    useCallback(async () => {
+      try {
+        setLoading(true);
+        setErrorMessage("");
 
-      const data = await getJournalEntries();
+        const data =
+          await getJournalEntries();
 
-      setEntries(data);
-    } catch (error) {
-      console.error(
-        "Unable to load journal entries:",
-        error
-      );
+        setEntries(data);
+      } catch (error) {
+        console.error(
+          "Unable to load journal entries:",
+          error
+        );
 
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Unable to load your journal."
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Unable to load your journal."
+        );
+      } finally {
+        setLoading(false);
+      }
+    }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -84,60 +127,89 @@ export default function JournalScreen() {
     }, [loadEntries])
   );
 
-  const filteredEntries = useMemo(() => {
-    const normalizedSearch =
-      searchText.trim().toLowerCase();
+  const filteredEntries =
+    useMemo(() => {
+      const normalizedSearch =
+        searchText
+          .trim()
+          .toLowerCase();
 
-    const now = new Date();
+      const now =
+        new Date();
 
-    return entries.filter((entry) => {
-      const matchesSearch =
-        !normalizedSearch ||
-        entry.title
-          .toLowerCase()
-          .includes(normalizedSearch) ||
-        entry.content
-          .toLowerCase()
-          .includes(normalizedSearch);
+      return entries.filter(
+        (entry) => {
+          const matchesSearch =
+            !normalizedSearch ||
+            entry.title
+              .toLowerCase()
+              .includes(
+                normalizedSearch
+              ) ||
+            entry.content
+              .toLowerCase()
+              .includes(
+                normalizedSearch
+              );
 
-      const matchesMood =
-        moodFilter === "all" ||
-        entry.mood === moodFilter;
+          const matchesMood =
+            moodFilter === "all" ||
+            entry.mood ===
+              moodFilter;
 
-      let matchesDate = true;
+          let matchesDate = true;
 
-      if (dateFilter !== "all") {
-        const days = Number(dateFilter);
+          if (
+            dateFilter !== "all"
+          ) {
+            const days =
+              Number(
+                dateFilter
+              );
 
-        const startDate = new Date(now);
-        startDate.setHours(0, 0, 0, 0);
-        startDate.setDate(
-          startDate.getDate() - (days - 1)
-        );
+            const startDate =
+              new Date(now);
 
-        const entryDate = new Date(
-          `${entry.entry_date}T00:00:00`
-        );
+            startDate.setHours(
+              0,
+              0,
+              0,
+              0
+            );
 
-        matchesDate =
-          entryDate >= startDate;
-      }
+            startDate.setDate(
+              startDate.getDate() -
+                (days - 1)
+            );
 
-      return (
-        matchesSearch &&
-        matchesMood &&
-        matchesDate
+            const entryDate =
+              new Date(
+                `${entry.entry_date}T00:00:00`
+              );
+
+            matchesDate =
+              entryDate >=
+              startDate;
+          }
+
+          return (
+            matchesSearch &&
+            matchesMood &&
+            matchesDate
+          );
+        }
       );
-    });
-  }, [
-    entries,
-    searchText,
-    moodFilter,
-    dateFilter,
-  ]);
+    }, [
+      entries,
+      searchText,
+      moodFilter,
+      dateFilter,
+    ]);
 
   const hasActiveFilters =
-    searchText.trim().length > 0 ||
+    searchText
+      .trim()
+      .length > 0 ||
     moodFilter !== "all" ||
     dateFilter !== "all";
 
@@ -148,241 +220,352 @@ export default function JournalScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={styles.container}
+    >
       <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
+        contentContainerStyle={
+          styles.content
+        }
+        showsVerticalScrollIndicator={
+          false
+        }
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.eyebrow}>
-              YOUR REFLECTIONS
+        <View
+          style={
+            styles.header
+          }
+        >
+          <View style={{ flex: 1 }}>
+            <Text
+              style={
+                styles.title
+              }
+            >
+              Journal
             </Text>
 
-            <Text style={styles.title}>
-              Journal
+            <Text
+              style={
+                styles.subtitle
+              }
+            >
+              A place for what wants
+              to be remembered.
             </Text>
           </View>
 
           <Pressable
-            style={styles.newButton}
+            style={
+              styles.newButton
+            }
             onPress={() =>
-              router.push("/journal/new")
+              router.push(
+                "/journal/new"
+              )
             }
           >
-            <Text style={styles.newButtonText}>
-              ＋
+            <Text
+              style={
+                styles.newButtonText
+              }
+            >
+              +
             </Text>
           </Pressable>
         </View>
 
-        <View style={styles.searchBox}>
-          <Text style={styles.searchIcon}>
-            ⌕
+        <View
+          style={
+            styles.searchBox
+          }
+        >
+          <Text
+            style={
+              styles.searchSymbol
+            }
+          >
+            ✦
           </Text>
 
           <TextInput
-            style={styles.searchInput}
-            value={searchText}
-            onChangeText={setSearchText}
-            placeholder="Search reflections..."
-            placeholderTextColor="#70677F"
+            style={
+              styles.searchInput
+            }
+            value={
+              searchText
+            }
+            onChangeText={
+              setSearchText
+            }
+            placeholder="Search your reflections..."
+            placeholderTextColor={
+              colors.textDim
+            }
           />
 
-          {searchText.length > 0 ? (
+          {searchText.length >
+          0 ? (
             <Pressable
               onPress={() =>
                 setSearchText("")
               }
             >
-              <Text style={styles.clearSearch}>
+              <Text
+                style={
+                  styles.clearSearch
+                }
+              >
                 ×
               </Text>
             </Pressable>
           ) : null}
         </View>
 
-        <Text style={styles.filterLabel}>
-          Time
-        </Text>
+        <SectionHeading
+          title="When"
+        />
 
-        <View style={styles.filterRow}>
+        <View
+          style={
+            styles.filterRow
+          }
+        >
           {(
             [
-              ["all", "All"],
-              ["7", "7 Days"],
-              ["30", "30 Days"],
+              [
+                "all",
+                "All time",
+              ],
+              [
+                "7",
+                "7 days",
+              ],
+              [
+                "30",
+                "30 days",
+              ],
             ] as [
               DateFilter,
               string
             ][]
-          ).map(([value, label]) => {
-            const selected =
-              dateFilter === value;
+          ).map(
+            ([
+              value,
+              label,
+            ]) => {
+              const selected =
+                dateFilter ===
+                value;
 
-            return (
-              <Pressable
-                key={value}
-                style={[
-                  styles.filterChip,
-                  selected &&
-                    styles.filterChipSelected,
-                ]}
-                onPress={() =>
-                  setDateFilter(value)
-                }
-              >
-                <Text
+              return (
+                <Pressable
+                  key={value}
                   style={[
-                    styles.filterChipText,
+                    styles.filterChip,
+
                     selected &&
-                      styles.filterChipTextSelected,
+                      styles.filterChipSelected,
                   ]}
+                  onPress={() =>
+                    setDateFilter(
+                      value
+                    )
+                  }
                 >
-                  {label}
-                </Text>
-              </Pressable>
-            );
-          })}
+                  <Text
+                    style={[
+                      styles.filterChipText,
+
+                      selected &&
+                        styles.filterChipTextSelected,
+                    ]}
+                  >
+                    {label}
+                  </Text>
+                </Pressable>
+              );
+            }
+          )}
         </View>
 
-        <Text style={styles.filterLabel}>
-          Mood
-        </Text>
+        <SectionHeading
+          title="How it felt"
+        />
 
         <ScrollView
           horizontal
-          showsHorizontalScrollIndicator={false}
+          showsHorizontalScrollIndicator={
+            false
+          }
           contentContainerStyle={
-            styles.horizontalFilters
+            styles.moodFilters
           }
         >
-          {moodFilters.map((mood) => {
-            const selected =
-              moodFilter === mood;
+          {moodFilters.map(
+            (mood) => {
+              const selected =
+                moodFilter ===
+                mood;
 
-            return (
-              <Pressable
-                key={mood}
-                style={[
-                  styles.filterChip,
-                  selected &&
-                    styles.filterChipSelected,
-                ]}
-                onPress={() =>
-                  setMoodFilter(mood)
-                }
-              >
-                <Text
+              return (
+                <Pressable
+                  key={mood}
                   style={[
-                    styles.filterChipText,
+                    styles.filterChip,
+
                     selected &&
-                      styles.filterChipTextSelected,
+                      styles.filterChipSelected,
                   ]}
+                  onPress={() =>
+                    setMoodFilter(
+                      mood
+                    )
+                  }
                 >
-                  {mood === "all"
-                    ? "All moods"
-                    : mood}
-                </Text>
-              </Pressable>
-            );
-          })}
+                  <Text
+                    style={[
+                      styles.filterChipText,
+
+                      selected &&
+                        styles.filterChipTextSelected,
+                    ]}
+                  >
+                    {mood ===
+                    "all"
+                      ? "All moods"
+                      : mood}
+                  </Text>
+                </Pressable>
+              );
+            }
+          )}
         </ScrollView>
 
-        <View style={styles.resultHeader}>
-          <Text style={styles.resultText}>
+        <View
+          style={
+            styles.resultHeader
+          }
+        >
+          <Text
+            style={
+              styles.resultCount
+            }
+          >
             {filteredEntries.length}{" "}
-            {filteredEntries.length === 1
+            {filteredEntries.length ===
+            1
               ? "reflection"
               : "reflections"}
           </Text>
 
           {hasActiveFilters ? (
-            <Pressable onPress={clearFilters}>
-              <Text style={styles.clearFilters}>
-                Clear filters
+            <Pressable
+              onPress={
+                clearFilters
+              }
+            >
+              <Text
+                style={
+                  styles.clearFilters
+                }
+              >
+                Clear
               </Text>
             </Pressable>
           ) : null}
         </View>
 
         {loading ? (
-          <ActivityIndicator
-            size="large"
-            color="#CDB9FF"
-            style={styles.loader}
-          />
+          <View
+            style={
+              styles.loadingState
+            }
+          >
+            <ActivityIndicator
+              color={
+                colors.lavender
+              }
+            />
+
+            <Text
+              style={
+                styles.loadingText
+              }
+            >
+              Opening your
+              journal...
+            </Text>
+          </View>
         ) : null}
 
         {errorMessage ? (
-          <Text style={styles.error}>
-            {errorMessage}
-          </Text>
+          <View
+            style={
+              styles.errorBox
+            }
+          >
+            <Text
+              style={
+                styles.errorText
+              }
+            >
+              {errorMessage}
+            </Text>
+          </View>
         ) : null}
 
         {!loading &&
-        filteredEntries.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyMoon}>
-              ☾
-            </Text>
-
-            <Text style={styles.emptyTitle}>
-              {hasActiveFilters
-                ? "No reflections match"
-                : "Your journal is waiting"}
-            </Text>
-
-            <Text style={styles.emptyText}>
-              {hasActiveFilters
-                ? "Try changing your search or filters."
-                : "Write your first reflection whenever something feels worth remembering."}
-            </Text>
-
-            {hasActiveFilters ? (
-              <Pressable
-                style={styles.secondaryButton}
-                onPress={clearFilters}
-              >
-                <Text
-                  style={
-                    styles.secondaryButtonText
-                  }
-                >
-                  Clear Filters
-                </Text>
-              </Pressable>
-            ) : (
-              <Pressable
-                style={styles.createButton}
-                onPress={() =>
-                  router.push(
-                    "/journal/new"
-                  )
-                }
-              >
-                <Text
-                  style={
-                    styles.createButtonText
-                  }
-                >
-                  Write First Entry
-                </Text>
-              </Pressable>
-            )}
-          </View>
+        filteredEntries.length ===
+          0 ? (
+          <EmptyState
+            symbol="☾"
+            title={
+              hasActiveFilters
+                ? "Nothing here just yet"
+                : "Your pages are waiting"
+            }
+            description={
+              hasActiveFilters
+                ? "Try another word, mood, or time window."
+                : "Your reflections will gather here as you write."
+            }
+            actionTitle={
+              hasActiveFilters
+                ? "Clear filters"
+                : "Write a reflection"
+            }
+            onAction={
+              hasActiveFilters
+                ? clearFilters
+                : () =>
+                    router.push(
+                      "/journal/new"
+                    )
+            }
+          />
         ) : (
-          <View style={styles.entries}>
+          <View
+            style={
+              styles.entryList
+            }
+          >
             {filteredEntries.map(
               (entry) => (
                 <Pressable
                   key={entry.id}
-                  style={styles.entryCard}
+                  style={({ pressed }) => [
+                    styles.entryCard,
+
+                    pressed &&
+                      styles.entryPressed,
+                  ]}
                   onPress={() =>
                     router.push({
                       pathname:
                         "/journal/[id]",
+
                       params: {
                         id: entry.id,
                       },
@@ -390,9 +573,13 @@ export default function JournalScreen() {
                   }
                 >
                   <Text
-                    style={styles.entryDate}
+                    style={
+                      styles.entryDate
+                    }
                   >
-                    {entry.entry_date}
+                    {
+                      entry.entry_date
+                    }
                   </Text>
 
                   <Text
@@ -404,34 +591,57 @@ export default function JournalScreen() {
                   </Text>
 
                   <Text
-                    style={styles.preview}
+                    style={
+                      styles.entryPreview
+                    }
                     numberOfLines={3}
                   >
-                    {entry.content}
+                    {
+                      entry.content
+                    }
                   </Text>
 
                   <View
-                    style={styles.metadata}
+                    style={
+                      styles.metadata
+                    }
                   >
                     {entry.mood ? (
-                      <Text
+                      <View
                         style={
-                          styles.metadataText
+                          styles.metaChip
                         }
                       >
-                        {entry.mood}
-                      </Text>
+                        <Text
+                          style={
+                            styles.metaText
+                          }
+                        >
+                          {
+                            entry.mood
+                          }
+                        </Text>
+                      </View>
                     ) : null}
 
                     {entry.energy_level ? (
-                      <Text
+                      <View
                         style={
-                          styles.metadataText
+                          styles.metaChip
                         }
                       >
-                        Energy{" "}
-                        {entry.energy_level}/5
-                      </Text>
+                        <Text
+                          style={
+                            styles.metaText
+                          }
+                        >
+                          Energy{" "}
+                          {
+                            entry.energy_level
+                          }
+                          /5
+                        </Text>
+                      </View>
                     ) : null}
                   </View>
                 </Pressable>
@@ -444,253 +654,255 @@ export default function JournalScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0C0A18",
-  },
+const styles =
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor:
+        colors.background,
+    },
 
-  content: {
-    width: "100%",
-    maxWidth: 720,
-    alignSelf: "center",
-    paddingHorizontal: 24,
-    paddingTop: 30,
-    paddingBottom: 110,
-  },
+    content: {
+      width: "100%",
+      maxWidth: 720,
+      alignSelf: "center",
+      paddingHorizontal: 24,
+      paddingTop: 34,
+      paddingBottom: 115,
+    },
 
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 24,
-  },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 16,
+      marginBottom: 30,
+    },
 
-  eyebrow: {
-    color: "#8873B8",
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 2,
-  },
+    title: {
+      color: colors.text,
+      fontFamily:
+        fonts.display,
+      fontSize: 40,
+      lineHeight: 43,
+    },
 
-  title: {
-    color: "#F5F0FF",
-    fontSize: 34,
-    fontWeight: "700",
-    marginTop: 4,
-  },
+    subtitle: {
+      color:
+        colors.textMuted,
+      fontFamily: fonts.body,
+      fontSize: 13,
+      lineHeight: 20,
+      marginTop: 3,
+    },
 
-  newButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#7357C7",
-    justifyContent: "center",
-    alignItems: "center",
-  },
+    newButton: {
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      backgroundColor:
+        colors.purple,
+      alignItems: "center",
+      justifyContent:
+        "center",
+    },
 
-  newButtonText: {
-    color: "#FFFFFF",
-    fontSize: 26,
-  },
+    newButtonText: {
+      color: colors.white,
+      fontFamily:
+        fonts.bodyMedium,
+      fontSize: 26,
+      lineHeight: 28,
+    },
 
-  searchBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#151126",
-    borderWidth: 1,
-    borderColor: "#302847",
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    marginBottom: 20,
-  },
+    searchBox: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor:
+        colors.surface,
+      borderWidth: 1,
+      borderColor:
+        colors.border,
+      borderRadius: radius.lg,
+      paddingHorizontal: 15,
+      marginBottom: 30,
+    },
 
-  searchIcon: {
-    color: "#8E819F",
-    fontSize: 20,
-    marginRight: 9,
-  },
+    searchSymbol: {
+      color: colors.gold,
+      fontSize: 14,
+      marginRight: 9,
+    },
 
-  searchInput: {
-    flex: 1,
-    color: "#F2EDFA",
-    fontSize: 15,
-    paddingVertical: 14,
-  },
+    searchInput: {
+      flex: 1,
+      color: colors.text,
+      fontFamily: fonts.body,
+      fontSize: 14,
+      paddingVertical: 14,
+    },
 
-  clearSearch: {
-    color: "#A998BD",
-    fontSize: 22,
-    paddingHorizontal: 4,
-  },
+    clearSearch: {
+      color:
+        colors.textMuted,
+      fontSize: 21,
+      paddingHorizontal: 4,
+    },
 
-  filterLabel: {
-    color: "#8F84A0",
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 1.2,
-    marginBottom: 9,
-  },
+    filterRow: {
+      flexDirection: "row",
+      gap: 8,
+      marginBottom: 27,
+    },
 
-  filterRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 18,
-  },
+    moodFilters: {
+      gap: 8,
+      paddingBottom: 30,
+    },
 
-  horizontalFilters: {
-    gap: 8,
-    paddingBottom: 20,
-  },
+    filterChip: {
+      backgroundColor:
+        colors.surface,
+      borderWidth: 1,
+      borderColor:
+        colors.border,
+      borderRadius:
+        radius.pill,
+      paddingHorizontal: 14,
+      paddingVertical: 9,
+    },
 
-  filterChip: {
-    backgroundColor: "#151126",
-    borderWidth: 1,
-    borderColor: "#302847",
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-  },
+    filterChipSelected: {
+      backgroundColor:
+        colors.purpleDark,
+      borderColor:
+        colors.lavenderStrong,
+    },
 
-  filterChipSelected: {
-    backgroundColor: "#5E489D",
-    borderColor: "#8F74D2",
-  },
+    filterChipText: {
+      color:
+        colors.textMuted,
+      fontFamily:
+        fonts.bodyMedium,
+      fontSize: 11,
+    },
 
-  filterChipText: {
-    color: "#A89DBB",
-    fontSize: 12,
-  },
+    filterChipTextSelected: {
+      color: colors.white,
+    },
 
-  filterChipTextSelected: {
-    color: "#FFFFFF",
-  },
+    resultHeader: {
+      flexDirection: "row",
+      justifyContent:
+        "space-between",
+      alignItems: "center",
+      marginBottom: 15,
+    },
 
-  resultHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
+    resultCount: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 11,
+    },
 
-  resultText: {
-    color: "#81778D",
-    fontSize: 12,
-  },
+    clearFilters: {
+      color: colors.lavender,
+      fontFamily:
+        fonts.bodySemiBold,
+      fontSize: 11,
+    },
 
-  clearFilters: {
-    color: "#A98BE0",
-    fontSize: 12,
-    fontWeight: "600",
-  },
+    loadingState: {
+      alignItems: "center",
+      paddingVertical: 30,
+    },
 
-  loader: {
-    marginTop: 30,
-  },
+    loadingText: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      marginTop: 10,
+      fontSize: 12,
+    },
 
-  entries: {
-    gap: 14,
-  },
+    errorBox: {
+      backgroundColor:
+        colors.errorBackground,
+      borderWidth: 1,
+      borderColor:
+        colors.errorBorder,
+      borderRadius:
+        radius.md,
+      padding: 13,
+      marginBottom: 15,
+    },
 
-  entryCard: {
-    backgroundColor: "#151126",
-    padding: 20,
-    borderRadius: 19,
-    borderWidth: 1,
-    borderColor: "#29213D",
-  },
+    errorText: {
+      color: colors.errorText,
+      fontFamily: fonts.body,
+      fontSize: 12,
+    },
 
-  entryDate: {
-    color: "#81758F",
-    fontSize: 12,
-  },
+    entryList: {
+      gap: 12,
+    },
 
-  entryTitle: {
-    color: "#EFE8FA",
-    fontSize: 20,
-    fontWeight: "700",
-    marginTop: 6,
-  },
+    entryCard: {
+      backgroundColor:
+        colors.surface,
+      borderWidth: 1,
+      borderColor:
+        colors.border,
+      borderRadius:
+        radius.xl,
+      padding: 20,
+    },
 
-  preview: {
-    color: "#948A9F",
-    lineHeight: 21,
-    marginTop: 8,
-  },
+    entryPressed: {
+      opacity: 0.8,
+    },
 
-  metadata: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 9,
-    marginTop: 15,
-  },
+    entryDate: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 10,
+    },
 
-  metadataText: {
-    color: "#B5A4D3",
-    backgroundColor: "#211A35",
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    fontSize: 12,
-  },
+    entryTitle: {
+      color: colors.text,
+      fontFamily:
+        fonts.display,
+      fontSize: 24,
+      lineHeight: 28,
+      marginTop: 5,
+    },
 
-  emptyState: {
-    alignItems: "center",
-    backgroundColor: "#151126",
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#29213D",
-    padding: 34,
-  },
+    entryPreview: {
+      color:
+        colors.textMuted,
+      fontFamily: fonts.body,
+      fontSize: 12,
+      lineHeight: 19,
+      marginTop: 7,
+    },
 
-  emptyMoon: {
-    color: "#8B74B3",
-    fontSize: 42,
-  },
+    metadata: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 7,
+      marginTop: 14,
+    },
 
-  emptyTitle: {
-    color: "#E2DAEE",
-    fontSize: 19,
-    fontWeight: "700",
-    marginTop: 12,
-  },
+    metaChip: {
+      backgroundColor:
+        colors.surfaceRaised,
+      borderRadius:
+        radius.pill,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+    },
 
-  emptyText: {
-    color: "#83798D",
-    textAlign: "center",
-    lineHeight: 21,
-    marginTop: 8,
-  },
-
-  createButton: {
-    backgroundColor: "#7357C7",
-    borderRadius: 14,
-    paddingVertical: 13,
-    paddingHorizontal: 20,
-    marginTop: 20,
-  },
-
-  createButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-  },
-
-  secondaryButton: {
-    borderWidth: 1,
-    borderColor: "#5B477D",
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    marginTop: 20,
-  },
-
-  secondaryButtonText: {
-    color: "#C9B6E8",
-    fontWeight: "700",
-  },
-
-  error: {
-    color: "#F1A7B9",
-    marginBottom: 18,
-  },
-}); 
+    metaText: {
+      color: colors.lavender,
+      fontFamily: fonts.body,
+      fontSize: 10,
+    },
+  }); 

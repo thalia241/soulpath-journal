@@ -20,6 +20,15 @@ import {
   View,
 } from "react-native";
 
+import EmptyState from "../../src/components/EmptyState";
+import SectionHeading from "../../src/components/SectionHeading";
+
+import {
+  colors,
+  fonts,
+  radius,
+} from "../../src/theme";
+
 import {
   Experience,
   ExperienceType,
@@ -61,8 +70,10 @@ export default function ExperiencesScreen() {
     setSynchronicityCount,
   ] = useState(0);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
 
   const [
     errorMessage,
@@ -103,18 +114,18 @@ export default function ExperiencesScreen() {
         const [
           entries,
           dreams,
-          synchronicities,
-        ] = await Promise.all([
-          getExperiences(),
-          getDreamCount(),
-          getSynchronicityCount(),
-        ]);
+          signs,
+        ] =
+          await Promise.all([
+            getExperiences(),
+            getDreamCount(),
+            getSynchronicityCount(),
+          ]);
 
         setExperiences(entries);
         setDreamCount(dreams);
-
         setSynchronicityCount(
-          synchronicities
+          signs
         );
       } catch (error) {
         console.error(
@@ -125,7 +136,7 @@ export default function ExperiencesScreen() {
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : "Unable to load your experiences."
+            : "Unable to open your dreams and signs."
         );
       } finally {
         setLoading(false);
@@ -140,35 +151,30 @@ export default function ExperiencesScreen() {
 
   const filteredExperiences =
     useMemo(() => {
-      const normalizedSearch =
+      const search =
         searchText
           .trim()
           .toLowerCase();
 
-      const now = new Date();
+      const now =
+        new Date();
 
       return experiences.filter(
         (experience) => {
           const matchesSearch =
-            !normalizedSearch ||
+            !search ||
             experience.title
               .toLowerCase()
-              .includes(
-                normalizedSearch
-              ) ||
+              .includes(search) ||
             experience.description
               .toLowerCase()
-              .includes(
-                normalizedSearch
-              ) ||
+              .includes(search) ||
             (
               experience.interpretation ??
               ""
             )
               .toLowerCase()
-              .includes(
-                normalizedSearch
-              );
+              .includes(search);
 
           const matchesType =
             typeFilter === "all" ||
@@ -191,29 +197,25 @@ export default function ExperiencesScreen() {
             const days =
               Number(dateFilter);
 
-            const startDate =
+            const start =
               new Date(now);
 
-            startDate.setHours(
+            start.setHours(
               0,
               0,
               0,
               0
             );
 
-            startDate.setDate(
-              startDate.getDate() -
+            start.setDate(
+              start.getDate() -
                 (days - 1)
             );
 
-            const experienceDate =
+            matchesDate =
               new Date(
                 experience.experienced_at
-              );
-
-            matchesDate =
-              experienceDate >=
-              startDate;
+              ) >= start;
           }
 
           return (
@@ -232,25 +234,20 @@ export default function ExperiencesScreen() {
       dateFilter,
     ]);
 
-  const hasActiveFilters =
-    searchText.trim().length > 0 ||
+  const hasFilters =
+    searchText.trim() !== "" ||
     typeFilter !== "all" ||
-    significanceFilter !== "all" ||
+    significanceFilter !==
+      "all" ||
     dateFilter !== "all";
 
   function clearFilters() {
     setSearchText("");
     setTypeFilter("all");
-    setSignificanceFilter("all");
+    setSignificanceFilter(
+      "all"
+    );
     setDateFilter("all");
-  }
-
-  function getIcon(
-    type: ExperienceType
-  ) {
-    return type === "dream"
-      ? "☾"
-      : "✦";
   }
 
   return (
@@ -266,18 +263,24 @@ export default function ExperiencesScreen() {
         }
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.header}>
-          <View>
-            <Text
-              style={styles.eyebrow}
-            >
-              MEANINGFUL EXPERIENCES
-            </Text>
-
+        <View
+          style={styles.header}
+        >
+          <View style={{ flex: 1 }}>
             <Text
               style={styles.title}
             >
               Dreams & Signs
+            </Text>
+
+            <Text
+              style={
+                styles.subtitle
+              }
+            >
+              The things that linger
+              after waking. The moments
+              that ask to be noticed.
             </Text>
           </View>
 
@@ -294,13 +297,17 @@ export default function ExperiencesScreen() {
                 styles.addButtonText
               }
             >
-              ＋
+              +
             </Text>
           </Pressable>
         </View>
 
-        <View style={styles.statsRow}>
-          <View style={styles.statCard}>
+        <View
+          style={styles.statsRow}
+        >
+          <View
+            style={styles.statCard}
+          >
             <Text
               style={styles.statSymbol}
             >
@@ -316,11 +323,13 @@ export default function ExperiencesScreen() {
             <Text
               style={styles.statLabel}
             >
-              Dreams
+              dreams remembered
             </Text>
           </View>
 
-          <View style={styles.statCard}>
+          <View
+            style={styles.statCard}
+          >
             <Text
               style={styles.statSymbol}
             >
@@ -336,171 +345,190 @@ export default function ExperiencesScreen() {
             <Text
               style={styles.statLabel}
             >
-              Synchronicities
+              signs noticed
             </Text>
           </View>
         </View>
 
-        <View style={styles.searchBox}>
-          <Text style={styles.searchIcon}>
-            ⌕
+        <View
+          style={styles.searchBox}
+        >
+          <Text
+            style={
+              styles.searchSymbol
+            }
+          >
+            ☾
           </Text>
 
           <TextInput
             style={styles.searchInput}
             value={searchText}
-            onChangeText={setSearchText}
-            placeholder="Search dreams and signs..."
-            placeholderTextColor="#70677F"
+            onChangeText={
+              setSearchText
+            }
+            placeholder="Search what you remember..."
+            placeholderTextColor={
+              colors.textDim
+            }
           />
 
-          {searchText.length > 0 ? (
+          {searchText ? (
             <Pressable
               onPress={() =>
                 setSearchText("")
               }
             >
-              <Text style={styles.clearSearch}>
+              <Text
+                style={
+                  styles.clearSearch
+                }
+              >
                 ×
               </Text>
             </Pressable>
           ) : null}
         </View>
 
-        <Text style={styles.filterLabel}>
-          Type
-        </Text>
+        <SectionHeading
+          title="What kind of moment?"
+        />
 
-        <View style={styles.filterRow}>
-          {(
+        <View
+          style={styles.filterRow}
+        >
+          {[
+            ["all", "Everything"],
+            ["dream", "Dreams"],
             [
-              ["all", "All"],
-              ["dream", "Dreams"],
-              [
-                "synchronicity",
-                "Synchronicities",
-              ],
-            ] as [
-              TypeFilter,
-              string
-            ][]
-          ).map(([value, label]) => {
-            const selected =
-              typeFilter === value;
+              "synchronicity",
+              "Signs",
+            ],
+          ].map(
+            ([value, label]) => {
+              const selected =
+                typeFilter ===
+                value;
 
-            return (
-              <Pressable
-                key={value}
-                style={[
-                  styles.filterChip,
-                  selected &&
-                    styles.filterChipSelected,
-                ]}
-                onPress={() =>
-                  setTypeFilter(value)
-                }
-              >
-                <Text
+              return (
+                <Pressable
+                  key={value}
                   style={[
-                    styles.filterChipText,
+                    styles.chip,
                     selected &&
-                      styles.filterChipTextSelected,
+                      styles.chipSelected,
                   ]}
+                  onPress={() =>
+                    setTypeFilter(
+                      value as TypeFilter
+                    )
+                  }
                 >
-                  {label}
-                </Text>
-              </Pressable>
-            );
-          })}
+                  <Text
+                    style={[
+                      styles.chipText,
+                      selected &&
+                        styles.chipTextSelected,
+                    ]}
+                  >
+                    {label}
+                  </Text>
+                </Pressable>
+              );
+            }
+          )}
         </View>
 
-        <Text style={styles.filterLabel}>
-          Time
-        </Text>
+        <SectionHeading
+          title="When"
+        />
 
-        <View style={styles.filterRow}>
-          {(
-            [
-              ["all", "All"],
-              ["7", "7 Days"],
-              ["30", "30 Days"],
-            ] as [
-              DateFilter,
-              string
-            ][]
-          ).map(([value, label]) => {
-            const selected =
-              dateFilter === value;
+        <View
+          style={styles.filterRow}
+        >
+          {[
+            ["all", "All time"],
+            ["7", "7 days"],
+            ["30", "30 days"],
+          ].map(
+            ([value, label]) => {
+              const selected =
+                dateFilter ===
+                value;
 
-            return (
-              <Pressable
-                key={value}
-                style={[
-                  styles.filterChip,
-                  selected &&
-                    styles.filterChipSelected,
-                ]}
-                onPress={() =>
-                  setDateFilter(value)
-                }
-              >
-                <Text
+              return (
+                <Pressable
+                  key={value}
                   style={[
-                    styles.filterChipText,
+                    styles.chip,
                     selected &&
-                      styles.filterChipTextSelected,
+                      styles.chipSelected,
                   ]}
+                  onPress={() =>
+                    setDateFilter(
+                      value as DateFilter
+                    )
+                  }
                 >
-                  {label}
-                </Text>
-              </Pressable>
-            );
-          })}
+                  <Text
+                    style={[
+                      styles.chipText,
+                      selected &&
+                        styles.chipTextSelected,
+                    ]}
+                  >
+                    {label}
+                  </Text>
+                </Pressable>
+              );
+            }
+          )}
         </View>
 
-        <Text style={styles.filterLabel}>
-          Significance
-        </Text>
+        <SectionHeading
+          title="How deeply it stayed with you"
+        />
 
         <ScrollView
           horizontal
-          showsHorizontalScrollIndicator={false}
+          showsHorizontalScrollIndicator={
+            false
+          }
           contentContainerStyle={
-            styles.horizontalFilters
+            styles.significanceRow
           }
         >
-          {(
-            [
-              "all",
-              "1",
-              "2",
-              "3",
-              "4",
-              "5",
-            ] as SignificanceFilter[]
-          ).map((value) => {
+          {[
+            "all",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+          ].map((value) => {
             const selected =
-              significanceFilter === value;
+              significanceFilter ===
+              value;
 
             return (
               <Pressable
                 key={value}
                 style={[
-                  styles.filterChip,
+                  styles.chip,
                   selected &&
-                    styles.filterChipSelected,
+                    styles.chipSelected,
                 ]}
                 onPress={() =>
                   setSignificanceFilter(
-                    value
+                    value as SignificanceFilter
                   )
                 }
               >
                 <Text
                   style={[
-                    styles.filterChipText,
+                    styles.chipText,
                     selected &&
-                      styles.filterChipTextSelected,
+                      styles.chipTextSelected,
                   ]}
                 >
                   {value === "all"
@@ -512,18 +540,24 @@ export default function ExperiencesScreen() {
           })}
         </ScrollView>
 
-        <View style={styles.resultHeader}>
-          <Text style={styles.resultText}>
+        <View
+          style={
+            styles.resultsHeader
+          }
+        >
+          <Text
+            style={styles.resultText}
+          >
             {
               filteredExperiences.length
             }{" "}
             {filteredExperiences.length ===
             1
-              ? "experience"
-              : "experiences"}
+              ? "memory"
+              : "memories"}
           </Text>
 
-          {hasActiveFilters ? (
+          {hasFilters ? (
             <Pressable
               onPress={clearFilters}
             >
@@ -532,186 +566,187 @@ export default function ExperiencesScreen() {
                   styles.clearFilters
                 }
               >
-                Clear filters
+                Clear
               </Text>
             </Pressable>
           ) : null}
         </View>
 
         {loading ? (
-          <ActivityIndicator
-            color="#CDB9FF"
-            size="large"
-            style={styles.loader}
-          />
+          <View
+            style={
+              styles.loadingState
+            }
+          >
+            <ActivityIndicator
+              color={
+                colors.lavender
+              }
+            />
+
+            <Text
+              style={
+                styles.loadingText
+              }
+            >
+              Gathering what you've
+              recorded...
+            </Text>
+          </View>
         ) : null}
 
         {errorMessage ? (
-          <Text style={styles.error}>
-            {errorMessage}
-          </Text>
+          <View
+            style={styles.errorBox}
+          >
+            <Text
+              style={
+                styles.errorText
+              }
+            >
+              {errorMessage}
+            </Text>
+          </View>
         ) : null}
 
         {!loading &&
         filteredExperiences.length ===
           0 ? (
-          <View
-            style={styles.emptyState}
-          >
-            <Text
-              style={styles.emptySymbol}
-            >
-              ☾ ✦
-            </Text>
-
-            <Text
-              style={styles.emptyTitle}
-            >
-              {hasActiveFilters
-                ? "No experiences match"
-                : "Nothing recorded yet"}
-            </Text>
-
-            <Text
-              style={styles.emptyText}
-            >
-              {hasActiveFilters
-                ? "Try changing your search or filters."
-                : "Dreams and meaningful coincidences can be captured here whenever they stand out to you."}
-            </Text>
-
-            {hasActiveFilters ? (
-              <Pressable
-                style={
-                  styles.secondaryButton
-                }
-                onPress={clearFilters}
-              >
-                <Text
-                  style={
-                    styles.secondaryButtonText
-                  }
-                >
-                  Clear Filters
-                </Text>
-              </Pressable>
-            ) : (
-              <Pressable
-                style={
-                  styles.createButton
-                }
-                onPress={() =>
-                  router.push(
-                    "/experiences/new"
-                  )
-                }
-              >
-                <Text
-                  style={
-                    styles.createButtonText
-                  }
-                >
-                  Record an Experience
-                </Text>
-              </Pressable>
-            )}
-          </View>
+          <EmptyState
+            symbol="☾ ✦"
+            title={
+              hasFilters
+                ? "Nothing surfaced here"
+                : "The page is quiet"
+            }
+            description={
+              hasFilters
+                ? "Try changing the words or filters you're using."
+                : "Dreams, strange coincidences, and meaningful moments can gather here when they find you."
+            }
+            actionTitle={
+              hasFilters
+                ? "Clear filters"
+                : "Record something"
+            }
+            onAction={
+              hasFilters
+                ? clearFilters
+                : () =>
+                    router.push(
+                      "/experiences/new"
+                    )
+            }
+          />
         ) : (
-          <View style={styles.list}>
+          <View
+            style={styles.list}
+          >
             {filteredExperiences.map(
-              (experience) => (
-                <Pressable
-                  key={experience.id}
-                  style={
-                    styles.experienceCard
-                  }
-                  onPress={() =>
-                    router.push({
-                      pathname:
-                        "/experiences/[id]",
-                      params: {
-                        id: experience.id,
-                      },
-                    })
-                  }
-                >
-                  <View
-                    style={
-                      styles.cardHeader
+              (experience) => {
+                const dream =
+                  experience.experience_type ===
+                  "dream";
+
+                return (
+                  <Pressable
+                    key={
+                      experience.id
+                    }
+                    style={({ pressed }) => [
+                      styles.experienceCard,
+                      pressed &&
+                        styles.pressed,
+                    ]}
+                    onPress={() =>
+                      router.push({
+                        pathname:
+                          "/experiences/[id]",
+                        params: {
+                          id: experience.id,
+                        },
+                      })
                     }
                   >
-                    <Text
+                    <View
                       style={
-                        styles.cardSymbol
+                        styles.typeRow
                       }
                     >
-                      {getIcon(
-                        experience.experience_type
-                      )}
-                    </Text>
-
-                    <Text
-                      style={
-                        styles.cardType
-                      }
-                    >
-                      {experience.experience_type ===
-                      "dream"
-                        ? "DREAM"
-                        : "SYNCHRONICITY"}
-                    </Text>
-                  </View>
-
-                  <Text
-                    style={
-                      styles.cardTitle
-                    }
-                  >
-                    {experience.title}
-                  </Text>
-
-                  <Text
-                    style={
-                      styles.cardPreview
-                    }
-                    numberOfLines={3}
-                  >
-                    {
-                      experience.description
-                    }
-                  </Text>
-
-                  <View
-                    style={
-                      styles.cardFooter
-                    }
-                  >
-                    <Text
-                      style={
-                        styles.cardDate
-                      }
-                    >
-                      {new Date(
-                        experience.experienced_at
-                      ).toLocaleDateString()}
-                    </Text>
-
-                    {experience.significance_level ? (
                       <Text
                         style={
-                          styles.significanceChip
+                          styles.typeSymbol
                         }
                       >
-                        Significance{" "}
-                        {
-                          experience.significance_level
-                        }
-                        /5
+                        {dream
+                          ? "☾"
+                          : "✦"}
                       </Text>
-                    ) : null}
-                  </View>
-                </Pressable>
-              )
+
+                      <Text
+                        style={
+                          styles.typeText
+                        }
+                      >
+                        {dream
+                          ? "Dream"
+                          : "Synchronicity"}
+                      </Text>
+                    </View>
+
+                    <Text
+                      style={
+                        styles.cardTitle
+                      }
+                    >
+                      {
+                        experience.title
+                      }
+                    </Text>
+
+                    <Text
+                      style={
+                        styles.cardBody
+                      }
+                      numberOfLines={3}
+                    >
+                      {
+                        experience.description
+                      }
+                    </Text>
+
+                    <View
+                      style={
+                        styles.cardFooter
+                      }
+                    >
+                      <Text
+                        style={
+                          styles.dateText
+                        }
+                      >
+                        {new Date(
+                          experience.experienced_at
+                        ).toLocaleDateString()}
+                      </Text>
+
+                      {experience.significance_level ? (
+                        <Text
+                          style={
+                            styles.significance
+                          }
+                        >
+                          ✦{" "}
+                          {
+                            experience.significance_level
+                          }
+                          /5
+                        </Text>
+                      ) : null}
+                    </View>
+                  </Pressable>
+                );
+              }
             )}
           </View>
         )}
@@ -720,310 +755,305 @@ export default function ExperiencesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0C0A18",
-  },
+const styles =
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor:
+        colors.background,
+    },
 
-  content: {
-    width: "100%",
-    maxWidth: 720,
-    alignSelf: "center",
-    paddingHorizontal: 24,
-    paddingTop: 30,
-    paddingBottom: 110,
-  },
+    content: {
+      width: "100%",
+      maxWidth: 720,
+      alignSelf: "center",
+      paddingHorizontal: 24,
+      paddingTop: 34,
+      paddingBottom: 115,
+    },
 
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 26,
-  },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 16,
+      marginBottom: 28,
+    },
 
-  eyebrow: {
-    color: "#8873B8",
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 2,
-  },
+    title: {
+      color: colors.text,
+      fontFamily: fonts.display,
+      fontSize: 39,
+      lineHeight: 43,
+    },
 
-  title: {
-    color: "#F5F0FF",
-    fontSize: 32,
-    fontWeight: "700",
-    marginTop: 5,
-  },
+    subtitle: {
+      color:
+        colors.textMuted,
+      fontFamily:
+        fonts.displayItalic,
+      fontSize: 16,
+      lineHeight: 22,
+      marginTop: 4,
+      maxWidth: 480,
+    },
 
-  addButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#7357C7",
-    justifyContent: "center",
-    alignItems: "center",
-  },
+    addButton: {
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      backgroundColor:
+        colors.purple,
+      justifyContent:
+        "center",
+      alignItems: "center",
+    },
 
-  addButtonText: {
-    color: "#FFFFFF",
-    fontSize: 26,
-  },
+    addButtonText: {
+      color: colors.white,
+      fontFamily:
+        fonts.bodyMedium,
+      fontSize: 26,
+    },
 
-  statsRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 22,
-  },
+    statsRow: {
+      flexDirection: "row",
+      gap: 12,
+      marginBottom: 24,
+    },
 
-  statCard: {
-    flex: 1,
-    backgroundColor: "#151126",
-    borderWidth: 1,
-    borderColor: "#29213D",
-    borderRadius: 18,
-    padding: 18,
-  },
+    statCard: {
+      flex: 1,
+      backgroundColor:
+        colors.surface,
+      borderWidth: 1,
+      borderColor:
+        colors.border,
+      borderRadius:
+        radius.lg,
+      padding: 18,
+    },
 
-  statSymbol: {
-    color: "#D4B866",
-    fontSize: 20,
-  },
+    statSymbol: {
+      color: colors.gold,
+      fontSize: 19,
+    },
 
-  statNumber: {
-    color: "#F0E8FF",
-    fontSize: 26,
-    fontWeight: "700",
-    marginTop: 8,
-  },
+    statNumber: {
+      color: colors.text,
+      fontFamily: fonts.display,
+      fontSize: 31,
+      marginTop: 5,
+    },
 
-  statLabel: {
-    color: "#82798E",
-    fontSize: 12,
-    marginTop: 2,
-  },
+    statLabel: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 10,
+    },
 
-  searchBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#151126",
-    borderWidth: 1,
-    borderColor: "#302847",
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    marginBottom: 20,
-  },
+    searchBox: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor:
+        colors.surface,
+      borderWidth: 1,
+      borderColor:
+        colors.border,
+      borderRadius:
+        radius.lg,
+      paddingHorizontal: 15,
+      marginBottom: 30,
+    },
 
-  searchIcon: {
-    color: "#8E819F",
-    fontSize: 20,
-    marginRight: 9,
-  },
+    searchSymbol: {
+      color: colors.gold,
+      fontSize: 16,
+      marginRight: 10,
+    },
 
-  searchInput: {
-    flex: 1,
-    color: "#F2EDFA",
-    fontSize: 15,
-    paddingVertical: 14,
-  },
+    searchInput: {
+      flex: 1,
+      color: colors.text,
+      fontFamily: fonts.body,
+      paddingVertical: 14,
+      fontSize: 14,
+    },
 
-  clearSearch: {
-    color: "#A998BD",
-    fontSize: 22,
-    paddingHorizontal: 4,
-  },
+    clearSearch: {
+      color:
+        colors.textMuted,
+      fontSize: 21,
+    },
 
-  filterLabel: {
-    color: "#8F84A0",
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 1.2,
-    marginBottom: 9,
-  },
+    filterRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+      marginBottom: 27,
+    },
 
-  filterRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 18,
-  },
+    significanceRow: {
+      gap: 8,
+      paddingBottom: 29,
+    },
 
-  horizontalFilters: {
-    gap: 8,
-    paddingBottom: 20,
-  },
+    chip: {
+      backgroundColor:
+        colors.surface,
+      borderWidth: 1,
+      borderColor:
+        colors.border,
+      borderRadius:
+        radius.pill,
+      paddingHorizontal: 14,
+      paddingVertical: 9,
+    },
 
-  filterChip: {
-    backgroundColor: "#151126",
-    borderWidth: 1,
-    borderColor: "#302847",
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-  },
+    chipSelected: {
+      backgroundColor:
+        colors.purpleDark,
+      borderColor:
+        colors.lavenderStrong,
+    },
 
-  filterChipSelected: {
-    backgroundColor: "#5E489D",
-    borderColor: "#8F74D2",
-  },
+    chipText: {
+      color:
+        colors.textMuted,
+      fontFamily:
+        fonts.bodyMedium,
+      fontSize: 11,
+    },
 
-  filterChipText: {
-    color: "#A89DBB",
-    fontSize: 12,
-  },
+    chipTextSelected: {
+      color: colors.white,
+    },
 
-  filterChipTextSelected: {
-    color: "#FFFFFF",
-  },
+    resultsHeader: {
+      flexDirection: "row",
+      justifyContent:
+        "space-between",
+      marginBottom: 15,
+    },
 
-  resultHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
+    resultText: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 11,
+    },
 
-  resultText: {
-    color: "#81778D",
-    fontSize: 12,
-  },
+    clearFilters: {
+      color: colors.lavender,
+      fontFamily:
+        fonts.bodySemiBold,
+      fontSize: 11,
+    },
 
-  clearFilters: {
-    color: "#A98BE0",
-    fontSize: 12,
-    fontWeight: "600",
-  },
+    list: {
+      gap: 12,
+    },
 
-  loader: {
-    marginTop: 30,
-  },
+    experienceCard: {
+      backgroundColor:
+        colors.surface,
+      borderWidth: 1,
+      borderColor:
+        colors.border,
+      borderRadius:
+        radius.xl,
+      padding: 20,
+    },
 
-  list: {
-    gap: 13,
-  },
+    pressed: {
+      opacity: 0.8,
+    },
 
-  experienceCard: {
-    backgroundColor: "#151126",
-    borderWidth: 1,
-    borderColor: "#29213D",
-    borderRadius: 19,
-    padding: 20,
-  },
+    typeRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 7,
+    },
 
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
+    typeSymbol: {
+      color: colors.gold,
+      fontSize: 14,
+    },
 
-  cardSymbol: {
-    color: "#D4B866",
-    fontSize: 18,
-  },
+    typeText: {
+      color: colors.lavender,
+      fontFamily:
+        fonts.bodySemiBold,
+      fontSize: 10,
+    },
 
-  cardType: {
-    color: "#917CB8",
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 1.4,
-  },
+    cardTitle: {
+      color: colors.text,
+      fontFamily: fonts.display,
+      fontSize: 25,
+      lineHeight: 29,
+      marginTop: 9,
+    },
 
-  cardTitle: {
-    color: "#EFE8FA",
-    fontSize: 20,
-    fontWeight: "700",
-    marginTop: 11,
-  },
+    cardBody: {
+      color:
+        colors.textMuted,
+      fontFamily: fonts.body,
+      fontSize: 12,
+      lineHeight: 19,
+      marginTop: 6,
+    },
 
-  cardPreview: {
-    color: "#948A9F",
-    fontSize: 14,
-    lineHeight: 21,
-    marginTop: 8,
-  },
+    cardFooter: {
+      flexDirection: "row",
+      justifyContent:
+        "space-between",
+      alignItems: "center",
+      marginTop: 14,
+    },
 
-  cardFooter: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 16,
-  },
+    dateText: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 10,
+    },
 
-  cardDate: {
-    color: "#777080",
-    fontSize: 12,
-  },
+    significance: {
+      color: colors.goldSoft,
+      fontFamily: fonts.body,
+      fontSize: 10,
+      backgroundColor:
+        colors.surfaceRaised,
+      paddingHorizontal: 9,
+      paddingVertical: 5,
+      borderRadius:
+        radius.pill,
+    },
 
-  significanceChip: {
-    color: "#C1AEE1",
-    backgroundColor: "#211A35",
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    fontSize: 11,
-  },
+    loadingState: {
+      alignItems: "center",
+      paddingVertical: 30,
+    },
 
-  emptyState: {
-    backgroundColor: "#151126",
-    borderWidth: 1,
-    borderColor: "#29213D",
-    borderRadius: 20,
-    alignItems: "center",
-    padding: 34,
-  },
+    loadingText: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      marginTop: 10,
+      fontSize: 12,
+    },
 
-  emptySymbol: {
-    color: "#A68ECF",
-    fontSize: 32,
-  },
+    errorBox: {
+      backgroundColor:
+        colors.errorBackground,
+      borderWidth: 1,
+      borderColor:
+        colors.errorBorder,
+      borderRadius:
+        radius.md,
+      padding: 13,
+    },
 
-  emptyTitle: {
-    color: "#E4DAF0",
-    fontSize: 19,
-    fontWeight: "700",
-    marginTop: 14,
-  },
-
-  emptyText: {
-    color: "#83798D",
-    textAlign: "center",
-    lineHeight: 21,
-    marginTop: 8,
-    maxWidth: 380,
-  },
-
-  createButton: {
-    backgroundColor: "#7357C7",
-    borderRadius: 14,
-    paddingHorizontal: 19,
-    paddingVertical: 13,
-    marginTop: 20,
-  },
-
-  createButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-  },
-
-  secondaryButton: {
-    borderWidth: 1,
-    borderColor: "#5B477D",
-    borderRadius: 14,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    marginTop: 20,
-  },
-
-  secondaryButtonText: {
-    color: "#C9B6E8",
-    fontWeight: "700",
-  },
-
-  error: {
-    color: "#F1A7B9",
-    textAlign: "center",
-    marginVertical: 20,
-  },
-}); 
+    errorText: {
+      color: colors.errorText,
+      fontFamily: fonts.body,
+      fontSize: 12,
+    },
+  }); 

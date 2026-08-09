@@ -1,58 +1,87 @@
 import { router } from "expo-router";
+
 import {
+  Pressable,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
+
+import SoulButton from "../src/components/SoulButton";
+
+import {
+  colors,
+  fonts,
+  radius,
+} from "../src/theme";
 
 export default function WelcomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.symbolContainer}>
-          <Text style={styles.moon}>☾</Text>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.stars}>
           <Text style={styles.star}>✦</Text>
+          <Text style={styles.moon}>☾</Text>
+          <Text style={styles.smallStar}>·</Text>
         </View>
 
-        <View style={styles.titleSection}>
-          <Text style={styles.title}>SoulPath Journal</Text>
+        <View style={styles.hero}>
+          <Text style={styles.name}>
+            SoulPath
+          </Text>
 
-          <Text style={styles.subtitle}>
+          <Text style={styles.tagline}>
             A private space for the journey within.
           </Text>
-        </View>
 
-        <View style={styles.descriptionContainer}>
           <Text style={styles.description}>
-            Reflect on your emotions, spiritual practices, dreams,
-            synchronicities, and meaningful experiences in one peaceful place.
+            Keep the thoughts, dreams, rituals, questions,
+            and quiet moments that help you understand
+            your own inner landscape.
           </Text>
         </View>
 
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={styles.primaryButton}
-            activeOpacity={0.85}
-            onPress={() => router.push("/register")}
-          >
-            <Text style={styles.primaryButtonText}>Begin Your Journey</Text>
-          </TouchableOpacity>
+        <View style={styles.quoteArea}>
+          <Text style={styles.quoteSymbol}>
+            ✦
+          </Text>
 
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            activeOpacity={0.85}
-            onPress={() => router.push("/login")}
-          >
-            <Text style={styles.secondaryButtonText}>Sign In</Text>
-          </TouchableOpacity>
+          <Text style={styles.quote}>
+            You don't need to know where the path leads
+            before you begin paying attention.
+          </Text>
         </View>
 
-        <Text style={styles.privacyText}>
-          Your reflections belong to you.
-        </Text>
-      </View>
+        <View style={styles.actions}>
+          <SoulButton
+            title="Begin your journal"
+            onPress={() =>
+              router.push("/register")
+            }
+          />
+
+          <SoulButton
+            title="I already have a SoulPath"
+            variant="secondary"
+            onPress={() =>
+              router.push("/login")
+            }
+          />
+        </View>
+
+        <Pressable
+          style={styles.privacy}
+        >
+          <Text style={styles.privacyText}>
+            Private reflection • Your data belongs to you
+          </Text>
+        </Pressable>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -60,108 +89,110 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0C0A18",
+    backgroundColor: colors.background,
   },
 
   content: {
-    flex: 1,
+    flexGrow: 1,
+    width: "100%",
+    maxWidth: 620,
+    alignSelf: "center",
     justifyContent: "center",
-    alignItems: "center",
     paddingHorizontal: 28,
+    paddingVertical: 50,
   },
 
-  symbolContainer: {
-    width: 110,
-    height: 110,
-    justifyContent: "center",
+  stars: {
     alignItems: "center",
-    marginBottom: 30,
-  },
-
-  moon: {
-    fontSize: 82,
-    color: "#D9C6FF",
-    position: "absolute",
+    marginBottom: 26,
   },
 
   star: {
-    fontSize: 22,
-    color: "#E4C77D",
     position: "absolute",
-    top: 7,
-    right: 10,
+    left: "31%",
+    top: 2,
+    color: colors.gold,
+    fontSize: 15,
   },
 
-  titleSection: {
+  smallStar: {
+    position: "absolute",
+    right: "33%",
+    bottom: 6,
+    color: colors.lavender,
+    fontSize: 24,
+  },
+
+  moon: {
+    color: colors.gold,
+    fontSize: 54,
+  },
+
+  hero: {
     alignItems: "center",
-    marginBottom: 28,
   },
 
-  title: {
-    fontSize: 36,
-    fontWeight: "700",
-    color: "#F6F0FF",
+  name: {
+    color: colors.text,
+    fontFamily: fonts.display,
+    fontSize: 55,
+    lineHeight: 59,
+  },
+
+  tagline: {
+    color: colors.lavender,
+    fontFamily: fonts.displayItalic,
+    fontSize: 21,
     textAlign: "center",
-    letterSpacing: 0.5,
-  },
-
-  subtitle: {
-    marginTop: 12,
-    fontSize: 17,
-    color: "#B9AED0",
-    textAlign: "center",
-    fontStyle: "italic",
-  },
-
-  descriptionContainer: {
-    maxWidth: 420,
-    marginBottom: 42,
+    marginTop: 5,
   },
 
   description: {
-    fontSize: 16,
-    color: "#9D94B5",
-    lineHeight: 25,
+    color: colors.textMuted,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    lineHeight: 21,
     textAlign: "center",
+    marginTop: 18,
+    maxWidth: 440,
   },
 
-  buttonContainer: {
-    width: "100%",
-    maxWidth: 420,
-    gap: 14,
-  },
-
-  primaryButton: {
-    backgroundColor: "#7357C7",
-    borderRadius: 16,
-    paddingVertical: 17,
-    alignItems: "center",
-  },
-
-  primaryButtonText: {
-    color: "#FFFFFF",
-    fontSize: 17,
-    fontWeight: "700",
-  },
-
-  secondaryButton: {
+  quoteArea: {
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#4D426C",
-    borderRadius: 16,
-    paddingVertical: 17,
-    alignItems: "center",
-    backgroundColor: "#151126",
+    borderColor: colors.border,
+    borderRadius: radius.xl,
+    padding: 22,
+    marginTop: 34,
   },
 
-  secondaryButtonText: {
-    color: "#D9C6FF",
-    fontSize: 17,
-    fontWeight: "600",
+  quoteSymbol: {
+    color: colors.gold,
+    fontSize: 15,
+  },
+
+  quote: {
+    color: colors.textSoft,
+    fontFamily: fonts.displayItalic,
+    fontSize: 20,
+    lineHeight: 27,
+    marginTop: 8,
+  },
+
+  actions: {
+    gap: 11,
+    marginTop: 28,
+  },
+
+  privacy: {
+    padding: 18,
+    alignItems: "center",
   },
 
   privacyText: {
-    marginTop: 30,
-    color: "#716982",
-    fontSize: 13,
+    color: colors.textDim,
+    fontFamily: fonts.body,
+    fontSize: 9,
+    textAlign: "center",
   },
 }); 

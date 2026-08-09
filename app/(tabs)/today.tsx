@@ -17,13 +17,24 @@ import {
   View,
 } from "react-native";
 
+import SoulButton from "../../src/components/SoulButton";
+import SoulCard from "../../src/components/SoulCard";
+import SectionHeading from "../../src/components/SectionHeading";
+
+import {
+  colors,
+  fonts,
+  radius,
+  spacing,
+} from "../../src/theme";
+
 import {
   useAuth,
-} from "../../src/context/AuthContext"; 
+} from "../../src/context/AuthContext";
 
 import {
   supabase,
-} from "../../src/lib/supabase";  
+} from "../../src/lib/supabase";
 
 import {
   getJournalEntryCount,
@@ -31,7 +42,7 @@ import {
   getRecentJournalEntries,
   getTodayJournalEntry,
   JournalEntry,
-} from "../../src/services/journalService"; 
+} from "../../src/services/journalService";
 
 import {
   getTodayPractices,
@@ -39,18 +50,24 @@ import {
   Practice,
 } from "../../src/services/practiceService";
 
-export default function HomeScreen() {
-  const { session } = useAuth();
+export default function TodayScreen() {
+  const { session } =
+    useAuth();
 
   const displayName =
-    session?.user.user_metadata?.display_name ||
+    session?.user.user_metadata
+      ?.display_name ||
     "Traveler";
 
-  const [entryCount, setEntryCount] =
-    useState(0);
+  const [
+    entryCount,
+    setEntryCount,
+  ] = useState(0);
 
-  const [streak, setStreak] =
-    useState(0);
+  const [
+    streak,
+    setStreak,
+  ] = useState(0);
 
   const [
     practiceCount,
@@ -73,7 +90,8 @@ export default function HomeScreen() {
   const [
     recentEntries,
     setRecentEntries,
-  ] = useState<JournalEntry[]>([]);
+  ] =
+    useState<JournalEntry[]>([]);
 
   const [
     dashboardLoading,
@@ -103,9 +121,18 @@ export default function HomeScreen() {
 
         setEntryCount(count);
         setStreak(journalStreak);
-        setTodayEntry(todaysEntry);
-        setRecentEntries(recent);
-        setTodayPractices(practices);
+
+        setTodayEntry(
+          todaysEntry
+        );
+
+        setRecentEntries(
+          recent
+        );
+
+        setTodayPractices(
+          practices
+        );
 
         setPracticeCount(
           uniquePracticeCount
@@ -116,7 +143,9 @@ export default function HomeScreen() {
           error
         );
       } finally {
-        setDashboardLoading(false);
+        setDashboardLoading(
+          false
+        );
       }
     }, []);
 
@@ -129,7 +158,9 @@ export default function HomeScreen() {
   function openTodayEntry() {
     if (todayEntry) {
       router.push({
-        pathname: "/journal/[id]",
+        pathname:
+          "/journal/[id]",
+
         params: {
           id: todayEntry.id,
         },
@@ -138,7 +169,9 @@ export default function HomeScreen() {
       return;
     }
 
-    router.push("/journal/new");
+    router.push(
+      "/journal/new"
+    );
   }
 
   function editTodayEntry() {
@@ -146,6 +179,7 @@ export default function HomeScreen() {
       router.push({
         pathname:
           "/journal/edit/[id]",
+
         params: {
           id: todayEntry.id,
         },
@@ -154,12 +188,16 @@ export default function HomeScreen() {
       return;
     }
 
-    router.push("/journal/new");
+    router.push(
+      "/journal/new"
+    );
   }
 
   async function handleLogout() {
     const { error } =
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({
+        scope: "local",
+      });
 
     if (error) {
       console.error(
@@ -174,76 +212,105 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={styles.container}
+    >
       <ScrollView
         contentContainerStyle={
-          styles.scrollContent
+          styles.content
         }
         showsVerticalScrollIndicator={
           false
         }
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerText}>
-            <Text style={styles.eyebrow}>
-              YOUR SOULPATH
+        <View
+          style={styles.topRow}
+        >
+          <View style={{ flex: 1 }}>
+            <Text
+              style={
+                styles.smallGreeting
+              }
+            >
+              Welcome back,
             </Text>
 
-            <Text style={styles.greeting}>
-              Welcome back, {displayName}
-            </Text>
-
-            <Text style={styles.dateText}>
-              A quiet space for today's
-              reflection.
+            <Text
+              style={
+                styles.greeting
+              }
+            >
+              {displayName}
             </Text>
           </View>
 
           <Pressable
-            style={styles.profileButton}
-            onPress={handleLogout}
+            style={styles.moonButton}
+            onPress={() =>
+              router.push(
+                "/settings"
+              )
+            }
           >
             <Text
-              style={
-                styles.profileButtonText
-              }
+              style={styles.moon}
             >
               ☾
             </Text>
           </Pressable>
         </View>
 
-        {/* Prompt */}
-        <View style={styles.quoteCard}>
-          <Text style={styles.quoteSymbol}>
+        <View
+          style={
+            styles.reflectionPrompt
+          }
+        >
+          <Text
+            style={
+              styles.promptSymbol
+            }
+          >
             ✦
           </Text>
 
-          <Text style={styles.quote}>
-            “What is asking for your
-            attention today?”
+          <Text
+            style={
+              styles.prompt
+            }
+          >
+            What has stayed with you
+            today?
           </Text>
 
-          <Text style={styles.quoteHint}>
-            Begin with awareness. The rest
-            can follow.
+          <Text
+            style={
+              styles.promptSubtext
+            }
+          >
+            You don't have to understand
+            it yet. Just notice what is
+            here.
           </Text>
         </View>
 
-        {/* Mood + energy */}
-        <Text style={styles.sectionTitle}>
-          How are you feeling?
-        </Text>
+        <SectionHeading
+          title="How are you feeling?"
+        />
 
-        <View style={styles.trackingGrid}>
+        <View
+          style={styles.checkInRow}
+        >
           <Pressable
-            style={styles.trackingCard}
-            onPress={editTodayEntry}
+            style={
+              styles.checkInCard
+            }
+            onPress={
+              editTodayEntry
+            }
           >
             <Text
               style={
-                styles.trackingIcon
+                styles.checkInSymbol
               }
             >
               ◉
@@ -251,7 +318,7 @@ export default function HomeScreen() {
 
             <Text
               style={
-                styles.trackingLabel
+                styles.checkInLabel
               }
             >
               Mood
@@ -259,23 +326,27 @@ export default function HomeScreen() {
 
             <Text
               style={
-                styles.trackingValue
+                styles.checkInValue
               }
             >
               {dashboardLoading
                 ? "..."
-                : todayEntry?.mood ??
+                : todayEntry?.mood ||
                   "Check in"}
             </Text>
           </Pressable>
 
           <Pressable
-            style={styles.trackingCard}
-            onPress={editTodayEntry}
+            style={
+              styles.checkInCard
+            }
+            onPress={
+              editTodayEntry
+            }
           >
             <Text
               style={
-                styles.trackingIcon
+                styles.checkInSymbol
               }
             >
               ✧
@@ -283,7 +354,7 @@ export default function HomeScreen() {
 
             <Text
               style={
-                styles.trackingLabel
+                styles.checkInLabel
               }
             >
               Energy
@@ -291,74 +362,58 @@ export default function HomeScreen() {
 
             <Text
               style={
-                styles.trackingValue
+                styles.checkInValue
               }
             >
               {dashboardLoading
                 ? "..."
-                : todayEntry?.energy_level
-                  ? `${todayEntry.energy_level} / 5`
+                : todayEntry
+                    ?.energy_level
+                  ? `${todayEntry.energy_level}/5`
                   : "Check in"}
             </Text>
           </Pressable>
         </View>
 
-        {/* Today's practices */}
-        <View
-          style={styles.sectionHeader}
-        >
-          <Text
-            style={styles.sectionTitle}
-          >
-            Today's practices
-          </Text>
-
-          <Pressable
-            onPress={editTodayEntry}
-          >
-            <Text
-              style={styles.sectionAction}
-            >
-              {todayEntry
-                ? "Edit"
-                : "Add"}
-            </Text>
-          </Pressable>
-        </View>
+        <SectionHeading
+          title="Today's practices"
+          subtitle="Small rituals can become landmarks."
+        />
 
         {dashboardLoading ? (
           <Text
             style={
-              styles.practiceLoadingText
+              styles.mutedText
             }
           >
-            Loading practices...
+            Gathering today's
+            practices...
           </Text>
         ) : todayPractices.length ===
           0 ? (
           <Pressable
-            style={styles.practiceEmpty}
-            onPress={editTodayEntry}
+            style={
+              styles.practiceEmpty
+            }
+            onPress={
+              editTodayEntry
+            }
           >
             <Text
               style={
-                styles.practiceEmptySymbol
+                styles.practiceSymbol
               }
             >
               ✦
             </Text>
 
-            <View
-              style={
-                styles.practiceEmptyContent
-              }
-            >
+            <View style={{ flex: 1 }}>
               <Text
                 style={
                   styles.practiceEmptyTitle
                 }
               >
-                No practices recorded yet
+                No practice recorded yet
               </Text>
 
               <Text
@@ -366,8 +421,8 @@ export default function HomeScreen() {
                   styles.practiceEmptyText
                 }
               >
-                Tap to add today's
-                spiritual practice.
+                Add whatever supported
+                your inner life today.
               </Text>
             </View>
           </Pressable>
@@ -378,7 +433,7 @@ export default function HomeScreen() {
               false
             }
             contentContainerStyle={
-              styles.practiceContainer
+              styles.practiceRow
             }
           >
             {todayPractices.map(
@@ -394,9 +449,10 @@ export default function HomeScreen() {
                 >
                   <Text
                     style={
-                      styles.practiceText
+                      styles.practiceChipText
                     }
                   >
+                    ✦{" "}
                     {practice.name}
                   </Text>
                 </Pressable>
@@ -405,169 +461,139 @@ export default function HomeScreen() {
           </ScrollView>
         )}
 
-        {/* Daily Reflection */}
-        <View style={styles.journalCard}>
-          <View
-            style={styles.journalTopRow}
-          >
-            <Text
-              style={
-                styles.journalSymbol
-              }
-            >
-              ✎
-            </Text>
-
-            <Text
-              style={
-                styles.journalLabel
-              }
-            >
-              DAILY REFLECTION
-            </Text>
-          </View>
-
-          <Text
-            style={styles.journalTitle}
-          >
-            What's moving through you
-            today?
-          </Text>
-
-          <Text
-            style={
-              styles.journalDescription
-            }
-          >
-            Capture a thought,
-            realization, emotion, dream,
-            or moment that feels
-            meaningful.
-          </Text>
-
-          <Pressable
-            style={styles.primaryButton}
-            onPress={openTodayEntry}
-          >
-            <Text
-              style={
-                styles.primaryButtonText
-              }
-            >
-              {todayEntry
-                ? "View Today's Reflection"
-                : "Write Today's Entry"}
-            </Text>
-          </Pressable>
-
-          <Pressable
-            style={
-              styles.secondaryJournalButton
-            }
-            onPress={() =>
-              router.push("/journal")
-            }
-          >
-            <Text
-              style={
-                styles.secondaryJournalText
-              }
-            >
-              View Journal
-            </Text>
-          </Pressable>
-        </View>
-
-        {/* Dreams & Signs */}
-        <View
-          style={styles.experienceCard}
+        <SoulCard
+          style={
+            styles.journalCard
+          }
         >
-          <View
+          <Text
             style={
-              styles.experienceTopRow
+              styles.cardSymbol
             }
           >
-            <Text
-              style={
-                styles.experienceSymbol
-              }
-            >
-              ☾ ✦
-            </Text>
+            ☾
+          </Text>
 
-            <Text
-              style={
-                styles.experienceLabel
+          <Text
+            style={
+              styles.journalTitle
+            }
+          >
+            A place for what wants to be
+            remembered.
+          </Text>
+
+          <Text
+            style={
+              styles.journalBody
+            }
+          >
+            Write without needing to
+            solve anything. A thought,
+            feeling, question, memory, or
+            realization is enough.
+          </Text>
+
+          <View
+            style={
+              styles.primaryAction
+            }
+          >
+            <SoulButton
+              title={
+                todayEntry
+                  ? "Read today's reflection"
+                  : "Write today's reflection"
               }
-            >
-              DREAMS & SIGNS
-            </Text>
+              onPress={
+                openTodayEntry
+              }
+            />
           </View>
+
+          <SoulButton
+            title="Visit your journal"
+            variant="ghost"
+            onPress={() =>
+              router.push(
+                "/journal"
+              )
+            }
+          />
+        </SoulCard>
+
+        <SoulCard
+          style={
+            styles.experienceCard
+          }
+        >
+          <Text
+            style={
+              styles.cardSymbol
+            }
+          >
+            ✦
+          </Text>
 
           <Text
             style={
               styles.experienceTitle
             }
           >
-            Record meaningful experiences
+            Dreams & Signs
           </Text>
 
           <Text
             style={
-              styles.experienceDescription
+              styles.experienceQuote
             }
           >
-            Capture dreams,
-            synchronicities, and moments
-            that feel significant.
+            The things that linger after
+            waking. The coincidences that
+            ask to be noticed.
           </Text>
 
-          <Pressable
+          <View
             style={
-              styles.experienceButton
-            }
-            onPress={() =>
-              router.push("/experiences")
+              styles.primaryAction
             }
           >
-            <Text
-              style={
-                styles.experienceButtonText
+            <SoulButton
+              title="Explore dreams & signs"
+              variant="secondary"
+              onPress={() =>
+                router.push(
+                  "/experiences"
+                )
               }
-            >
-              Open Dreams & Signs
-            </Text>
-          </Pressable>
+            />
+          </View>
 
-          <Pressable
-            style={
-              styles.secondaryExperienceButton
-            }
+          <SoulButton
+            title="Record something new"
+            variant="ghost"
             onPress={() =>
               router.push(
                 "/experiences/new"
               )
             }
+          />
+        </SoulCard>
+
+        <SectionHeading
+          title="Your path so far"
+        />
+
+        <View
+          style={styles.statsRow}
+        >
+          <View
+            style={styles.stat}
           >
             <Text
               style={
-                styles.secondaryExperienceText
+                styles.statNumber
               }
-            >
-              Record New Experience
-            </Text>
-          </Pressable>
-        </View>
-
-        {/* Stats */}
-        <Text style={styles.sectionTitle}>
-          Your path
-        </Text>
-
-        <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <Text
-              style={styles.statNumber}
             >
               {dashboardLoading
                 ? "—"
@@ -575,15 +601,21 @@ export default function HomeScreen() {
             </Text>
 
             <Text
-              style={styles.statLabel}
+              style={
+                styles.statLabel
+              }
             >
-              Entries
+              reflections
             </Text>
           </View>
 
-          <View style={styles.statCard}>
+          <View
+            style={styles.stat}
+          >
             <Text
-              style={styles.statNumber}
+              style={
+                styles.statNumber
+              }
             >
               {dashboardLoading
                 ? "—"
@@ -591,15 +623,21 @@ export default function HomeScreen() {
             </Text>
 
             <Text
-              style={styles.statLabel}
+              style={
+                styles.statLabel
+              }
             >
-              Day streak
+              day streak
             </Text>
           </View>
 
-          <View style={styles.statCard}>
+          <View
+            style={styles.stat}
+          >
             <Text
-              style={styles.statNumber}
+              style={
+                styles.statNumber
+              }
             >
               {dashboardLoading
                 ? "—"
@@ -607,169 +645,146 @@ export default function HomeScreen() {
             </Text>
 
             <Text
-              style={styles.statLabel}
+              style={
+                styles.statLabel
+              }
             >
-              Practices
+              practices
             </Text>
           </View>
         </View>
 
-        {/* Recent reflections */}
-        <View
-          style={styles.recentSection}
-        >
-          <View
-            style={styles.sectionHeader}
+        <SectionHeading
+          title="Recently"
+          subtitle="Pieces of your path you have already left behind."
+        />
+
+        {dashboardLoading ? (
+          <Text
+            style={
+              styles.mutedText
+            }
           >
+            Gathering your recent
+            reflections...
+          </Text>
+        ) : recentEntries.length ===
+          0 ? (
+          <SoulCard>
             <Text
-              style={styles.sectionTitle}
+              style={
+                styles.emptyTitle
+              }
             >
-              Recent reflections
+              Your pages are still quiet.
             </Text>
 
-            {recentEntries.length > 0 ? (
-              <Pressable
-                onPress={() =>
-                  router.push("/journal")
-                }
-              >
-                <Text
+            <Text
+              style={
+                styles.emptyText
+              }
+            >
+              Your recent reflections
+              will gather here as your
+              journal grows.
+            </Text>
+          </SoulCard>
+        ) : (
+          <View
+            style={styles.recentList}
+          >
+            {recentEntries.map(
+              (entry) => (
+                <Pressable
+                  key={entry.id}
                   style={
-                    styles.sectionAction
+                    styles.recentCard
+                  }
+                  onPress={() =>
+                    router.push({
+                      pathname:
+                        "/journal/[id]",
+
+                      params: {
+                        id: entry.id,
+                      },
+                    })
                   }
                 >
-                  View all
-                </Text>
-              </Pressable>
-            ) : null}
-          </View>
-
-          {dashboardLoading ? (
-            <Text
-              style={styles.loadingText}
-            >
-              Gathering your
-              reflections...
-            </Text>
-          ) : recentEntries.length ===
-            0 ? (
-            <View
-              style={styles.emptyState}
-            >
-              <Text
-                style={styles.emptySymbol}
-              >
-                ☾
-              </Text>
-
-              <Text
-                style={styles.emptyTitle}
-              >
-                Your journal is waiting
-              </Text>
-
-              <Text
-                style={
-                  styles.emptyDescription
-                }
-              >
-                Your most recent
-                reflections will appear
-                here once you begin
-                writing.
-              </Text>
-            </View>
-          ) : (
-            <View
-              style={styles.recentList}
-            >
-              {recentEntries.map(
-                (entry) => (
-                  <Pressable
-                    key={entry.id}
+                  <Text
                     style={
-                      styles.recentCard
-                    }
-                    onPress={() =>
-                      router.push({
-                        pathname:
-                          "/journal/[id]",
-                        params: {
-                          id: entry.id,
-                        },
-                      })
+                      styles.recentDate
                     }
                   >
-                    <Text
-                      style={
-                        styles.recentDate
-                      }
-                    >
-                      {entry.entry_date}
-                    </Text>
+                    {entry.entry_date}
+                  </Text>
 
-                    <Text
-                      style={
-                        styles.recentTitle
-                      }
-                    >
-                      {entry.title}
-                    </Text>
+                  <Text
+                    style={
+                      styles.recentTitle
+                    }
+                  >
+                    {entry.title}
+                  </Text>
 
-                    <Text
-                      style={
-                        styles.recentPreview
-                      }
-                      numberOfLines={2}
-                    >
-                      {entry.content}
-                    </Text>
+                  <Text
+                    style={
+                      styles.recentBody
+                    }
+                    numberOfLines={2}
+                  >
+                    {entry.content}
+                  </Text>
 
-                    <View
-                      style={
-                        styles.recentMetadata
-                      }
-                    >
-                      {entry.mood ? (
-                        <Text
-                          style={
-                            styles.recentChip
-                          }
-                        >
-                          {entry.mood}
-                        </Text>
-                      ) : null}
+                  <View
+                    style={
+                      styles.recentMeta
+                    }
+                  >
+                    {entry.mood ? (
+                      <Text
+                        style={
+                          styles.metaText
+                        }
+                      >
+                        {entry.mood}
+                      </Text>
+                    ) : null}
 
-                      {entry.energy_level ? (
-                        <Text
-                          style={
-                            styles.recentChip
-                          }
-                        >
-                          Energy{" "}
-                          {
-                            entry.energy_level
-                          }
-                          /5
-                        </Text>
-                      ) : null}
-                    </View>
-                  </Pressable>
-                )
-              )}
-            </View>
-          )}
-        </View>
+                    {entry.energy_level ? (
+                      <Text
+                        style={
+                          styles.metaText
+                        }
+                      >
+                        Energy{" "}
+                        {
+                          entry.energy_level
+                        }
+                        /5
+                      </Text>
+                    ) : null}
+                  </View>
+                </Pressable>
+              )
+            )}
+          </View>
+        )}
 
-        {/* Sign Out */}
         <Pressable
-          style={styles.logoutButton}
-          onPress={handleLogout}
+          style={
+            styles.quietSignOut
+          }
+          onPress={
+            handleLogout
+          }
         >
           <Text
-            style={styles.logoutText}
+            style={
+              styles.quietSignOutText
+            }
           >
-            Sign Out
+            Sign out
           </Text>
         </Pressable>
       </ScrollView>
@@ -777,464 +792,351 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0C0A18",
-  },
-
-  scrollContent: {
-    width: "100%",
-    maxWidth: 760,
-    alignSelf: "center",
-    paddingHorizontal: 24,
-    paddingTop: 28,
-    paddingBottom: 60,
-  },
-
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 30,
-  },
-
-  headerText: {
-    flex: 1,
-    paddingRight: 18,
-  },
-
-  eyebrow: {
-    color: "#8773B8",
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 2,
-    marginBottom: 8,
-  },
-
-  greeting: {
-    color: "#F5F0FF",
-    fontSize: 30,
-    fontWeight: "700",
-  },
-
-  dateText: {
-    color: "#8E859F",
-    fontSize: 15,
-    marginTop: 7,
-  },
-
-  profileButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#171329",
-    borderWidth: 1,
-    borderColor: "#302847",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  profileButtonText: {
-    color: "#D9C6FF",
-    fontSize: 25,
-  },
-
-  quoteCard: {
-    backgroundColor: "#151126",
-    borderRadius: 22,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: "#29213D",
-    marginBottom: 34,
-  },
-
-  quoteSymbol: {
-    color: "#D4B866",
-    fontSize: 18,
-    marginBottom: 12,
-  },
-
-  quote: {
-    color: "#EEE6FF",
-    fontSize: 21,
-    lineHeight: 30,
-    fontWeight: "600",
-  },
-
-  quoteHint: {
-    color: "#847B95",
-    fontSize: 14,
-    marginTop: 12,
-  },
-
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-
-  sectionTitle: {
-    color: "#E9E1F7",
-    fontSize: 19,
-    fontWeight: "700",
-    marginBottom: 16,
-  },
-
-  sectionAction: {
-    color: "#A78DE3",
-    fontSize: 14,
-    marginBottom: 16,
-  },
-
-  trackingGrid: {
-    flexDirection: "row",
-    gap: 14,
-    marginBottom: 34,
-  },
-
-  trackingCard: {
-    flex: 1,
-    backgroundColor: "#151126",
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "#29213D",
-    padding: 18,
-  },
-
-  trackingIcon: {
-    color: "#CDB9FF",
-    fontSize: 23,
-    marginBottom: 18,
-  },
-
-  trackingLabel: {
-    color: "#8F859F",
-    fontSize: 13,
-  },
-
-  trackingValue: {
-    color: "#F0E9FF",
-    fontSize: 18,
-    fontWeight: "600",
-    marginTop: 4,
-  },
-
-  practiceContainer: {
-    gap: 10,
-    paddingBottom: 34,
-  },
-
-  practiceChip: {
-    backgroundColor: "#171329",
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#31284A",
-    paddingHorizontal: 18,
-    paddingVertical: 11,
-  },
-
-  practiceText: {
-    color: "#C8B7E8",
-    fontSize: 14,
-  },
-
-  practiceLoadingText: {
-    color: "#7E758C",
-    fontSize: 13,
-    marginBottom: 34,
-  },
-
-  practiceEmpty: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    backgroundColor: "#151126",
-    borderRadius: 17,
-    borderWidth: 1,
-    borderColor: "#29213D",
-    padding: 17,
-    marginBottom: 34,
-  },
-
-  practiceEmptyContent: {
-    flex: 1,
-  },
-
-  practiceEmptySymbol: {
-    color: "#A98DE3",
-    fontSize: 21,
-  },
-
-  practiceEmptyTitle: {
-    color: "#D9D0E8",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-
-  practiceEmptyText: {
-    color: "#7E758C",
-    fontSize: 13,
-    marginTop: 3,
-  },
-
-  journalCard: {
-    backgroundColor: "#1A1430",
-    borderRadius: 24,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: "#3A2C62",
-    marginBottom: 24,
-  },
-
-  journalTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 14,
-  },
-
-  journalSymbol: {
-    color: "#D8BA69",
-    fontSize: 17,
-  },
-
-  journalLabel: {
-    color: "#9A82CB",
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 1.5,
-  },
-
-  journalTitle: {
-    color: "#F4EEFF",
-    fontSize: 22,
-    fontWeight: "700",
-  },
-
-  journalDescription: {
-    color: "#9187A3",
-    lineHeight: 22,
-    fontSize: 14,
-    marginTop: 9,
-  },
-
-  primaryButton: {
-    backgroundColor: "#7357C7",
-    borderRadius: 15,
-    paddingVertical: 15,
-    alignItems: "center",
-    marginTop: 22,
-  },
-
-  primaryButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-
-  secondaryJournalButton: {
-    alignItems: "center",
-    paddingVertical: 13,
-    marginTop: 5,
-  },
-
-  secondaryJournalText: {
-    color: "#B8A5DC",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-
-  experienceCard: {
-    backgroundColor: "#151126",
-    borderRadius: 24,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: "#33284A",
-    marginBottom: 36,
-  },
-
-  experienceTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 14,
-  },
-
-  experienceSymbol: {
-    color: "#D8BA69",
-    fontSize: 18,
-  },
-
-  experienceLabel: {
-    color: "#9A82CB",
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 1.5,
-  },
-
-  experienceTitle: {
-    color: "#F4EEFF",
-    fontSize: 22,
-    fontWeight: "700",
-  },
-
-  experienceDescription: {
-    color: "#9187A3",
-    lineHeight: 22,
-    fontSize: 14,
-    marginTop: 9,
-  },
-
-  experienceButton: {
-    backgroundColor: "#5E489D",
-    borderRadius: 15,
-    paddingVertical: 15,
-    alignItems: "center",
-    marginTop: 22,
-  },
-
-  experienceButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-
-  secondaryExperienceButton: {
-    alignItems: "center",
-    paddingVertical: 13,
-    marginTop: 5,
-  },
-
-  secondaryExperienceText: {
-    color: "#B8A5DC",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-
-  statsRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 36,
-  },
-
-  statCard: {
-    flex: 1,
-    backgroundColor: "#151126",
-    borderRadius: 16,
-    paddingVertical: 20,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#29213D",
-  },
-
-  statNumber: {
-    color: "#E7D9FF",
-    fontSize: 24,
-    fontWeight: "700",
-  },
-
-  statLabel: {
-    color: "#7F778C",
-    fontSize: 12,
-    marginTop: 5,
-  },
-
-  recentSection: {
-    marginTop: 2,
-  },
-
-  loadingText: {
-    color: "#83798D",
-    textAlign: "center",
-    paddingVertical: 30,
-  },
-
-  emptyState: {
-    backgroundColor: "#121020",
-    borderRadius: 20,
-    padding: 28,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#252039",
-  },
-
-  emptySymbol: {
-    color: "#75649B",
-    fontSize: 34,
-    marginBottom: 12,
-  },
-
-  emptyTitle: {
-    color: "#D9D0E8",
-    fontSize: 17,
-    fontWeight: "600",
-  },
-
-  emptyDescription: {
-    color: "#777080",
-    textAlign: "center",
-    marginTop: 8,
-    lineHeight: 20,
-    maxWidth: 360,
-  },
-
-  recentList: {
-    gap: 12,
-  },
-
-  recentCard: {
-    backgroundColor: "#151126",
-    borderRadius: 18,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: "#29213D",
-  },
-
-  recentDate: {
-    color: "#81758F",
-    fontSize: 12,
-  },
-
-  recentTitle: {
-    color: "#EFE8FA",
-    fontSize: 18,
-    fontWeight: "700",
-    marginTop: 5,
-  },
-
-  recentPreview: {
-    color: "#948A9F",
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 7,
-  },
-
-  recentMetadata: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 12,
-  },
-
-  recentChip: {
-    color: "#B5A4D3",
-    backgroundColor: "#211A35",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-    fontSize: 12,
-  },
-
-  logoutButton: {
-    alignSelf: "center",
-    marginTop: 38,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-  },
-
-  logoutText: {
-    color: "#726A80",
-    fontSize: 13,
-  },
-}); 
+const styles =
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor:
+        colors.background,
+    },
+
+    content: {
+      width: "100%",
+      maxWidth: 760,
+      alignSelf: "center",
+      paddingHorizontal: 24,
+      paddingTop: 34,
+      paddingBottom: 115,
+    },
+
+    topRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 34,
+    },
+
+    smallGreeting: {
+      color: colors.textMuted,
+      fontFamily: fonts.body,
+      fontSize: 13,
+    },
+
+    greeting: {
+      color: colors.text,
+      fontFamily: fonts.display,
+      fontSize: 39,
+      lineHeight: 43,
+      marginTop: 1,
+    },
+
+    moonButton: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor:
+        colors.surface,
+      borderWidth: 1,
+      borderColor:
+        colors.border,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+
+    moon: {
+      color: colors.gold,
+      fontSize: 23,
+    },
+
+    reflectionPrompt: {
+      paddingVertical: 10,
+      paddingHorizontal: 5,
+      marginBottom: 38,
+    },
+
+    promptSymbol: {
+      color: colors.gold,
+      fontSize: 17,
+      marginBottom: 10,
+    },
+
+    prompt: {
+      color: colors.text,
+      fontFamily:
+        fonts.displayItalic,
+      fontSize: 30,
+      lineHeight: 36,
+      maxWidth: 540,
+    },
+
+    promptSubtext: {
+      color: colors.textMuted,
+      fontFamily: fonts.body,
+      fontSize: 13,
+      lineHeight: 20,
+      marginTop: 11,
+      maxWidth: 470,
+    },
+
+    checkInRow: {
+      flexDirection: "row",
+      gap: 12,
+      marginBottom: 34,
+    },
+
+    checkInCard: {
+      flex: 1,
+      backgroundColor:
+        colors.surface,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor:
+        colors.border,
+      padding: 17,
+    },
+
+    checkInSymbol: {
+      color: colors.gold,
+      fontSize: 18,
+      marginBottom: 13,
+    },
+
+    checkInLabel: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 11,
+    },
+
+    checkInValue: {
+      color: colors.textSoft,
+      fontFamily:
+        fonts.bodySemiBold,
+      fontSize: 15,
+      marginTop: 3,
+    },
+
+    mutedText: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 12,
+      marginBottom: 30,
+    },
+
+    practiceEmpty: {
+      flexDirection: "row",
+      gap: 13,
+      alignItems: "center",
+      backgroundColor:
+        colors.surface,
+      borderWidth: 1,
+      borderColor:
+        colors.border,
+      borderRadius: radius.lg,
+      padding: 17,
+      marginBottom: 34,
+    },
+
+    practiceSymbol: {
+      color: colors.gold,
+      fontSize: 19,
+    },
+
+    practiceEmptyTitle: {
+      color: colors.textSoft,
+      fontFamily:
+        fonts.bodySemiBold,
+      fontSize: 13,
+    },
+
+    practiceEmptyText: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 11,
+      marginTop: 3,
+    },
+
+    practiceRow: {
+      gap: 9,
+      paddingBottom: 34,
+    },
+
+    practiceChip: {
+      backgroundColor:
+        colors.surfaceSoft,
+      borderWidth: 1,
+      borderColor:
+        colors.border,
+      borderRadius: radius.pill,
+      paddingHorizontal: 15,
+      paddingVertical: 10,
+    },
+
+    practiceChipText: {
+      color: colors.lavender,
+      fontFamily:
+        fonts.bodySemiBold,
+      fontSize: 12,
+    },
+
+    journalCard: {
+      marginBottom: 18,
+      borderColor:
+        colors.borderStrong,
+      backgroundColor: "#18122B",
+    },
+
+    cardSymbol: {
+      color: colors.gold,
+      fontSize: 20,
+      marginBottom: 12,
+    },
+
+    journalTitle: {
+      color: colors.text,
+      fontFamily: fonts.display,
+      fontSize: 27,
+      lineHeight: 31,
+    },
+
+    journalBody: {
+      color: colors.textMuted,
+      fontFamily: fonts.body,
+      fontSize: 13,
+      lineHeight: 21,
+      marginTop: 10,
+    },
+
+    primaryAction: {
+      marginTop: 21,
+    },
+
+    experienceCard: {
+      marginBottom: 36,
+    },
+
+    experienceTitle: {
+      color: colors.text,
+      fontFamily: fonts.display,
+      fontSize: 29,
+    },
+
+    experienceQuote: {
+      color: colors.textMuted,
+      fontFamily:
+        fonts.displayItalic,
+      fontSize: 18,
+      lineHeight: 25,
+      marginTop: 7,
+    },
+
+    statsRow: {
+      flexDirection: "row",
+      gap: 10,
+      marginBottom: 37,
+    },
+
+    stat: {
+      flex: 1,
+      backgroundColor:
+        colors.surface,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor:
+        colors.border,
+      alignItems: "center",
+      paddingVertical: 18,
+      paddingHorizontal: 8,
+    },
+
+    statNumber: {
+      color: colors.text,
+      fontFamily: fonts.display,
+      fontSize: 30,
+    },
+
+    statLabel: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 10,
+      marginTop: -1,
+    },
+
+    recentList: {
+      gap: 11,
+    },
+
+    recentCard: {
+      backgroundColor:
+        colors.surface,
+      borderWidth: 1,
+      borderColor:
+        colors.border,
+      borderRadius: radius.lg,
+      padding: 18,
+    },
+
+    recentDate: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 10,
+    },
+
+    recentTitle: {
+      color: colors.text,
+      fontFamily: fonts.display,
+      fontSize: 22,
+      marginTop: 5,
+    },
+
+    recentBody: {
+      color: colors.textMuted,
+      fontFamily: fonts.body,
+      fontSize: 12,
+      lineHeight: 19,
+      marginTop: 6,
+    },
+
+    recentMeta: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 7,
+      marginTop: 11,
+    },
+
+    metaText: {
+      color: colors.lavender,
+      backgroundColor:
+        colors.surfaceRaised,
+      fontFamily: fonts.body,
+      fontSize: 10,
+      borderRadius: radius.pill,
+      paddingHorizontal: 9,
+      paddingVertical: 4,
+    },
+
+    emptyTitle: {
+      color: colors.text,
+      fontFamily: fonts.display,
+      fontSize: 23,
+      textAlign: "center",
+    },
+
+    emptyText: {
+      color: colors.textMuted,
+      fontFamily: fonts.body,
+      textAlign: "center",
+      lineHeight: 20,
+      marginTop: 7,
+    },
+
+    quietSignOut: {
+      alignSelf: "center",
+      padding: 18,
+      marginTop: 28,
+    },
+
+    quietSignOutText: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 11,
+    },
+  });

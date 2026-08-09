@@ -11,6 +11,8 @@ import {
 
 import {
   ActivityIndicator,
+  Alert,
+  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -18,6 +20,16 @@ import {
   Text,
   View,
 } from "react-native";
+
+import SoulButton from "../../src/components/SoulButton";
+import SoulCard from "../../src/components/SoulCard";
+import FeedbackMessage from "../../src/components/FeedbackMessage";
+
+import {
+  colors,
+  fonts,
+  radius,
+} from "../../src/theme";
 
 import {
   deleteJournalEntry,
@@ -30,7 +42,7 @@ import {
   getEntryPractices,
 } from "../../src/services/practiceService";
 
-export default function JournalEntryScreen() {
+export default function JournalDetailScreen() {
   const { id } =
     useLocalSearchParams<{
       id: string;
@@ -42,18 +54,25 @@ export default function JournalEntryScreen() {
     );
 
   const [
-    entryPractices,
-    setEntryPracticesState,
-  ] = useState<EntryPractice[]>([]);
+    practices,
+    setPractices,
+  ] =
+    useState<EntryPractice[]>([]);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
 
-  const [deleting, setDeleting] =
-    useState(false);
+  const [
+    deleting,
+    setDeleting,
+  ] = useState(false);
 
-  const [errorMessage, setErrorMessage] =
-    useState("");
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState("");
 
   const loadEntry =
     useCallback(async () => {
@@ -66,28 +85,23 @@ export default function JournalEntryScreen() {
         setErrorMessage("");
 
         const [
-          journalData,
-          practiceData,
-        ] = await Promise.all([
-          getJournalEntry(id),
-          getEntryPractices(id),
-        ]);
+          journalEntry,
+          entryPractices,
+        ] =
+          await Promise.all([
+            getJournalEntry(id),
+            getEntryPractices(id),
+          ]);
 
-        setEntry(journalData);
-
-        setEntryPracticesState(
-          practiceData
+        setEntry(journalEntry);
+        setPractices(
+          entryPractices
         );
       } catch (error) {
-        console.error(
-          "Unable to load journal entry:",
-          error
-        );
-
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : "Unable to load this entry."
+            : "Unable to open this reflection."
         );
       } finally {
         setLoading(false);
@@ -100,32 +114,66 @@ export default function JournalEntryScreen() {
     }, [loadEntry])
   );
 
-  async function handleDelete() {
-    if (!entry || deleting) {
+  function requestDelete() {
+    const warning =
+      "This reflection will be permanently removed.";
+
+    if (
+      Platform.OS === "web"
+    ) {
+      if (
+        typeof window !==
+          "undefined" &&
+        window.confirm(
+          `Let this reflection go?\n\n${warning}`
+        )
+      ) {
+        void removeEntry();
+      }
+
+      return;
+    }
+
+    Alert.alert(
+      "Let this reflection go?",
+      warning,
+      [
+        {
+          text: "Keep It",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () =>
+            void removeEntry(),
+        },
+      ]
+    );
+  }
+
+  async function removeEntry() {
+    if (!id) {
       return;
     }
 
     try {
       setDeleting(true);
-      setErrorMessage("");
 
       await deleteJournalEntry(
-        entry.id
+        id
       );
 
-      router.replace("/journal");
+      router.replace(
+        "/journal"
+      );
     } catch (error) {
-      console.error(
-        "Unable to delete reflection:",
-        error
-      );
-
       setErrorMessage(
         error instanceof Error
           ? error.message
           : "Unable to delete this reflection."
       );
-
+    } finally {
       setDeleting(false);
     }
   }
@@ -133,15 +181,16 @@ export default function JournalEntryScreen() {
   if (loading) {
     return (
       <SafeAreaView
-        style={styles.loadingContainer}
+        style={styles.centered}
       >
         <ActivityIndicator
-          size="large"
-          color="#CDB9FF"
+          color={colors.lavender}
         />
 
-        <Text style={styles.loadingText}>
-          Opening your reflection...
+        <Text
+          style={styles.loadingText}
+        >
+          Opening this page...
         </Text>
       </SafeAreaView>
     );
@@ -150,22 +199,30 @@ export default function JournalEntryScreen() {
   if (!entry) {
     return (
       <SafeAreaView
-        style={styles.loadingContainer}
+        style={styles.centered}
       >
-        <Text style={styles.error}>
-          {errorMessage ||
-            "Entry not found."}
+        <Text
+          style={styles.missingTitle}
+        >
+          This page couldn't be found.
         </Text>
 
-        <Pressable
+        {errorMessage ? (
+          <FeedbackMessage
+            type="error"
+            message={errorMessage}
+          />
+        ) : null}
+
+        <SoulButton
+          title="Return to journal"
+          variant="secondary"
           onPress={() =>
-            router.replace("/journal")
+            router.replace(
+              "/journal"
+            )
           }
-        >
-          <Text style={styles.backText}>
-            Return to Journal
-          </Text>
-        </Pressable>
+        />
       </SafeAreaView>
     );
   }
@@ -173,13 +230,14 @@ export default function JournalEntryScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
-        contentContainerStyle={
-          styles.content
-        }
+        contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
         <Pressable
-          onPress={() => router.back()}
+          style={styles.back}
+          onPress={() =>
+            router.back()
+          }
         >
           <Text style={styles.backText}>
             ‹ Journal
@@ -196,49 +254,43 @@ export default function JournalEntryScreen() {
 
         <View style={styles.metadata}>
           {entry.mood ? (
-            <Text style={styles.chip}>
-              {entry.mood}
-            </Text>
+            <View style={styles.metaChip}>
+              <Text style={styles.metaText}>
+                ◉ {entry.mood}
+              </Text>
+            </View>
           ) : null}
 
           {entry.energy_level ? (
-            <Text style={styles.chip}>
-              Energy{" "}
-              {entry.energy_level}/5
-            </Text>
+            <View style={styles.metaChip}>
+              <Text style={styles.metaText}>
+                ✧ Energy {entry.energy_level}/5
+              </Text>
+            </View>
           ) : null}
         </View>
 
-        {entryPractices.length > 0 ? (
-          <View
-            style={
-              styles.practiceSection
-            }
-          >
-            <Text
-              style={
-                styles.practiceHeading
-              }
-            >
-              PRACTICES
+        {practices.length > 0 ? (
+          <View style={styles.practiceArea}>
+            <Text style={styles.practiceHeading}>
+              What supported you
             </Text>
 
-            <View
-              style={
-                styles.practiceList
-              }
-            >
-              {entryPractices.map(
+            <View style={styles.practiceWrap}>
+              {practices.map(
                 (item) => (
-                  <Text
+                  <View
                     key={item.id}
-                    style={
-                      styles.practiceChip
-                    }
+                    style={styles.practiceChip}
                   >
-                    {item.practice?.name ??
-                      "Practice"}
-                  </Text>
+                    <Text
+                      style={styles.practiceText}
+                    >
+                      ✦{" "}
+                      {item.practice?.name ??
+                        "Practice"}
+                    </Text>
+                  </View>
                 )
               )}
             </View>
@@ -247,58 +299,49 @@ export default function JournalEntryScreen() {
 
         <View style={styles.divider} />
 
-        <Text style={styles.body}>
+        <Text style={styles.contentText}>
           {entry.content}
         </Text>
 
+        <SoulCard style={styles.closingCard}>
+          <Text style={styles.closingSymbol}>
+            ☾
+          </Text>
+
+          <Text style={styles.closingText}>
+            A reflection doesn't have to be finished to
+            be worth keeping.
+          </Text>
+        </SoulCard>
+
         {errorMessage ? (
-          <View style={styles.errorBox}>
-            <Text style={styles.error}>
-              {errorMessage}
-            </Text>
-          </View>
+          <FeedbackMessage
+            type="error"
+            message={errorMessage}
+          />
         ) : null}
 
-        <Pressable
-          style={styles.editButton}
-          onPress={() =>
-            router.push({
-              pathname:
-                "/journal/edit/[id]",
-              params: {
-                id: entry.id,
-              },
-            })
-          }
-        >
-          <Text style={styles.editText}>
-            Edit Reflection
-          </Text>
-        </Pressable>
+        <View style={styles.actions}>
+          <SoulButton
+            title="Continue this reflection"
+            onPress={() =>
+              router.push({
+                pathname:
+                  "/journal/edit/[id]",
+                params: {
+                  id: entry.id,
+                },
+              })
+            }
+          />
 
-        <Pressable
-          style={[
-            styles.deleteButton,
-            deleting &&
-              styles.disabledButton,
-          ]}
-          onPress={handleDelete}
-          disabled={deleting}
-        >
-          {deleting ? (
-            <ActivityIndicator
-              color="#C27A91"
-            />
-          ) : (
-            <Text
-              style={
-                styles.deleteText
-              }
-            >
-              Delete Reflection
-            </Text>
-          )}
-        </Pressable>
+          <SoulButton
+            title="Let this reflection go"
+            variant="danger"
+            loading={deleting}
+            onPress={requestDelete}
+          />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -307,47 +350,51 @@ export default function JournalEntryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0C0A18",
+    backgroundColor: colors.background,
   },
 
-  loadingContainer: {
+  centered: {
     flex: 1,
-    backgroundColor: "#0C0A18",
+    backgroundColor: colors.background,
     justifyContent: "center",
     alignItems: "center",
-    padding: 24,
-  },
-
-  loadingText: {
-    color: "#8E859F",
-    marginTop: 14,
+    padding: 28,
+    gap: 18,
   },
 
   content: {
     width: "100%",
     maxWidth: 700,
     alignSelf: "center",
-    paddingHorizontal: 26,
-    paddingTop: 26,
-    paddingBottom: 60,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 65,
+  },
+
+  back: {
+    alignSelf: "flex-start",
+    paddingVertical: 8,
+    marginBottom: 28,
   },
 
   backText: {
-    color: "#B8A5DC",
-    fontSize: 16,
-    marginBottom: 30,
+    color: colors.lavender,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 12,
   },
 
   date: {
-    color: "#84778E",
-    fontSize: 13,
+    color: colors.textDim,
+    fontFamily: fonts.body,
+    fontSize: 10,
   },
 
   title: {
-    color: "#F5EFFF",
-    fontSize: 33,
-    fontWeight: "700",
-    marginTop: 8,
+    color: colors.text,
+    fontFamily: fonts.display,
+    fontSize: 41,
+    lineHeight: 45,
+    marginTop: 5,
   },
 
   metadata: {
@@ -357,96 +404,97 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
 
-  chip: {
-    color: "#BDA9DF",
-    backgroundColor: "#1E1831",
-    paddingVertical: 6,
+  metaChip: {
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radius.pill,
     paddingHorizontal: 11,
-    borderRadius: 13,
+    paddingVertical: 6,
   },
 
-  practiceSection: {
-    marginTop: 24,
+  metaText: {
+    color: colors.lavender,
+    fontFamily: fonts.body,
+    fontSize: 10,
+  },
+
+  practiceArea: {
+    marginTop: 26,
   },
 
   practiceHeading: {
-    color: "#9587A8",
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 1.4,
+    color: colors.textSoft,
+    fontFamily: fonts.display,
+    fontSize: 20,
     marginBottom: 10,
   },
 
-  practiceList: {
+  practiceWrap: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    gap: 7,
   },
 
   practiceChip: {
-    color: "#CDB9ED",
-    backgroundColor: "#211A35",
     borderWidth: 1,
-    borderColor: "#352A50",
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 14,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+
+  practiceText: {
+    color: colors.goldSoft,
+    fontFamily: fonts.body,
+    fontSize: 10,
   },
 
   divider: {
     height: 1,
-    backgroundColor: "#29213D",
-    marginTop: 30,
+    backgroundColor: colors.border,
+    marginVertical: 30,
   },
 
-  body: {
-    color: "#D4CCDF",
+  contentText: {
+    color: colors.textSoft,
+    fontFamily: fonts.body,
+    fontSize: 15,
+    lineHeight: 26,
+  },
+
+  closingCard: {
+    marginTop: 34,
+    backgroundColor: "#18122B",
+    borderColor: colors.borderStrong,
+  },
+
+  closingSymbol: {
+    color: colors.gold,
     fontSize: 17,
-    lineHeight: 28,
-    marginTop: 30,
   },
 
-  errorBox: {
-    backgroundColor: "#2A151E",
-    borderWidth: 1,
-    borderColor: "#683248",
-    borderRadius: 12,
-    padding: 12,
-    marginTop: 24,
+  closingText: {
+    color: colors.textMuted,
+    fontFamily: fonts.displayItalic,
+    fontSize: 18,
+    lineHeight: 25,
+    marginTop: 7,
   },
 
-  error: {
-    color: "#F1A7B9",
+  actions: {
+    gap: 10,
+    marginTop: 26,
+  },
+
+  loadingText: {
+    color: colors.textDim,
+    fontFamily: fonts.body,
+    fontSize: 11,
+  },
+
+  missingTitle: {
+    color: colors.text,
+    fontFamily: fonts.display,
+    fontSize: 27,
     textAlign: "center",
-    lineHeight: 20,
-  },
-
-  editButton: {
-    backgroundColor: "#7357C7",
-    borderRadius: 15,
-    paddingVertical: 15,
-    alignItems: "center",
-    marginTop: 42,
-  },
-
-  editText: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-    fontSize: 16,
-  },
-
-  deleteButton: {
-    alignItems: "center",
-    paddingVertical: 15,
-    marginTop: 10,
-  },
-
-  deleteText: {
-    color: "#C27A91",
-    fontWeight: "600",
-  },
-
-  disabledButton: {
-    opacity: 0.6,
   },
 }); 

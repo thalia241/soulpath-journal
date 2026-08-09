@@ -1,17 +1,30 @@
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+
+import {
+  useEffect,
+  useState,
+} from "react";
+
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
+
+import SoulButton from "../../src/components/SoulButton";
+import SoulInput from "../../src/components/SoulInput";
+import FeedbackMessage from "../../src/components/FeedbackMessage";
+import SectionHeading from "../../src/components/SectionHeading";
+
+import {
+  colors,
+  fonts,
+  radius,
+} from "../../src/theme";
 
 import {
   createJournalEntry,
@@ -33,97 +46,120 @@ const moods = [
   "Overwhelmed",
 ];
 
-const energyLevels = [1, 2, 3, 4, 5];
-
 export default function NewJournalEntryScreen() {
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
+  const [title, setTitle] =
+    useState("");
+
+  const [content, setContent] =
+    useState("");
 
   const [mood, setMood] =
-    useState<string | null>(null);
+    useState<string | null>(
+      null
+    );
 
-  const [energy, setEnergy] =
-    useState<number | null>(null);
+  const [
+    energyLevel,
+    setEnergyLevel,
+  ] =
+    useState<number | null>(
+      null
+    );
 
-  const [practices, setPractices] =
-    useState<Practice[]>([]);
+  const [
+    practices,
+    setPractices,
+  ] = useState<Practice[]>([]);
 
   const [
     selectedPracticeIds,
     setSelectedPracticeIds,
   ] = useState<string[]>([]);
 
-  const [loading, setLoading] =
-    useState(false);
+  const [
+    loadingPractices,
+    setLoadingPractices,
+  ] = useState(true);
 
-  const [practicesLoading, setPracticesLoading] =
-    useState(true);
+  const [
+    saving,
+    setSaving,
+  ] = useState(false);
 
-  const [errorMessage, setErrorMessage] =
-    useState("");
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState("");
 
   useEffect(() => {
-    async function loadPractices() {
-      try {
-        const data = await getPractices();
-
-        setPractices(data);
-      } catch (error) {
-        console.error(
-          "Unable to load practices:",
-          error
-        );
-
-        setErrorMessage(
-          "Unable to load spiritual practices."
-        );
-      } finally {
-        setPracticesLoading(false);
-      }
-    }
-
     loadPractices();
   }, []);
 
-  function togglePractice(id: string) {
-    setSelectedPracticeIds((current) => {
-      if (current.includes(id)) {
-        return current.filter(
-          (practiceId) =>
-            practiceId !== id
-        );
-      }
+  async function loadPractices() {
+    try {
+      setLoadingPractices(true);
 
-      return [...current, id];
-    });
+      const data =
+        await getPractices();
+
+      setPractices(data);
+    } catch (error) {
+      console.error(
+        "Unable to load practices:",
+        error
+      );
+    } finally {
+      setLoadingPractices(false);
+    }
   }
 
-  async function handleSave() {
+  function togglePractice(
+    id: string
+  ) {
+    setSelectedPracticeIds(
+      (current) =>
+        current.includes(id)
+          ? current.filter(
+              (item) =>
+                item !== id
+            )
+          : [...current, id]
+    );
+  }
+
+  async function saveEntry() {
+    const cleanTitle =
+      title.trim();
+
+    const cleanContent =
+      content.trim();
+
     setErrorMessage("");
 
-    if (!title.trim()) {
+    if (!cleanTitle) {
       setErrorMessage(
-        "Give your reflection a title."
+        "Give this reflection a small title so you can find it again."
       );
       return;
     }
 
-    if (!content.trim()) {
+    if (!cleanContent) {
       setErrorMessage(
-        "Write something before saving your reflection."
+        "Write a little of what is moving through you."
       );
       return;
     }
 
     try {
-      setLoading(true);
+      setSaving(true);
 
       const entry =
         await createJournalEntry({
-          title: title.trim(),
-          content: content.trim(),
+          title: cleanTitle,
+          content: cleanContent,
           mood,
-          energy_level: energy,
+          energy_level:
+            energyLevel,
         });
 
       await setEntryPractices(
@@ -132,7 +168,9 @@ export default function NewJournalEntryScreen() {
       );
 
       router.replace({
-        pathname: "/journal/[id]",
+        pathname:
+          "/journal/[id]",
+
         params: {
           id: entry.id,
         },
@@ -149,83 +187,63 @@ export default function NewJournalEntryScreen() {
           : "Unable to save your reflection."
       );
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={
-          Platform.OS === "ios"
-            ? "padding"
-            : undefined
-        }
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          contentContainerStyle={
-            styles.content
-          }
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <Pressable
-            onPress={() => router.back()}
-          >
-            <Text style={styles.backText}>
-              ‹ Back
-            </Text>
-          </Pressable>
+        <BackButton />
 
-          <Text style={styles.eyebrow}>
-            DAILY REFLECTION
-          </Text>
+        <Text style={styles.symbol}>
+          ☾
+        </Text>
 
-          <Text style={styles.heading}>
-            What's moving through you?
-          </Text>
+        <Text style={styles.title}>
+          A new reflection
+        </Text>
 
-          <Text style={styles.subheading}>
-            There is no right way to write
-            here.
-          </Text>
+        <Text style={styles.subtitle}>
+          You don't have to make sense of it. Let the
+          page hold it first.
+        </Text>
 
-          <Text style={styles.label}>
-            Title
-          </Text>
-
-          <TextInput
-            style={styles.input}
+        <View style={styles.form}>
+          <SoulInput
+            label="A few words to remember this by"
             value={title}
             onChangeText={setTitle}
-            placeholder="Give this reflection a name"
-            placeholderTextColor="#70677F"
+            placeholder="Title"
+            maxLength={120}
           />
 
-          <Text style={styles.label}>
-            Your reflection
-          </Text>
-
-          <TextInput
-            style={[
-              styles.input,
-              styles.journalInput,
-            ]}
+          <SoulInput
+            label="What's here?"
             value={content}
             onChangeText={setContent}
             placeholder="Write freely..."
-            placeholderTextColor="#70677F"
             multiline
             textAlignVertical="top"
+            style={styles.largeInput}
           />
+        </View>
 
-          <Text style={styles.sectionTitle}>
-            How are you feeling?
-          </Text>
+        <SectionHeading
+          title="How does today feel?"
+        />
 
-          <View style={styles.wrapRow}>
-            {moods.map((item) => {
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipRow}
+        >
+          {moods.map(
+            (item) => {
               const selected =
                 mood === item;
 
@@ -233,9 +251,9 @@ export default function NewJournalEntryScreen() {
                 <Pressable
                   key={item}
                   style={[
-                    styles.choice,
+                    styles.chip,
                     selected &&
-                      styles.choiceSelected,
+                      styles.chipSelected,
                   ]}
                   onPress={() =>
                     setMood(
@@ -247,26 +265,30 @@ export default function NewJournalEntryScreen() {
                 >
                   <Text
                     style={[
-                      styles.choiceText,
+                      styles.chipText,
                       selected &&
-                        styles.choiceTextSelected,
+                        styles.chipTextSelected,
                     ]}
                   >
                     {item}
                   </Text>
                 </Pressable>
               );
-            })}
-          </View>
+            }
+          )}
+        </ScrollView>
 
-          <Text style={styles.sectionTitle}>
-            Energy level
-          </Text>
+        <SectionHeading
+          title="Where is your energy?"
+          subtitle="1 is very low, 5 is very full."
+        />
 
-          <View style={styles.energyRow}>
-            {energyLevels.map((level) => {
+        <View style={styles.energyRow}>
+          {[1, 2, 3, 4, 5].map(
+            (level) => {
               const selected =
-                energy === level;
+                energyLevel ===
+                level;
 
               return (
                 <Pressable
@@ -277,7 +299,7 @@ export default function NewJournalEntryScreen() {
                       styles.energySelected,
                   ]}
                   onPress={() =>
-                    setEnergy(
+                    setEnergyLevel(
                       selected
                         ? null
                         : level
@@ -295,273 +317,237 @@ export default function NewJournalEntryScreen() {
                   </Text>
                 </Pressable>
               );
-            })}
-          </View>
-
-          <Text style={styles.sectionTitle}>
-            Spiritual practices
-          </Text>
-
-          <Text style={styles.practiceHint}>
-            Select anything that was part
-            of today's spiritual practice.
-          </Text>
-
-          {practicesLoading ? (
-            <ActivityIndicator
-              color="#CDB9FF"
-              style={
-                styles.practiceLoader
-              }
-            />
-          ) : (
-            <View style={styles.wrapRow}>
-              {practices.map(
-                (practice) => {
-                  const selected =
-                    selectedPracticeIds.includes(
-                      practice.id
-                    );
-
-                  return (
-                    <Pressable
-                      key={practice.id}
-                      style={[
-                        styles.choice,
-                        selected &&
-                          styles.choiceSelected,
-                      ]}
-                      onPress={() =>
-                        togglePractice(
-                          practice.id
-                        )
-                      }
-                    >
-                      <Text
-                        style={[
-                          styles.choiceText,
-                          selected &&
-                            styles.choiceTextSelected,
-                        ]}
-                      >
-                        {practice.name}
-                      </Text>
-                    </Pressable>
-                  );
-                }
-              )}
-            </View>
+            }
           )}
+        </View>
 
-          {errorMessage ? (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorText}>
-                {errorMessage}
-              </Text>
-            </View>
-          ) : null}
+        <SectionHeading
+          title="What supported you?"
+          subtitle="Choose any practices that were part of your day."
+        />
 
-          <Pressable
-            style={[
-              styles.saveButton,
-              loading &&
-                styles.disabledButton,
-            ]}
-            onPress={handleSave}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator
-                color="#FFFFFF"
-              />
-            ) : (
-              <Text
-                style={
-                  styles.saveButtonText
-                }
-              >
-                Save Reflection
-              </Text>
+        {loadingPractices ? (
+          <ActivityIndicator
+            color={colors.lavender}
+          />
+        ) : (
+          <View style={styles.practiceWrap}>
+            {practices.map(
+              (practice) => {
+                const selected =
+                  selectedPracticeIds.includes(
+                    practice.id
+                  );
+
+                return (
+                  <Pressable
+                    key={practice.id}
+                    style={[
+                      styles.practiceChip,
+                      selected &&
+                        styles.practiceSelected,
+                    ]}
+                    onPress={() =>
+                      togglePractice(
+                        practice.id
+                      )
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.practiceText,
+                        selected &&
+                          styles.practiceTextSelected,
+                      ]}
+                    >
+                      ✦ {practice.name}
+                    </Text>
+                  </Pressable>
+                );
+              }
             )}
-          </Pressable>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          </View>
+        )}
+
+        {errorMessage ? (
+          <FeedbackMessage
+            type="error"
+            message={errorMessage}
+          />
+        ) : null}
+
+        <SoulButton
+          title="Keep this reflection"
+          loading={saving}
+          onPress={saveEntry}
+        />
+      </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function BackButton() {
+  return (
+    <Pressable
+      style={styles.back}
+      onPress={() =>
+        router.back()
+      }
+    >
+      <Text style={styles.backText}>
+        ‹ Journal
+      </Text>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0C0A18",
+    backgroundColor: colors.background,
   },
 
   content: {
     width: "100%",
-    maxWidth: 700,
+    maxWidth: 680,
     alignSelf: "center",
     paddingHorizontal: 24,
-    paddingTop: 26,
-    paddingBottom: 60,
+    paddingTop: 24,
+    paddingBottom: 65,
+  },
+
+  back: {
+    alignSelf: "flex-start",
+    paddingVertical: 8,
   },
 
   backText: {
-    color: "#B9AED0",
-    fontSize: 16,
-    marginBottom: 28,
+    color: colors.lavender,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 12,
   },
 
-  eyebrow: {
-    color: "#8F77BF",
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 2,
+  symbol: {
+    color: colors.gold,
+    fontSize: 20,
+    marginTop: 20,
   },
 
-  heading: {
-    color: "#F5F0FF",
-    fontSize: 31,
-    fontWeight: "700",
-    marginTop: 8,
+  title: {
+    color: colors.text,
+    fontFamily: fonts.display,
+    fontSize: 39,
+    marginTop: 6,
   },
 
-  subheading: {
-    color: "#8D859A",
-    fontSize: 15,
-    marginTop: 8,
+  subtitle: {
+    color: colors.textMuted,
+    fontFamily: fonts.displayItalic,
+    fontSize: 17,
+    lineHeight: 23,
+    marginTop: 3,
+    marginBottom: 27,
+  },
+
+  form: {
+    gap: 17,
     marginBottom: 30,
   },
 
-  label: {
-    color: "#D8C9F1",
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 9,
-    marginTop: 16,
+  largeInput: {
+    minHeight: 180,
+    paddingTop: 15,
   },
 
-  input: {
-    backgroundColor: "#171329",
-    color: "#F2EDFA",
-    borderRadius: 15,
+  chipRow: {
+    gap: 8,
+    paddingBottom: 29,
+  },
+
+  chip: {
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#332A49",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
   },
 
-  journalInput: {
-    minHeight: 220,
-    lineHeight: 24,
+  chipSelected: {
+    backgroundColor: colors.purpleDark,
+    borderColor: colors.lavenderStrong,
   },
 
-  sectionTitle: {
-    color: "#E5DCF4",
-    fontSize: 17,
-    fontWeight: "600",
-    marginTop: 28,
-    marginBottom: 12,
+  chipText: {
+    color: colors.textMuted,
+    fontFamily: fonts.bodyMedium,
+    fontSize: 11,
   },
 
-  practiceHint: {
-    color: "#847B95",
-    fontSize: 13,
-    marginTop: -5,
-    marginBottom: 13,
-  },
-
-  practiceLoader: {
-    marginTop: 8,
-  },
-
-  wrapRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 9,
-  },
-
-  choice: {
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: "#151126",
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "#312847",
-  },
-
-  choiceSelected: {
-    backgroundColor: "#5E489D",
-    borderColor: "#8F74D2",
-  },
-
-  choiceText: {
-    color: "#A89DBB",
-  },
-
-  choiceTextSelected: {
-    color: "#FFFFFF",
+  chipTextSelected: {
+    color: colors.white,
   },
 
   energyRow: {
     flexDirection: "row",
-    gap: 10,
+    gap: 9,
+    marginBottom: 30,
   },
 
   energyButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#151126",
+    flex: 1,
+    minHeight: 48,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#312847",
+    borderColor: colors.border,
+    borderRadius: radius.md,
     justifyContent: "center",
     alignItems: "center",
   },
 
   energySelected: {
-    backgroundColor: "#7357C7",
-    borderColor: "#8F74D2",
+    backgroundColor: colors.purpleDark,
+    borderColor: colors.lavenderStrong,
   },
 
   energyText: {
-    color: "#A89DBB",
-    fontWeight: "600",
+    color: colors.textMuted,
+    fontFamily: fonts.display,
+    fontSize: 21,
   },
 
   energyTextSelected: {
-    color: "#FFFFFF",
+    color: colors.white,
   },
 
-  errorBox: {
-    backgroundColor: "#2A151E",
+  practiceWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 28,
+  },
+
+  practiceChip: {
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#683248",
-    borderRadius: 12,
-    padding: 12,
-    marginTop: 24,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    paddingHorizontal: 13,
+    paddingVertical: 9,
   },
 
-  errorText: {
-    color: "#F1A7B9",
-    lineHeight: 20,
+  practiceSelected: {
+    backgroundColor: colors.surfaceRaised,
+    borderColor: colors.lavenderStrong,
   },
 
-  saveButton: {
-    backgroundColor: "#7357C7",
-    borderRadius: 16,
-    paddingVertical: 17,
-    alignItems: "center",
-    marginTop: 34,
+  practiceText: {
+    color: colors.textMuted,
+    fontFamily: fonts.body,
+    fontSize: 11,
   },
 
-  disabledButton: {
-    opacity: 0.6,
-  },
-
-  saveButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
+  practiceTextSelected: {
+    color: colors.lavender,
   },
 }); 

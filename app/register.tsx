@@ -1,118 +1,151 @@
 import { router } from "expo-router";
-import { useState } from "react";
+
 import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
+  useState,
+} from "react";
+
+import {
   Pressable,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 
-import { supabase } from "../src/lib/supabase";
+import SoulButton from "../src/components/SoulButton";
+import SoulInput from "../src/components/SoulInput";
+import FeedbackMessage from "../src/components/FeedbackMessage";
+
+import {
+  colors,
+  fonts,
+} from "../src/theme";
+
+import {
+  supabase,
+} from "../src/lib/supabase";
 
 export default function RegisterScreen() {
-  const [displayName, setDisplayName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [
+    displayName,
+    setDisplayName,
+  ] = useState("");
 
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [isError, setIsError] = useState(false);
+  const [
+    email,
+    setEmail,
+  ] = useState("");
 
-  function showError(text: string) {
-    setIsError(true);
-    setMessage(text);
-  }
+  const [
+    password,
+    setPassword,
+  ] = useState("");
 
-  function showSuccess(text: string) {
-    setIsError(false);
-    setMessage(text);
-  }
+  const [
+    confirmPassword,
+    setConfirmPassword,
+  ] = useState("");
+
+  const [
+    loading,
+    setLoading,
+  ] = useState(false);
+
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState("");
+
+  const [
+    successMessage,
+    setSuccessMessage,
+  ] = useState("");
 
   async function handleRegister() {
-    console.log("Create My SoulPath pressed");
+    const name =
+      displayName.trim();
 
-    setMessage("");
+    const cleanEmail =
+      email.trim().toLowerCase();
 
-    const cleanEmail = email.trim().toLowerCase();
-    const cleanName = displayName.trim();
+    setErrorMessage("");
+    setSuccessMessage("");
 
-    if (!cleanName) {
-      showError("Please enter your name.");
+    if (!name) {
+      setErrorMessage(
+        "What would you like SoulPath to call you?"
+      );
       return;
     }
 
     if (!cleanEmail) {
-      showError("Please enter your email address.");
-      return;
-    }
-
-    if (!password) {
-      showError("Please enter a password.");
+      setErrorMessage(
+        "Enter an email for your SoulPath account."
+      );
       return;
     }
 
     if (password.length < 8) {
-      showError("Your password must contain at least 8 characters.");
+      setErrorMessage(
+        "Choose a password with at least 8 characters."
+      );
       return;
     }
 
-    if (password !== confirmPassword) {
-      showError("Your passwords do not match.");
+    if (
+      password !==
+      confirmPassword
+    ) {
+      setErrorMessage(
+        "Those passwords don't match yet."
+      );
       return;
     }
 
     try {
       setLoading(true);
 
-      console.log("Attempting Supabase signup...");
+      const {
+        data,
+        error,
+      } =
+        await supabase.auth.signUp({
+          email: cleanEmail,
+          password,
 
-      const { data, error } = await supabase.auth.signUp({
-        email: cleanEmail,
-        password,
-        options: {
-          data: {
-            display_name: cleanName,
+          options: {
+            data: {
+              display_name: name,
+            },
           },
-        },
-      });
-
-      console.log("Signup completed");
-      console.log("User created:", !!data.user);
-      console.log("Session created:", !!data.session);
+        });
 
       if (error) {
-        console.error("Signup error:", error);
-        showError(error.message);
-        return;
+        throw error;
       }
 
-      if (!data.user) {
-        showError("Account creation did not return a user.");
-        return;
-      }
-
-      if (!data.session) {
-        showSuccess(
-          "Your account was created! Check your email to verify your account, then sign in."
+      if (data.session) {
+        router.replace(
+          "/(tabs)/today"
         );
 
         return;
       }
 
-      router.replace("/(tabs)/today");
+      setSuccessMessage(
+        "Your SoulPath has been created. Check your email to confirm your account, then return here to sign in."
+      );
     } catch (error) {
-      console.error("Unexpected registration error:", error);
+      console.error(
+        "Unable to register:",
+        error
+      );
 
-      showError(
+      setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Something went wrong while creating your account."
+          : "Unable to create your SoulPath."
       );
     } finally {
       setLoading(false);
@@ -121,130 +154,110 @@ export default function RegisterScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        style={styles.keyboardContainer}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.content}>
-          <Pressable
-            onPress={() => router.back()}
-            style={styles.backButton}
-          >
-            <Text style={styles.backText}>‹ Back</Text>
-          </Pressable>
-
-          <Text style={styles.symbol}>☾</Text>
-
-          <Text style={styles.title}>Begin Your Journey</Text>
-
-          <Text style={styles.subtitle}>
-            Create your private SoulPath space.
+        <Pressable
+          style={styles.back}
+          onPress={() =>
+            router.back()
+          }
+        >
+          <Text style={styles.backText}>
+            ‹ Back
           </Text>
+        </Pressable>
 
-          <View style={styles.form}>
-            <Text style={styles.label}>Name</Text>
+        <Text style={styles.symbol}>
+          ✦
+        </Text>
 
-            <TextInput
-              style={styles.input}
-              placeholder="What should we call you?"
-              placeholderTextColor="#6F6780"
-              value={displayName}
-              onChangeText={setDisplayName}
-              autoCapitalize="words"
+        <Text style={styles.title}>
+          Begin your SoulPath
+        </Text>
+
+        <Text style={styles.subtitle}>
+          Make a quiet place for whatever you're
+          becoming, remembering, or learning to notice.
+        </Text>
+
+        <View style={styles.form}>
+          <SoulInput
+            label="What should we call you?"
+            value={displayName}
+            onChangeText={setDisplayName}
+            placeholder="Display name"
+            autoCapitalize="words"
+            maxLength={60}
+          />
+
+          <SoulInput
+            label="Email"
+            value={email}
+            onChangeText={setEmail}
+            placeholder="you@example.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+
+          <SoulInput
+            label="Password"
+            value={password}
+            onChangeText={setPassword}
+            placeholder="At least 8 characters"
+            secureTextEntry
+            autoCapitalize="none"
+          />
+
+          <SoulInput
+            label="One more time"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            placeholder="Repeat your password"
+            secureTextEntry
+            autoCapitalize="none"
+          />
+
+          {errorMessage ? (
+            <FeedbackMessage
+              type="error"
+              message={errorMessage}
             />
+          ) : null}
 
-            <Text style={styles.label}>Email</Text>
+          {successMessage ? (
+            <>
+              <FeedbackMessage
+                message={successMessage}
+              />
 
-            <TextInput
-              style={styles.input}
-              placeholder="you@example.com"
-              placeholderTextColor="#6F6780"
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              autoCorrect={false}
-            />
-
-            <Text style={styles.label}>Password</Text>
-
-            <TextInput
-              style={styles.input}
-              placeholder="At least 8 characters"
-              placeholderTextColor="#6F6780"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-            />
-
-            <Text style={styles.label}>Confirm Password</Text>
-
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your password again"
-              placeholderTextColor="#6F6780"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry
-              autoCapitalize="none"
-            />
-
-            {message ? (
-              <View
-                style={[
-                  styles.messageBox,
-                  isError
-                    ? styles.errorMessageBox
-                    : styles.successMessageBox,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.messageText,
-                    isError
-                      ? styles.errorText
-                      : styles.successText,
-                  ]}
-                >
-                  {message}
-                </Text>
-              </View>
-            ) : null}
-
-            <Pressable
-              style={({ pressed }) => [
-                styles.primaryButton,
-                pressed && styles.buttonPressed,
-                loading && styles.buttonDisabled,
-              ]}
+              <SoulButton
+                title="Go to sign in"
+                variant="secondary"
+                onPress={() =>
+                  router.replace(
+                    "/login"
+                  )
+                }
+              />
+            </>
+          ) : (
+            <SoulButton
+              title="Create my SoulPath"
+              loading={loading}
               onPress={handleRegister}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.primaryButtonText}>
-                  Create My SoulPath
-                </Text>
-              )}
-            </Pressable>
-          </View>
-
-          <Pressable onPress={() => router.replace("/login")}>
-            <Text style={styles.signInText}>
-              Already have an account?{" "}
-              <Text style={styles.signInLink}>
-                Sign in
-              </Text>
-            </Text>
-          </Pressable>
-
-          <Text style={styles.privacyText}>
-            Your reflections are private and belong to you.
-          </Text>
+            />
+          )}
         </View>
-      </KeyboardAvoidingView>
+
+        <Text style={styles.privacy}>
+          Your journal is intended to be private to
+          your authenticated account.
+        </Text>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -252,146 +265,62 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0C0A18",
-  },
-
-  keyboardContainer: {
-    flex: 1,
+    backgroundColor: colors.background,
   },
 
   content: {
-    flex: 1,
     width: "100%",
-    maxWidth: 480,
+    maxWidth: 560,
     alignSelf: "center",
     paddingHorizontal: 28,
-    paddingTop: 30,
-    justifyContent: "center",
+    paddingTop: 32,
+    paddingBottom: 55,
   },
 
-  backButton: {
-    position: "absolute",
-    top: 20,
-    left: 28,
+  back: {
+    alignSelf: "flex-start",
+    paddingVertical: 8,
   },
 
   backText: {
-    color: "#B9AED0",
-    fontSize: 16,
+    color: colors.lavender,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 12,
   },
 
   symbol: {
-    textAlign: "center",
-    fontSize: 54,
-    color: "#D9C6FF",
-    marginBottom: 16,
+    color: colors.gold,
+    fontSize: 30,
+    marginTop: 26,
   },
 
   title: {
-    color: "#F6F0FF",
-    fontSize: 32,
-    fontWeight: "700",
-    textAlign: "center",
+    color: colors.text,
+    fontFamily: fonts.display,
+    fontSize: 41,
+    lineHeight: 45,
+    marginTop: 10,
   },
 
   subtitle: {
-    color: "#9D94B5",
-    fontSize: 16,
-    textAlign: "center",
-    marginTop: 10,
-    marginBottom: 30,
+    color: colors.textMuted,
+    fontFamily: fonts.displayItalic,
+    fontSize: 17,
+    lineHeight: 24,
+    marginTop: 5,
   },
 
   form: {
-    gap: 10,
+    gap: 16,
+    marginTop: 31,
   },
 
-  label: {
-    color: "#D9C6FF",
-    fontSize: 14,
-    fontWeight: "600",
-    marginTop: 4,
-  },
-
-  input: {
-    backgroundColor: "#171329",
-    borderColor: "#39304F",
-    borderWidth: 1,
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 15,
-    color: "#F6F0FF",
-    fontSize: 16,
-  },
-
-  messageBox: {
-    borderRadius: 12,
-    padding: 12,
-    marginTop: 8,
-  },
-
-  errorMessageBox: {
-    backgroundColor: "#2A151E",
-    borderWidth: 1,
-    borderColor: "#683248",
-  },
-
-  successMessageBox: {
-    backgroundColor: "#14241E",
-    borderWidth: 1,
-    borderColor: "#315C4B",
-  },
-
-  messageText: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-
-  errorText: {
-    color: "#F1A7B9",
-  },
-
-  successText: {
-    color: "#A9DFC8",
-  },
-
-  primaryButton: {
-    marginTop: 16,
-    backgroundColor: "#7357C7",
-    paddingVertical: 17,
-    borderRadius: 16,
-    alignItems: "center",
-  },
-
-  buttonPressed: {
-    opacity: 0.85,
-  },
-
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-
-  primaryButtonText: {
-    color: "#FFFFFF",
-    fontSize: 17,
-    fontWeight: "700",
-  },
-
-  signInText: {
-    color: "#8D849F",
+  privacy: {
+    color: colors.textDim,
+    fontFamily: fonts.body,
+    fontSize: 9,
     textAlign: "center",
-    marginTop: 24,
-  },
-
-  signInLink: {
-    color: "#D9C6FF",
-    fontWeight: "700",
-  },
-
-  privacyText: {
-    color: "#665F74",
-    fontSize: 12,
-    textAlign: "center",
-    marginTop: 24,
+    lineHeight: 15,
+    marginTop: 22,
   },
 }); 

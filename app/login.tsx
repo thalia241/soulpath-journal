@@ -1,55 +1,100 @@
 import { router } from "expo-router";
-import { useState } from "react";
+
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
+  useState,
+} from "react";
+
+import {
   Pressable,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 
-import { supabase } from "../src/lib/supabase";
+import SoulButton from "../src/components/SoulButton";
+import SoulInput from "../src/components/SoulInput";
+import FeedbackMessage from "../src/components/FeedbackMessage";
+
+import {
+  colors,
+  fonts,
+} from "../src/theme";
+
+import {
+  supabase,
+} from "../src/lib/supabase";
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [
+    email,
+    setEmail,
+  ] = useState("");
+
+  const [
+    password,
+    setPassword,
+  ] = useState("");
+
+  const [
+    loading,
+    setLoading,
+  ] = useState(false);
+
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState("");
 
   async function handleLogin() {
-    const cleanEmail = email.trim().toLowerCase();
+    const cleanEmail =
+      email.trim().toLowerCase();
 
-    if (!cleanEmail || !password) {
-      Alert.alert(
-        "Missing information",
-        "Please enter your email and password."
+    setErrorMessage("");
+
+    if (!cleanEmail) {
+      setErrorMessage(
+        "Enter the email connected to your SoulPath."
       );
+      return;
+    }
 
+    if (!password) {
+      setErrorMessage(
+        "Enter your password to continue."
+      );
       return;
     }
 
     try {
       setLoading(true);
 
-      const { error } = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
-        password,
-      });
+      const {
+        error,
+      } =
+        await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password,
+        });
 
       if (error) {
-        Alert.alert("Unable to sign in", error.message);
-        return;
+        throw error;
       }
 
-      router.replace("/(tabs)/today");
-    } catch {
-      Alert.alert(
-        "Something went wrong",
-        "We couldn't sign you in. Please try again."
+      router.replace(
+        "/(tabs)/today"
+      );
+    } catch (error) {
+      console.error(
+        "Unable to sign in:",
+        error
+      );
+
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to open your SoulPath."
       );
     } finally {
       setLoading(false);
@@ -58,81 +103,87 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        style={styles.keyboardContainer}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.content}>
-          <Pressable
-            onPress={() => router.back()}
-            style={styles.backButton}
-          >
-            <Text style={styles.backText}>‹ Back</Text>
-          </Pressable>
+        <Pressable
+          style={styles.back}
+          onPress={() =>
+            router.back()
+          }
+        >
+          <Text style={styles.backText}>
+            ‹ Back
+          </Text>
+        </Pressable>
 
-          <Text style={styles.symbol}>☾</Text>
+        <Text style={styles.symbol}>
+          ☾
+        </Text>
 
-          <Text style={styles.title}>Welcome Back</Text>
+        <Text style={styles.title}>
+          Welcome back
+        </Text>
 
-          <Text style={styles.subtitle}>
-            Return to your private space.
+        <Text style={styles.subtitle}>
+          Your pages have been waiting quietly for you.
+        </Text>
+
+        <View style={styles.form}>
+          <SoulInput
+            label="Email"
+            value={email}
+            onChangeText={setEmail}
+            placeholder="you@example.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+
+          <SoulInput
+            label="Password"
+            value={password}
+            onChangeText={setPassword}
+            placeholder="Your password"
+            secureTextEntry
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+
+          {errorMessage ? (
+            <FeedbackMessage
+              type="error"
+              message={errorMessage}
+            />
+          ) : null}
+
+          <SoulButton
+            title="Return to SoulPath"
+            loading={loading}
+            onPress={handleLogin}
+          />
+        </View>
+
+        <View style={styles.joinRow}>
+          <Text style={styles.joinText}>
+            New to SoulPath?
           </Text>
 
-          <View style={styles.form}>
-            <Text style={styles.label}>Email</Text>
-
-            <TextInput
-              style={styles.input}
-              placeholder="you@example.com"
-              placeholderTextColor="#6F6780"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-
-            <Text style={styles.label}>Password</Text>
-
-            <TextInput
-              style={styles.input}
-              placeholder="Your password"
-              placeholderTextColor="#6F6780"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-            />
-
-            <Pressable
-              style={({ pressed }) => [
-                styles.primaryButton,
-                pressed && styles.buttonPressed,
-                loading && styles.buttonDisabled,
-              ]}
-              onPress={handleLogin}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.primaryButtonText}>
-                  Enter SoulPath
-                </Text>
-              )}
-            </Pressable>
-          </View>
-
-          <Pressable onPress={() => router.replace("/register")}>
-            <Text style={styles.createAccountText}>
-              New to SoulPath?{" "}
-              <Text style={styles.createAccountLink}>
-                Create an account
-              </Text>
+          <Pressable
+            onPress={() =>
+              router.replace(
+                "/register"
+              )
+            }
+          >
+            <Text style={styles.joinLink}>
+              Begin here
             </Text>
           </Pressable>
         </View>
-      </KeyboardAvoidingView>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -140,107 +191,76 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0C0A18",
-  },
-
-  keyboardContainer: {
-    flex: 1,
+    backgroundColor: colors.background,
   },
 
   content: {
-    flex: 1,
+    flexGrow: 1,
     width: "100%",
-    maxWidth: 480,
+    maxWidth: 560,
     alignSelf: "center",
-    paddingHorizontal: 28,
     justifyContent: "center",
+    paddingHorizontal: 28,
+    paddingVertical: 40,
   },
 
-  backButton: {
+  back: {
     position: "absolute",
-    top: 20,
+    top: 24,
     left: 28,
+    paddingVertical: 8,
   },
 
   backText: {
-    color: "#B9AED0",
-    fontSize: 16,
+    color: colors.lavender,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 12,
   },
 
   symbol: {
-    fontSize: 54,
-    color: "#D9C6FF",
+    color: colors.gold,
+    fontSize: 36,
     textAlign: "center",
-    marginBottom: 16,
   },
 
   title: {
-    color: "#F6F0FF",
-    fontSize: 32,
-    fontWeight: "700",
+    color: colors.text,
+    fontFamily: fonts.display,
+    fontSize: 43,
     textAlign: "center",
+    marginTop: 14,
   },
 
   subtitle: {
-    color: "#9D94B5",
-    fontSize: 16,
+    color: colors.textMuted,
+    fontFamily: fonts.displayItalic,
+    fontSize: 18,
+    lineHeight: 24,
     textAlign: "center",
-    marginTop: 10,
-    marginBottom: 32,
-  },
-
-  form: {
-    gap: 10,
-  },
-
-  label: {
-    color: "#D9C6FF",
-    fontWeight: "600",
-    fontSize: 14,
     marginTop: 4,
   },
 
-  input: {
-    backgroundColor: "#171329",
-    borderWidth: 1,
-    borderColor: "#39304F",
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 15,
-    color: "#F6F0FF",
-    fontSize: 16,
+  form: {
+    gap: 17,
+    marginTop: 36,
   },
 
-  primaryButton: {
-    backgroundColor: "#7357C7",
-    paddingVertical: 17,
-    borderRadius: 16,
-    alignItems: "center",
-    marginTop: 18,
+  joinRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 5,
+    marginTop: 25,
   },
 
-  primaryButtonText: {
-    color: "#FFFFFF",
-    fontSize: 17,
-    fontWeight: "700",
+  joinText: {
+    color: colors.textDim,
+    fontFamily: fonts.body,
+    fontSize: 11,
   },
 
-  buttonPressed: {
-    opacity: 0.85,
-  },
-
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-
-  createAccountText: {
-    color: "#8D849F",
-    textAlign: "center",
-    marginTop: 26,
-  },
-
-  createAccountLink: {
-    color: "#D9C6FF",
-    fontWeight: "700",
+  joinLink: {
+    color: colors.lavender,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 11,
   },
 }); 

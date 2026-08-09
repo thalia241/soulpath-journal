@@ -12,33 +12,59 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 
-import { useAuth } from "../../src/context/AuthContext";
-import { supabase } from "../../src/lib/supabase";
+import SoulButton from "../../src/components/SoulButton";
+import SoulInput from "../../src/components/SoulInput";
+import FeedbackMessage from "../../src/components/FeedbackMessage";
+
+import {
+  colors,
+  fonts,
+  radius,
+} from "../../src/theme";
+
+import {
+  useAuth,
+} from "../../src/context/AuthContext";
+
+import {
+  supabase,
+} from "../../src/lib/supabase";
 
 export default function ProfileSettingsScreen() {
-  const { session } = useAuth();
+  const { session } =
+    useAuth();
 
-  const [displayName, setDisplayName] =
-    useState("");
+  const [
+    displayName,
+    setDisplayName,
+  ] = useState("");
 
-  const [loading, setLoading] =
-    useState(true);
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
 
-  const [saving, setSaving] =
-    useState(false);
+  const [
+    saving,
+    setSaving,
+  ] = useState(false);
 
-  const [errorMessage, setErrorMessage] =
-    useState("");
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState("");
 
-  const [successMessage, setSuccessMessage] =
-    useState("");
+  const [
+    successMessage,
+    setSuccessMessage,
+  ] = useState("");
 
   const email =
-    session?.user.email || "";
+    session?.user.email ||
+    "";
 
   useEffect(() => {
     loadProfile();
@@ -47,25 +73,27 @@ export default function ProfileSettingsScreen() {
   async function loadProfile() {
     try {
       setLoading(true);
-      setErrorMessage("");
 
       const {
         data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+        error,
+      } =
+        await supabase.auth.getUser();
 
-      if (userError || !user) {
+      if (error || !user) {
         throw new Error(
-          "Unable to load your account."
+          "Unable to open your profile."
         );
       }
 
       const {
-        data: profile,
+        data,
         error: profileError,
       } = await supabase
         .from("profiles")
-        .select("display_name")
+        .select(
+          "display_name"
+        )
         .eq("id", user.id)
         .maybeSingle();
 
@@ -74,16 +102,12 @@ export default function ProfileSettingsScreen() {
       }
 
       setDisplayName(
-        profile?.display_name ||
-          user.user_metadata?.display_name ||
+        data?.display_name ||
+          user.user_metadata
+            ?.display_name ||
           ""
       );
     } catch (error) {
-      console.error(
-        "Unable to load profile:",
-        error
-      );
-
       setErrorMessage(
         error instanceof Error
           ? error.message
@@ -95,14 +119,13 @@ export default function ProfileSettingsScreen() {
   }
 
   async function saveProfile() {
-    const cleanName =
+    const name =
       displayName.trim();
 
-    if (!cleanName) {
+    if (!name) {
       setErrorMessage(
-        "Please enter a display name."
+        "What would you like SoulPath to call you?"
       );
-
       return;
     }
 
@@ -113,12 +136,13 @@ export default function ProfileSettingsScreen() {
 
       const {
         data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+        error,
+      } =
+        await supabase.auth.getUser();
 
-      if (userError || !user) {
+      if (error || !user) {
         throw new Error(
-          "You must be signed in to update your profile."
+          "Your session could not be found."
         );
       }
 
@@ -127,7 +151,7 @@ export default function ProfileSettingsScreen() {
       } = await supabase
         .from("profiles")
         .update({
-          display_name: cleanName,
+          display_name: name,
         })
         .eq("id", user.id);
 
@@ -137,31 +161,29 @@ export default function ProfileSettingsScreen() {
 
       const {
         error: authError,
-      } = await supabase.auth.updateUser({
-        data: {
-          display_name: cleanName,
-        },
-      });
+      } =
+        await supabase.auth.updateUser(
+          {
+            data: {
+              display_name: name,
+            },
+          }
+        );
 
       if (authError) {
         throw authError;
       }
 
-      setDisplayName(cleanName);
+      setDisplayName(name);
 
       setSuccessMessage(
-        "Your profile has been updated."
+        "Your name has been saved."
       );
     } catch (error) {
-      console.error(
-        "Unable to save profile:",
-        error
-      );
-
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Unable to update your profile."
+          : "Unable to save your changes."
       );
     } finally {
       setSaving(false);
@@ -169,109 +191,122 @@ export default function ProfileSettingsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={styles.container}
+    >
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={
+          styles.content
+        }
         keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
       >
-        <Pressable
-          style={styles.backButton}
-          onPress={() => router.back()}
+        <BackButton />
+
+        <Text
+          style={styles.title}
         >
-          <Text style={styles.backText}>
-            ‹ Settings
-          </Text>
-        </Pressable>
-
-        <Text style={styles.eyebrow}>
-          YOUR ACCOUNT
-        </Text>
-
-        <Text style={styles.title}>
           Profile
         </Text>
 
-        <Text style={styles.subtitle}>
-          Manage the name that appears throughout
-          your SoulPath experience.
+        <Text
+          style={styles.subtitle}
+        >
+          A small piece of you that
+          SoulPath carries from page to
+          page.
         </Text>
 
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
+        <View
+          style={styles.avatar}
+        >
+          <Text
+            style={
+              styles.avatarText
+            }
+          >
             ☾
           </Text>
         </View>
 
         {loading ? (
           <ActivityIndicator
-            size="large"
-            color="#CDB9FF"
-            style={styles.loader}
+            color={
+              colors.lavender
+            }
           />
         ) : (
           <>
-            <Text style={styles.label}>
-              Display name
-            </Text>
-
-            <TextInput
-              style={styles.input}
+            <SoulInput
+              label="What should we call you?"
               value={displayName}
-              onChangeText={setDisplayName}
-              placeholder="Your display name"
-              placeholderTextColor="#70677F"
-              autoCapitalize="words"
+              onChangeText={
+                setDisplayName
+              }
+              placeholder="Display name"
               maxLength={60}
+              autoCapitalize="words"
             />
 
-            <Text style={styles.label}>
-              Email
-            </Text>
+            <View
+              style={styles.emailArea}
+            >
+              <Text
+                style={styles.label}
+              >
+                Email
+              </Text>
 
-            <View style={styles.readonlyInput}>
-              <Text style={styles.readonlyText}>
-                {email}
+              <View
+                style={
+                  styles.readOnly
+                }
+              >
+                <Text
+                  style={
+                    styles.email
+                  }
+                >
+                  {email}
+                </Text>
+              </View>
+
+              <Text
+                style={styles.hint}
+              >
+                Email changes aren't
+                part of this version of
+                SoulPath yet.
               </Text>
             </View>
 
-            <Text style={styles.fieldHint}>
-              Email changes are not enabled in this
-              version of SoulPath.
-            </Text>
-
             {errorMessage ? (
-              <View style={styles.errorBox}>
-                <Text style={styles.errorText}>
-                  {errorMessage}
-                </Text>
-              </View>
+              <FeedbackMessage
+                type="error"
+                message={
+                  errorMessage
+                }
+              />
             ) : null}
 
             {successMessage ? (
-              <View style={styles.successBox}>
-                <Text style={styles.successText}>
-                  {successMessage}
-                </Text>
-              </View>
+              <FeedbackMessage
+                message={
+                  successMessage
+                }
+              />
             ) : null}
 
-            <Pressable
-              style={[
-                styles.saveButton,
-                saving && styles.disabledButton,
-              ]}
-              disabled={saving}
-              onPress={saveProfile}
+            <View
+              style={styles.action}
             >
-              {saving ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.saveButtonText}>
-                  Save Changes
-                </Text>
-              )}
-            </Pressable>
+              <SoulButton
+                title="Save changes"
+                loading={saving}
+                onPress={
+                  saveProfile
+                }
+              />
+            </View>
           </>
         )}
       </ScrollView>
@@ -279,159 +314,127 @@ export default function ProfileSettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0C0A18",
-  },
+function BackButton() {
+  return (
+    <Pressable
+      style={styles.back}
+      onPress={() =>
+        router.back()
+      }
+    >
+      <Text
+        style={styles.backText}
+      >
+        ‹ Settings
+      </Text>
+    </Pressable>
+  );
+}
 
-  content: {
-    width: "100%",
-    maxWidth: 680,
-    alignSelf: "center",
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 60,
-  },
+const styles =
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor:
+        colors.background,
+    },
 
-  backButton: {
-    alignSelf: "flex-start",
-    paddingVertical: 8,
-    marginBottom: 20,
-  },
+    content: {
+      width: "100%",
+      maxWidth: 650,
+      alignSelf: "center",
+      paddingHorizontal: 24,
+      paddingTop: 24,
+      paddingBottom: 60,
+      gap: 15,
+    },
 
-  backText: {
-    color: "#A78DE3",
-    fontSize: 15,
-    fontWeight: "600",
-  },
+    back: {
+      alignSelf: "flex-start",
+      paddingVertical: 8,
+    },
 
-  eyebrow: {
-    color: "#8873B8",
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 2,
-  },
+    backText: {
+      color: colors.lavender,
+      fontFamily:
+        fonts.bodySemiBold,
+      fontSize: 12,
+    },
 
-  title: {
-    color: "#F5F0FF",
-    fontSize: 34,
-    fontWeight: "700",
-    marginTop: 5,
-  },
+    title: {
+      color: colors.text,
+      fontFamily: fonts.display,
+      fontSize: 39,
+      marginTop: 5,
+    },
 
-  subtitle: {
-    color: "#8D859A",
-    fontSize: 14,
-    lineHeight: 22,
-    marginTop: 9,
-  },
+    subtitle: {
+      color:
+        colors.textMuted,
+      fontFamily:
+        fonts.displayItalic,
+      fontSize: 17,
+      lineHeight: 23,
+    },
 
-  avatar: {
-    alignSelf: "center",
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    backgroundColor: "#211A35",
-    justifyContent: "center",
-    alignItems: "center",
-    marginVertical: 32,
-    borderWidth: 1,
-    borderColor: "#3B2F57",
-  },
+    avatar: {
+      alignSelf: "center",
+      width: 82,
+      height: 82,
+      borderRadius: 41,
+      backgroundColor:
+        colors.surfaceRaised,
+      justifyContent:
+        "center",
+      alignItems: "center",
+      marginVertical: 19,
+      borderWidth: 1,
+      borderColor:
+        colors.border,
+    },
 
-  avatarText: {
-    color: "#D9C6FF",
-    fontSize: 39,
-  },
+    avatarText: {
+      color: colors.gold,
+      fontSize: 38,
+    },
 
-  loader: {
-    marginTop: 30,
-  },
+    emailArea: {
+      marginTop: 8,
+    },
 
-  label: {
-    color: "#D7CCDF",
-    fontSize: 13,
-    fontWeight: "700",
-    marginBottom: 8,
-    marginTop: 18,
-  },
+    label: {
+      color: colors.textSoft,
+      fontFamily:
+        fonts.bodySemiBold,
+      fontSize: 13,
+      marginBottom: 8,
+    },
 
-  input: {
-    backgroundColor: "#151126",
-    borderWidth: 1,
-    borderColor: "#302847",
-    borderRadius: 15,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: "#F2EDFA",
-    fontSize: 15,
-  },
+    readOnly: {
+      backgroundColor:
+        colors.backgroundSoft,
+      borderWidth: 1,
+      borderColor:
+        colors.border,
+      borderRadius:
+        radius.md,
+      padding: 15,
+    },
 
-  readonlyInput: {
-    backgroundColor: "#11101C",
-    borderWidth: 1,
-    borderColor: "#252039",
-    borderRadius: 15,
-    paddingHorizontal: 16,
-    paddingVertical: 15,
-  },
+    email: {
+      color: colors.textMuted,
+      fontFamily: fonts.body,
+      fontSize: 14,
+    },
 
-  readonlyText: {
-    color: "#8A8194",
-    fontSize: 15,
-  },
+    hint: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 10,
+      marginTop: 6,
+    },
 
-  fieldHint: {
-    color: "#6F6679",
-    fontSize: 11,
-    lineHeight: 17,
-    marginTop: 7,
-  },
-
-  errorBox: {
-    backgroundColor: "#2A151E",
-    borderWidth: 1,
-    borderColor: "#683248",
-    borderRadius: 13,
-    padding: 13,
-    marginTop: 20,
-  },
-
-  errorText: {
-    color: "#F1A7B9",
-    fontSize: 12,
-  },
-
-  successBox: {
-    backgroundColor: "#18241D",
-    borderWidth: 1,
-    borderColor: "#365141",
-    borderRadius: 13,
-    padding: 13,
-    marginTop: 20,
-  },
-
-  successText: {
-    color: "#B7D5C1",
-    fontSize: 12,
-  },
-
-  saveButton: {
-    backgroundColor: "#7357C7",
-    borderRadius: 15,
-    paddingVertical: 15,
-    alignItems: "center",
-    marginTop: 26,
-  },
-
-  saveButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-    fontSize: 15,
-  },
-
-  disabledButton: {
-    opacity: 0.55,
-  },
-}); 
+    action: {
+      marginTop: 8,
+    },
+  }); 

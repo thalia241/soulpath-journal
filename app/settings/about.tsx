@@ -9,89 +9,139 @@ import {
   View,
 } from "react-native";
 
+import SoulCard from "../../src/components/SoulCard";
+
+import {
+  colors,
+  fonts,
+} from "../../src/theme";
+
 export default function AboutSettingsScreen() {
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={styles.container}
+    >
       <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
+        contentContainerStyle={
+          styles.content
+        }
       >
         <Pressable
-          style={styles.backButton}
-          onPress={() => router.back()}
+          style={styles.back}
+          onPress={() =>
+            router.back()
+          }
         >
-          <Text style={styles.backText}>
+          <Text
+            style={styles.backText}
+          >
             ‹ Settings
           </Text>
         </Pressable>
 
-        <View style={styles.hero}>
-          <Text style={styles.symbol}>
+        <View
+          style={styles.hero}
+        >
+          <Text
+            style={
+              styles.heroSymbol
+            }
+          >
             ☾ ✦
           </Text>
 
-          <Text style={styles.title}>
-            SoulPath Journal
+          <Text
+            style={styles.title}
+          >
+            SoulPath
           </Text>
 
-          <Text style={styles.tagline}>
-            A private space for the journey within.
+          <Text
+            style={
+              styles.tagline
+            }
+          >
+            A private space for the
+            journey within.
           </Text>
 
-          <Text style={styles.version}>
+          <Text
+            style={
+              styles.version
+            }
+          >
             Version 1.0.0
           </Text>
         </View>
 
-        <InfoSection
-          eyebrow="PURPOSE"
-          title="A space for reflection"
+        <InfoCard
+          symbol="☾"
+          title="A place to remember yourself"
         >
-          SoulPath is designed to help you record
-          personal reflections, moods, energy,
-          spiritual practices, dreams, synchronicities,
-          and the patterns you notice over time.
-        </InfoSection>
+          SoulPath gives your
+          reflections, moods, energy,
+          practices, dreams,
+          synchronicities, and personal
+          observations somewhere quiet
+          to gather.
+        </InfoCard>
 
-        <InfoSection
-          eyebrow="PRIVACY"
-          title="Designed around private records"
+        <InfoCard
+          symbol="◌"
+          title="Private by design"
         >
-          Your SoulPath content is associated with
-          your authenticated account. Database access
-          is controlled using Supabase authentication
-          and Row Level Security policies.
-        </InfoSection>
+          Your records are associated
+          with your authenticated
+          account, with database access
+          controlled through
+          authentication and Row Level
+          Security.
+        </InfoCard>
 
-        <InfoSection
-          eyebrow="INSIGHTS"
-          title="Patterns, not predictions"
+        <InfoCard
+          symbol="✦"
+          title="Patterns, not prophecy"
         >
-          SoulPath Insights summarizes patterns in the
-          information you choose to record. These
-          observations do not establish cause and
-          effect and are not predictions.
-        </InfoSection>
+          Insights are drawn from the
+          information you choose to
+          record. They are observations
+          of your own data, not
+          predictions and not claims of
+          cause and effect.
+        </InfoCard>
 
-        <InfoSection
-          eyebrow="WELLNESS"
-          title="Personal reflection only"
+        <InfoCard
+          symbol="♡"
+          title="Reflection, not treatment"
         >
-          SoulPath is not a medical, psychological,
-          diagnostic, therapeutic, divinatory, or
-          other professional service. Information
-          shown in the app is intended for personal
-          reflection.
-        </InfoSection>
+          SoulPath is intended for
+          personal reflection. It is not
+          a medical, psychological,
+          diagnostic, therapeutic,
+          divinatory, or other
+          professional service.
+        </InfoCard>
 
-        <View style={styles.footerCard}>
-          <Text style={styles.footerSymbol}>
+        <View
+          style={styles.madeWith}
+        >
+          <Text
+            style={
+              styles.madeSymbol
+            }
+          >
             ✦
           </Text>
 
-          <Text style={styles.footerText}>
-            Built with React Native, Expo, TypeScript,
-            Expo Router, Supabase Auth, and PostgreSQL.
+          <Text
+            style={
+              styles.madeText
+            }
+          >
+            Built with React Native,
+            Expo, TypeScript, Expo
+            Router, Supabase, and
+            PostgreSQL.
           </Text>
         </View>
       </ScrollView>
@@ -99,140 +149,146 @@ export default function AboutSettingsScreen() {
   );
 }
 
-function InfoSection({
-  eyebrow,
+function InfoCard({
+  symbol,
   title,
   children,
 }: {
-  eyebrow: string;
+  symbol: string;
   title: string;
   children: string;
 }) {
   return (
-    <View style={styles.sectionCard}>
-      <Text style={styles.sectionEyebrow}>
-        {eyebrow}
+    <SoulCard
+      style={styles.infoCard}
+    >
+      <Text
+        style={styles.infoSymbol}
+      >
+        {symbol}
       </Text>
 
-      <Text style={styles.sectionTitle}>
+      <Text
+        style={styles.infoTitle}
+      >
         {title}
       </Text>
 
-      <Text style={styles.sectionText}>
+      <Text
+        style={styles.infoText}
+      >
         {children}
       </Text>
-    </View>
+    </SoulCard>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0C0A18",
-  },
+const styles =
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor:
+        colors.background,
+    },
 
-  content: {
-    width: "100%",
-    maxWidth: 680,
-    alignSelf: "center",
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 60,
-  },
+    content: {
+      width: "100%",
+      maxWidth: 650,
+      alignSelf: "center",
+      paddingHorizontal: 24,
+      paddingTop: 24,
+      paddingBottom: 60,
+    },
 
-  backButton: {
-    alignSelf: "flex-start",
-    paddingVertical: 8,
-    marginBottom: 20,
-  },
+    back: {
+      alignSelf: "flex-start",
+      paddingVertical: 8,
+    },
 
-  backText: {
-    color: "#A78DE3",
-    fontSize: 15,
-    fontWeight: "600",
-  },
+    backText: {
+      color: colors.lavender,
+      fontFamily:
+        fonts.bodySemiBold,
+      fontSize: 12,
+    },
 
-  hero: {
-    alignItems: "center",
-    paddingVertical: 30,
-    marginBottom: 10,
-  },
+    hero: {
+      alignItems: "center",
+      paddingVertical: 39,
+    },
 
-  symbol: {
-    color: "#D4B866",
-    fontSize: 37,
-  },
+    heroSymbol: {
+      color: colors.gold,
+      fontSize: 32,
+    },
 
-  title: {
-    color: "#F5F0FF",
-    fontSize: 30,
-    fontWeight: "700",
-    marginTop: 13,
-  },
+    title: {
+      color: colors.text,
+      fontFamily: fonts.display,
+      fontSize: 43,
+      marginTop: 9,
+    },
 
-  tagline: {
-    color: "#9387A0",
-    fontSize: 14,
-    marginTop: 7,
-    textAlign: "center",
-  },
+    tagline: {
+      color:
+        colors.textMuted,
+      fontFamily:
+        fonts.displayItalic,
+      fontSize: 18,
+      textAlign: "center",
+      marginTop: 3,
+    },
 
-  version: {
-    color: "#655D70",
-    fontSize: 11,
-    marginTop: 13,
-  },
+    version: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 9,
+      marginTop: 13,
+    },
 
-  sectionCard: {
-    backgroundColor: "#151126",
-    borderWidth: 1,
-    borderColor: "#29213D",
-    borderRadius: 19,
-    padding: 20,
-    marginBottom: 14,
-  },
+    infoCard: {
+      marginBottom: 12,
+    },
 
-  sectionEyebrow: {
-    color: "#8873B8",
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 1.5,
-  },
+    infoSymbol: {
+      color: colors.gold,
+      fontSize: 17,
+    },
 
-  sectionTitle: {
-    color: "#EDE4F7",
-    fontSize: 17,
-    fontWeight: "700",
-    marginTop: 5,
-  },
+    infoTitle: {
+      color: colors.text,
+      fontFamily: fonts.display,
+      fontSize: 23,
+      marginTop: 7,
+    },
 
-  sectionText: {
-    color: "#8D8398",
-    fontSize: 13,
-    lineHeight: 21,
-    marginTop: 8,
-  },
+    infoText: {
+      color:
+        colors.textMuted,
+      fontFamily: fonts.body,
+      fontSize: 11,
+      lineHeight: 18,
+      marginTop: 7,
+    },
 
-  footerCard: {
-    backgroundColor: "#181329",
-    borderWidth: 1,
-    borderColor: "#34294D",
-    borderRadius: 17,
-    padding: 18,
-    alignItems: "center",
-    marginTop: 8,
-  },
+    madeWith: {
+      alignItems: "center",
+      paddingVertical: 28,
+      paddingHorizontal: 25,
+    },
 
-  footerSymbol: {
-    color: "#D4B866",
-    fontSize: 19,
-  },
+    madeSymbol: {
+      color: colors.gold,
+      fontSize: 15,
+    },
 
-  footerText: {
-    color: "#81778D",
-    fontSize: 11,
-    lineHeight: 18,
-    textAlign: "center",
-    marginTop: 8,
-  },
-}); 
+    madeText: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 9,
+      lineHeight: 15,
+      textAlign: "center",
+      marginTop: 7,
+      maxWidth: 380,
+    },
+  }); 

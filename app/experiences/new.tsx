@@ -1,31 +1,33 @@
 import { router } from "expo-router";
-import { useState } from "react";
 
 import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
+  useState,
+} from "react";
+
+import {
   Pressable,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
+
+import SoulButton from "../../src/components/SoulButton";
+import SoulInput from "../../src/components/SoulInput";
+import FeedbackMessage from "../../src/components/FeedbackMessage";
+import SectionHeading from "../../src/components/SectionHeading";
+
+import {
+  colors,
+  fonts,
+  radius,
+} from "../../src/theme";
 
 import {
   createExperience,
   ExperienceType,
 } from "../../src/services/experienceService";
-
-const significanceLevels = [
-  1,
-  2,
-  3,
-  4,
-  5,
-];
 
 export default function NewExperienceScreen() {
   const [
@@ -57,52 +59,51 @@ export default function NewExperienceScreen() {
       null
     );
 
-  const [loading, setLoading] =
-    useState(false);
+  const [
+    saving,
+    setSaving,
+  ] = useState(false);
 
   const [
     errorMessage,
     setErrorMessage,
   ] = useState("");
 
-  const isDream =
-    experienceType === "dream";
+  async function saveExperience() {
+    const cleanTitle =
+      title.trim();
 
-  async function handleSave() {
-    setErrorMessage("");
+    const cleanDescription =
+      description.trim();
 
-    if (!title.trim()) {
+    if (!cleanTitle) {
       setErrorMessage(
-        isDream
-          ? "Give your dream a title."
-          : "Give this synchronicity a title."
+        "Give this memory a small title."
       );
-
       return;
     }
 
-    if (!description.trim()) {
+    if (!cleanDescription) {
       setErrorMessage(
-        isDream
-          ? "Describe what you remember from the dream."
-          : "Describe what happened."
+        "Write down what you remember or noticed."
       );
-
       return;
     }
 
     try {
-      setLoading(true);
+      setSaving(true);
+      setErrorMessage("");
 
       const experience =
         await createExperience({
           experience_type:
             experienceType,
 
-          title: title.trim(),
+          title:
+            cleanTitle,
 
           description:
-            description.trim(),
+            cleanDescription,
 
           interpretation:
             interpretation.trim() ||
@@ -115,556 +116,422 @@ export default function NewExperienceScreen() {
       router.replace({
         pathname:
           "/experiences/[id]",
-
         params: {
           id: experience.id,
         },
       });
     } catch (error) {
-      console.error(
-        "Unable to save experience:",
-        error
-      );
-
       setErrorMessage(
         error instanceof Error
           ? error.message
           : "Unable to save this experience."
       );
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   }
+
+  const dream =
+    experienceType ===
+    "dream";
 
   return (
     <SafeAreaView
       style={styles.container}
     >
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={
-          Platform.OS === "ios"
-            ? "padding"
-            : undefined
+      <ScrollView
+        contentContainerStyle={
+          styles.content
+        }
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={
+          false
         }
       >
-        <ScrollView
-          contentContainerStyle={
-            styles.content
-          }
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={
-            false
+        <Pressable
+          style={styles.back}
+          onPress={() =>
+            router.back()
           }
         >
-          <Pressable
-            onPress={() =>
-              router.back()
+          <Text
+            style={styles.backText}
+          >
+            ‹ Dreams & Signs
+          </Text>
+        </Pressable>
+
+        <Text
+          style={styles.symbol}
+        >
+          {dream ? "☾" : "✦"}
+        </Text>
+
+        <Text style={styles.title}>
+          {dream
+            ? "Remember a dream"
+            : "Notice a sign"}
+        </Text>
+
+        <Text
+          style={styles.subtitle}
+        >
+          {dream
+            ? "Write what remains before the edges begin to fade."
+            : "Keep the moment as you experienced it, without needing to decide what it means."}
+        </Text>
+
+        <SectionHeading
+          title="What kind of moment?"
+        />
+
+        <View
+          style={styles.typeRow}
+        >
+          <TypeCard
+            symbol="☾"
+            title="Dream"
+            subtitle="Something remembered from sleep"
+            selected={
+              experienceType ===
+              "dream"
             }
-          >
-            <Text
-              style={styles.backText}
-            >
-              ‹ Back
-            </Text>
-          </Pressable>
+            onPress={() =>
+              setExperienceType(
+                "dream"
+              )
+            }
+          />
 
-          <Text
-            style={styles.eyebrow}
-          >
-            MEANINGFUL EXPERIENCE
-          </Text>
+          <TypeCard
+            symbol="✦"
+            title="Sign"
+            subtitle="A synchronicity or meaningful coincidence"
+            selected={
+              experienceType ===
+              "synchronicity"
+            }
+            onPress={() =>
+              setExperienceType(
+                "synchronicity"
+              )
+            }
+          />
+        </View>
 
-          <Text
-            style={styles.heading}
-          >
-            Record what stood out
-          </Text>
-
-          <Text
-            style={styles.subheading}
-          >
-            Capture the experience first.
-            Meaning can unfold later.
-          </Text>
-
-          <Text
-            style={styles.sectionTitle}
-          >
-            What are you recording?
-          </Text>
-
-          <View
-            style={styles.typeRow}
-          >
-            <Pressable
-              style={[
-                styles.typeCard,
-                isDream &&
-                  styles.typeCardSelected,
-              ]}
-              onPress={() =>
-                setExperienceType(
-                  "dream"
-                )
-              }
-            >
-              <Text
-                style={styles.typeIcon}
-              >
-                ☾
-              </Text>
-
-              <Text
-                style={[
-                  styles.typeTitle,
-                  isDream &&
-                    styles.typeTextSelected,
-                ]}
-              >
-                Dream
-              </Text>
-
-              <Text
-                style={
-                  styles.typeDescription
-                }
-              >
-                Record something from
-                your dream world.
-              </Text>
-            </Pressable>
-
-            <Pressable
-              style={[
-                styles.typeCard,
-                !isDream &&
-                  styles.typeCardSelected,
-              ]}
-              onPress={() =>
-                setExperienceType(
-                  "synchronicity"
-                )
-              }
-            >
-              <Text
-                style={styles.typeIcon}
-              >
-                ✦
-              </Text>
-
-              <Text
-                style={[
-                  styles.typeTitle,
-                  !isDream &&
-                    styles.typeTextSelected,
-                ]}
-              >
-                Synchronicity
-              </Text>
-
-              <Text
-                style={
-                  styles.typeDescription
-                }
-              >
-                Record a meaningful
-                coincidence or pattern.
-              </Text>
-            </Pressable>
-          </View>
-
-          <Text style={styles.label}>
-            Title
-          </Text>
-
-          <TextInput
-            style={styles.input}
+        <View style={styles.form}>
+          <SoulInput
+            label="A name for this memory"
             value={title}
             onChangeText={setTitle}
             placeholder={
-              isDream
-                ? "The house beneath the stars"
-                : "I saw 11:11 three times"
+              dream
+                ? "The house by the ocean..."
+                : "11:11 after thinking of..."
             }
-            placeholderTextColor="#70677F"
+            maxLength={120}
           />
 
-          <Text style={styles.label}>
-            {isDream
-              ? "What happened in the dream?"
-              : "What happened?"}
-          </Text>
-
-          <TextInput
-            style={[
-              styles.input,
-              styles.largeInput,
-            ]}
+          <SoulInput
+            label={
+              dream
+                ? "What happened in the dream?"
+                : "What happened?"
+            }
             value={description}
             onChangeText={
               setDescription
             }
-            placeholder={
-              isDream
-                ? "Write everything you remember..."
-                : "Describe the coincidence, pattern, or moment..."
-            }
-            placeholderTextColor="#70677F"
+            placeholder="Write what you remember..."
             multiline
             textAlignVertical="top"
+            style={styles.largeInput}
           />
 
-          <Text style={styles.label}>
-            Personal reflection
-          </Text>
-
-          <TextInput
-            style={[
-              styles.input,
-              styles.interpretationInput,
-            ]}
+          <SoulInput
+            label="What does it bring up for you?"
+            hint="Optional. This is your own reflection, not an interpretation generated by SoulPath."
             value={interpretation}
             onChangeText={
               setInterpretation
             }
-            placeholder={
-              isDream
-                ? "What might this dream mean to you?"
-                : "Why did this feel meaningful to you?"
-            }
-            placeholderTextColor="#70677F"
+            placeholder="Thoughts, symbols, feelings..."
             multiline
             textAlignVertical="top"
+            style={styles.reflectionInput}
           />
+        </View>
 
-          <Text
-            style={styles.sectionTitle}
-          >
-            Significance
-          </Text>
+        <SectionHeading
+          title="How deeply did it stay with you?"
+          subtitle="Optional — from subtle to profound."
+        />
 
-          <Text
-            style={
-              styles.significanceHint
-            }
-          >
-            How meaningful did this feel
-            to you?
-          </Text>
+        <View
+          style={styles.significanceRow}
+        >
+          {[1, 2, 3, 4, 5].map(
+            (level) => {
+              const selected =
+                significance ===
+                level;
 
-          <View
-            style={styles.levelRow}
-          >
-            {significanceLevels.map(
-              (level) => {
-                const selected =
-                  significance ===
-                  level;
-
-                return (
-                  <Pressable
-                    key={level}
+              return (
+                <Pressable
+                  key={level}
+                  style={[
+                    styles.level,
+                    selected &&
+                      styles.levelSelected,
+                  ]}
+                  onPress={() =>
+                    setSignificance(
+                      selected
+                        ? null
+                        : level
+                    )
+                  }
+                >
+                  <Text
                     style={[
-                      styles.levelButton,
-
+                      styles.levelText,
                       selected &&
-                        styles.levelSelected,
+                        styles.levelTextSelected,
                     ]}
-                    onPress={() =>
-                      setSignificance(
-                        selected
-                          ? null
-                          : level
-                      )
-                    }
                   >
-                    <Text
-                      style={[
-                        styles.levelText,
-
-                        selected &&
-                          styles.levelTextSelected,
-                      ]}
-                    >
-                      {level}
-                    </Text>
-                  </Pressable>
-                );
-              }
-            )}
-          </View>
-
-          <View
-            style={
-              styles.significanceLabels
+                    {level}
+                  </Text>
+                </Pressable>
+              );
             }
+          )}
+        </View>
+
+        <View
+          style={styles.scaleLabels}
+        >
+          <Text
+            style={styles.scaleText}
           >
-            <Text
-              style={
-                styles.significanceLabel
-              }
-            >
-              Subtle
-            </Text>
+            subtle
+          </Text>
 
-            <Text
-              style={
-                styles.significanceLabel
-              }
-            >
-              Profound
-            </Text>
-          </View>
-
-          {errorMessage ? (
-            <View
-              style={styles.errorBox}
-            >
-              <Text
-                style={
-                  styles.errorText
-                }
-              >
-                {errorMessage}
-              </Text>
-            </View>
-          ) : null}
-
-          <Pressable
-            style={[
-              styles.saveButton,
-
-              loading &&
-                styles.disabledButton,
-            ]}
-            onPress={handleSave}
-            disabled={loading}
+          <Text
+            style={styles.scaleText}
           >
-            {loading ? (
-              <ActivityIndicator
-                color="#FFFFFF"
-              />
-            ) : (
-              <Text
-                style={
-                  styles.saveButtonText
-                }
-              >
-                {isDream
-                  ? "Save Dream"
-                  : "Save Synchronicity"}
-              </Text>
-            )}
-          </Pressable>
-        </ScrollView>
-      </KeyboardAvoidingView>
+            profound
+          </Text>
+        </View>
+
+        {errorMessage ? (
+          <FeedbackMessage
+            type="error"
+            message={errorMessage}
+          />
+        ) : null}
+
+        <SoulButton
+          title={
+            dream
+              ? "Keep this dream"
+              : "Keep this sign"
+          }
+          loading={saving}
+          onPress={
+            saveExperience
+          }
+        />
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
-const styles =
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: "#0C0A18",
-    },
+function TypeCard({
+  symbol,
+  title,
+  subtitle,
+  selected,
+  onPress,
+}: {
+  symbol: string;
+  title: string;
+  subtitle: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      style={[
+        styles.typeCard,
+        selected &&
+          styles.typeCardSelected,
+      ]}
+      onPress={onPress}
+    >
+      <Text
+        style={styles.typeSymbol}
+      >
+        {symbol}
+      </Text>
 
-    content: {
-      width: "100%",
-      maxWidth: 700,
-      alignSelf: "center",
-      paddingHorizontal: 24,
-      paddingTop: 26,
-      paddingBottom: 60,
-    },
+      <Text
+        style={styles.typeTitle}
+      >
+        {title}
+      </Text>
 
-    backText: {
-      color: "#B9AED0",
-      fontSize: 16,
-      marginBottom: 28,
-    },
+      <Text
+        style={styles.typeSubtitle}
+      >
+        {subtitle}
+      </Text>
+    </Pressable>
+  );
+}
 
-    eyebrow: {
-      color: "#8F77BF",
-      fontSize: 11,
-      fontWeight: "700",
-      letterSpacing: 2,
-    },
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
 
-    heading: {
-      color: "#F5F0FF",
-      fontSize: 31,
-      fontWeight: "700",
-      marginTop: 8,
-    },
+  content: {
+    width: "100%",
+    maxWidth: 680,
+    alignSelf: "center",
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 65,
+  },
 
-    subheading: {
-      color: "#8D859A",
-      fontSize: 15,
-      lineHeight: 22,
-      marginTop: 8,
-      marginBottom: 26,
-    },
+  back: {
+    alignSelf: "flex-start",
+    paddingVertical: 8,
+  },
 
-    sectionTitle: {
-      color: "#E5DCF4",
-      fontSize: 17,
-      fontWeight: "600",
-      marginTop: 22,
-      marginBottom: 12,
-    },
+  backText: {
+    color: colors.lavender,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 12,
+  },
 
-    typeRow: {
-      flexDirection: "row",
-      gap: 12,
-    },
+  symbol: {
+    color: colors.gold,
+    fontSize: 24,
+    marginTop: 21,
+  },
 
-    typeCard: {
-      flex: 1,
-      minHeight: 145,
-      backgroundColor: "#151126",
-      borderWidth: 1,
-      borderColor: "#302847",
-      borderRadius: 18,
-      padding: 17,
-    },
+  title: {
+    color: colors.text,
+    fontFamily: fonts.display,
+    fontSize: 39,
+    marginTop: 6,
+  },
 
-    typeCardSelected: {
-      backgroundColor: "#21183A",
-      borderColor: "#7459BC",
-    },
+  subtitle: {
+    color: colors.textMuted,
+    fontFamily: fonts.displayItalic,
+    fontSize: 17,
+    lineHeight: 23,
+    marginTop: 3,
+    marginBottom: 30,
+  },
 
-    typeIcon: {
-      color: "#D4B866",
-      fontSize: 26,
-      marginBottom: 10,
-    },
+  typeRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 30,
+  },
 
-    typeTitle: {
-      color: "#BEB4CE",
-      fontSize: 17,
-      fontWeight: "700",
-    },
+  typeCard: {
+    flex: 1,
+    minHeight: 135,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: 17,
+  },
 
-    typeTextSelected: {
-      color: "#F3EAFF",
-    },
+  typeCardSelected: {
+    borderColor: colors.lavenderStrong,
+    backgroundColor: colors.surfaceRaised,
+  },
 
-    typeDescription: {
-      color: "#81788F",
-      fontSize: 12,
-      lineHeight: 18,
-      marginTop: 6,
-    },
+  typeSymbol: {
+    color: colors.gold,
+    fontSize: 22,
+  },
 
-    label: {
-      color: "#D8C9F1",
-      fontSize: 14,
-      fontWeight: "600",
-      marginBottom: 9,
-      marginTop: 23,
-    },
+  typeTitle: {
+    color: colors.text,
+    fontFamily: fonts.display,
+    fontSize: 22,
+    marginTop: 6,
+  },
 
-    input: {
-      backgroundColor: "#171329",
-      color: "#F2EDFA",
-      borderRadius: 15,
-      borderWidth: 1,
-      borderColor: "#332A49",
-      paddingHorizontal: 16,
-      paddingVertical: 14,
-      fontSize: 16,
-    },
+  typeSubtitle: {
+    color: colors.textDim,
+    fontFamily: fonts.body,
+    fontSize: 9,
+    lineHeight: 14,
+    marginTop: 3,
+  },
 
-    largeInput: {
-      minHeight: 190,
-      lineHeight: 24,
-    },
+  form: {
+    gap: 17,
+    marginBottom: 30,
+  },
 
-    interpretationInput: {
-      minHeight: 130,
-      lineHeight: 22,
-    },
+  largeInput: {
+    minHeight: 155,
+  },
 
-    significanceHint: {
-      color: "#847B95",
-      fontSize: 13,
-      marginTop: -5,
-      marginBottom: 13,
-    },
+  reflectionInput: {
+    minHeight: 120,
+  },
 
-    levelRow: {
-      flexDirection: "row",
-      gap: 10,
-    },
+  significanceRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
 
-    levelButton: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      backgroundColor: "#151126",
-      borderWidth: 1,
-      borderColor: "#312847",
-      justifyContent: "center",
-      alignItems: "center",
-    },
+  level: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    justifyContent: "center",
+    alignItems: "center",
+  },
 
-    levelSelected: {
-      backgroundColor: "#7357C7",
-      borderColor: "#8F74D2",
-    },
+  levelSelected: {
+    backgroundColor: colors.purpleDark,
+    borderColor: colors.lavenderStrong,
+  },
 
-    levelText: {
-      color: "#A89DBB",
-      fontWeight: "700",
-    },
+  levelText: {
+    color: colors.textMuted,
+    fontFamily: fonts.display,
+    fontSize: 21,
+  },
 
-    levelTextSelected: {
-      color: "#FFFFFF",
-    },
+  levelTextSelected: {
+    color: colors.white,
+  },
 
-    significanceLabels: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      maxWidth: 280,
-      marginTop: 8,
-    },
+  scaleLabels: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 6,
+    marginBottom: 28,
+  },
 
-    significanceLabel: {
-      color: "#6F677C",
-      fontSize: 11,
-    },
-
-    errorBox: {
-      backgroundColor: "#2A151E",
-      borderWidth: 1,
-      borderColor: "#683248",
-      borderRadius: 12,
-      padding: 12,
-      marginTop: 24,
-    },
-
-    errorText: {
-      color: "#F1A7B9",
-      lineHeight: 20,
-    },
-
-    saveButton: {
-      backgroundColor: "#7357C7",
-      borderRadius: 16,
-      paddingVertical: 17,
-      alignItems: "center",
-      marginTop: 34,
-    },
-
-    saveButtonText: {
-      color: "#FFFFFF",
-      fontSize: 16,
-      fontWeight: "700",
-    },
-
-    disabledButton: {
-      opacity: 0.6,
-    },
-  }); 
+  scaleText: {
+    color: colors.textDim,
+    fontFamily: fonts.body,
+    fontSize: 9,
+  },
+}); 
