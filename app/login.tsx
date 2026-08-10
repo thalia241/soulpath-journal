@@ -1,4 +1,6 @@
-import { router } from "expo-router";
+import {
+  router,
+} from "expo-router";
 
 import {
   useState,
@@ -26,6 +28,16 @@ import {
   supabase,
 } from "../src/lib/supabase";
 
+import {
+  validateEmail,
+  validatePassword,
+} from "../src/utils/validation";
+
+type FormErrors = {
+  email?: string;
+  password?: string;
+};
+
 export default function LoginScreen() {
   const [
     email,
@@ -43,29 +55,64 @@ export default function LoginScreen() {
   ] = useState(false);
 
   const [
-    errorMessage,
-    setErrorMessage,
+    errors,
+    setErrors,
+  ] =
+    useState<FormErrors>({});
+
+  const [
+    formError,
+    setFormError,
   ] = useState("");
 
+  function validateForm(): boolean {
+    const nextErrors:
+      FormErrors = {};
+
+    const emailResult =
+      validateEmail(email);
+
+    if (!emailResult.valid) {
+      nextErrors.email =
+        emailResult.message;
+    }
+
+    const passwordResult =
+      validatePassword(
+        password
+      );
+
+    if (
+      !passwordResult.valid
+    ) {
+      nextErrors.password =
+        passwordResult.message;
+    }
+
+    setErrors(nextErrors);
+
+    return (
+      Object.keys(
+        nextErrors
+      ).length === 0
+    );
+  }
+
   async function handleLogin() {
+    if (loading) {
+      return;
+    }
+
+    setFormError("");
+
+    if (!validateForm()) {
+      return;
+    }
+
     const cleanEmail =
-      email.trim().toLowerCase();
-
-    setErrorMessage("");
-
-    if (!cleanEmail) {
-      setErrorMessage(
-        "Enter the email connected to your SoulPath."
-      );
-      return;
-    }
-
-    if (!password) {
-      setErrorMessage(
-        "Enter your password to continue."
-      );
-      return;
-    }
+      email
+        .trim()
+        .toLowerCase();
 
     try {
       setLoading(true);
@@ -73,10 +120,14 @@ export default function LoginScreen() {
       const {
         error,
       } =
-        await supabase.auth.signInWithPassword({
-          email: cleanEmail,
-          password,
-        });
+        await supabase.auth.signInWithPassword(
+          {
+            email:
+              cleanEmail,
+
+            password,
+          }
+        );
 
       if (error) {
         throw error;
@@ -91,7 +142,7 @@ export default function LoginScreen() {
         error
       );
 
-      setErrorMessage(
+      setFormError(
         error instanceof Error
           ? error.message
           : "Unable to open your SoulPath."
@@ -101,84 +152,167 @@ export default function LoginScreen() {
     }
   }
 
+  function handleEmailChange(
+    value: string
+  ) {
+    setEmail(value);
+
+    if (errors.email) {
+      setErrors(
+        (current) => ({
+          ...current,
+          email: undefined,
+        })
+      );
+    }
+
+    if (formError) {
+      setFormError("");
+    }
+  }
+
+  function handlePasswordChange(
+    value: string
+  ) {
+    setPassword(value);
+
+    if (errors.password) {
+      setErrors(
+        (current) => ({
+          ...current,
+          password:
+            undefined,
+        })
+      );
+    }
+
+    if (formError) {
+      setFormError("");
+    }
+  }
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={styles.container}
+    >
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={
+          styles.content
+        }
         keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={
+          false
+        }
       >
         <Pressable
           style={styles.back}
+          disabled={loading}
           onPress={() =>
             router.back()
           }
         >
-          <Text style={styles.backText}>
+          <Text
+            style={styles.backText}
+          >
             ‹ Back
           </Text>
         </Pressable>
 
-        <Text style={styles.symbol}>
+        <Text
+          style={styles.symbol}
+        >
           ☾
         </Text>
 
-        <Text style={styles.title}>
+        <Text
+          style={styles.title}
+        >
           Welcome back
         </Text>
 
-        <Text style={styles.subtitle}>
-          Your pages have been waiting quietly for you.
+        <Text
+          style={styles.subtitle}
+        >
+          Your pages have been
+          waiting quietly for you.
         </Text>
 
-        <View style={styles.form}>
+        <View
+          style={styles.form}
+        >
           <SoulInput
             label="Email"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={
+              handleEmailChange
+            }
             placeholder="you@example.com"
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
+            editable={!loading}
+            error={errors.email}
           />
 
           <SoulInput
             label="Password"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={
+              handlePasswordChange
+            }
             placeholder="Your password"
             secureTextEntry
             autoCapitalize="none"
             autoCorrect={false}
+            editable={!loading}
+            error={
+              errors.password
+            }
           />
 
-          {errorMessage ? (
+          {formError ? (
             <FeedbackMessage
               type="error"
-              message={errorMessage}
+              message={
+                formError
+              }
             />
           ) : null}
 
           <SoulButton
             title="Return to SoulPath"
             loading={loading}
-            onPress={handleLogin}
+            disabled={loading}
+            onPress={
+              handleLogin
+            }
           />
         </View>
 
-        <View style={styles.joinRow}>
-          <Text style={styles.joinText}>
+        <View
+          style={styles.joinRow}
+        >
+          <Text
+            style={
+              styles.joinText
+            }
+          >
             New to SoulPath?
           </Text>
 
           <Pressable
+            disabled={loading}
             onPress={() =>
               router.replace(
                 "/register"
               )
             }
           >
-            <Text style={styles.joinLink}>
+            <Text
+              style={
+                styles.joinLink
+              }
+            >
               Begin here
             </Text>
           </Pressable>
@@ -188,79 +322,90 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
+const styles =
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor:
+        colors.background,
+    },
 
-  content: {
-    flexGrow: 1,
-    width: "100%",
-    maxWidth: 560,
-    alignSelf: "center",
-    justifyContent: "center",
-    paddingHorizontal: 28,
-    paddingVertical: 40,
-  },
+    content: {
+      flexGrow: 1,
+      width: "100%",
+      maxWidth: 560,
+      alignSelf: "center",
+      justifyContent:
+        "center",
+      paddingHorizontal: 28,
+      paddingVertical: 40,
+    },
 
-  back: {
-    position: "absolute",
-    top: 24,
-    left: 28,
-    paddingVertical: 8,
-  },
+    back: {
+      position: "absolute",
+      top: 24,
+      left: 28,
+      paddingVertical: 8,
+    },
 
-  backText: {
-    color: colors.lavender,
-    fontFamily: fonts.bodySemiBold,
-    fontSize: 12,
-  },
+    backText: {
+      color:
+        colors.lavender,
+      fontFamily:
+        fonts.bodySemiBold,
+      fontSize: 12,
+    },
 
-  symbol: {
-    color: colors.gold,
-    fontSize: 36,
-    textAlign: "center",
-  },
+    symbol: {
+      color: colors.gold,
+      fontSize: 36,
+      textAlign: "center",
+    },
 
-  title: {
-    color: colors.text,
-    fontFamily: fonts.display,
-    fontSize: 43,
-    textAlign: "center",
-    marginTop: 14,
-  },
+    title: {
+      color: colors.text,
+      fontFamily:
+        fonts.display,
+      fontSize: 43,
+      textAlign: "center",
+      marginTop: 14,
+    },
 
-  subtitle: {
-    color: colors.textMuted,
-    fontFamily: fonts.displayItalic,
-    fontSize: 18,
-    lineHeight: 24,
-    textAlign: "center",
-    marginTop: 4,
-  },
+    subtitle: {
+      color:
+        colors.textMuted,
+      fontFamily:
+        fonts.displayItalic,
+      fontSize: 18,
+      lineHeight: 24,
+      textAlign: "center",
+      marginTop: 4,
+    },
 
-  form: {
-    gap: 17,
-    marginTop: 36,
-  },
+    form: {
+      gap: 17,
+      marginTop: 36,
+    },
 
-  joinRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 5,
-    marginTop: 25,
-  },
+    joinRow: {
+      flexDirection: "row",
+      justifyContent:
+        "center",
+      gap: 5,
+      marginTop: 25,
+    },
 
-  joinText: {
-    color: colors.textDim,
-    fontFamily: fonts.body,
-    fontSize: 11,
-  },
+    joinText: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 11,
+    },
 
-  joinLink: {
-    color: colors.lavender,
-    fontFamily: fonts.bodySemiBold,
-    fontSize: 11,
-  },
-}); 
+    joinLink: {
+      color:
+        colors.lavender,
+      fontFamily:
+        fonts.bodySemiBold,
+      fontSize: 11,
+    },
+  }); 

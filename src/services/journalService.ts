@@ -1,58 +1,285 @@
-import { supabase } from "../lib/supabase";
+import {
+  supabase,
+} from "../lib/supabase";
+
+import {
+  getConsecutiveDateStreak,
+  getLocalToday,
+} from "../utils/date";
 
 export type JournalEntry = {
   id: string;
+
   user_id: string;
+
   title: string;
+
   content: string;
-  mood: string | null;
-  energy_level: number | null;
+
+  mood:
+    | string
+    | null;
+
+  energy_level:
+    | number
+    | null;
+
   entry_date: string;
+
   is_favorite: boolean;
+
   created_at: string;
+
   updated_at: string;
 };
 
 export type CreateJournalEntryInput = {
   title: string;
+
   content: string;
-  mood?: string | null;
-  energy_level?: number | null;
+
+  mood?:
+    | string
+    | null;
+
+  energy_level?:
+    | number
+    | null;
+
   entry_date?: string;
+
+  is_favorite?: boolean;
 };
 
 export type UpdateJournalEntryInput = {
   title?: string;
+
   content?: string;
-  mood?: string | null;
-  energy_level?: number | null;
+
+  mood?:
+    | string
+    | null;
+
+  energy_level?:
+    | number
+    | null;
+
   entry_date?: string;
+
   is_favorite?: boolean;
 };
 
-export async function getJournalEntries() {
-  const { data, error } = await supabase
-    .from("journal_entries")
-    .select("*")
-    .order("entry_date", { ascending: false })
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    throw error;
+function getErrorMessage(
+  error: unknown,
+  fallback: string
+): string {
+  if (
+    error instanceof Error
+  ) {
+    return error.message;
   }
 
-  return data as JournalEntry[];
+  if (
+    typeof error ===
+      "object" &&
+    error !== null &&
+    "message" in error
+  ) {
+    const message =
+      (
+        error as {
+          message?: unknown;
+        }
+      ).message;
+
+    if (
+      typeof message ===
+      "string"
+    ) {
+      return message;
+    }
+  }
+
+  return fallback;
 }
 
-export async function getJournalEntry(id: string) {
-  const { data, error } = await supabase
-    .from("journal_entries")
-    .select("*")
-    .eq("id", id)
-    .single();
+async function requireUser() {
+  const {
+    data: {
+      user,
+    },
+    error,
+  } =
+    await supabase.auth.getUser();
+
+  if (
+    error ||
+    !user
+  ) {
+    throw new Error(
+      "Your SoulPath session has expired. Please sign in again."
+    );
+  }
+
+  return user;
+}
+
+function cleanRequiredText(
+  value: string,
+  fieldName: string
+): string {
+  const cleaned =
+    value.trim();
+
+  if (!cleaned) {
+    throw new Error(
+      `${fieldName} is required.`
+    );
+  }
+
+  return cleaned;
+}
+
+function validateEnergy(
+  energy:
+    | number
+    | null
+    | undefined
+) {
+  if (
+    energy === null ||
+    energy === undefined
+  ) {
+    return;
+  }
+
+  if (
+    !Number.isInteger(
+      energy
+    ) ||
+    energy < 1 ||
+    energy > 5
+  ) {
+    throw new Error(
+      "Energy must be between 1 and 5."
+    );
+  }
+}
+
+export async function getJournalEntries(): Promise<
+  JournalEntry[]
+> {
+  const user =
+    await requireUser();
+
+  const {
+    data,
+    error,
+  } = await supabase
+    .from(
+      "journal_entries"
+    )
+    .select(
+      `
+        id,
+        user_id,
+        title,
+        content,
+        mood,
+        energy_level,
+        entry_date,
+        is_favorite,
+        created_at,
+        updated_at
+      `
+    )
+    .eq(
+      "user_id",
+      user.id
+    )
+    .order(
+      "entry_date",
+      {
+        ascending: false,
+      }
+    )
+    .order(
+      "created_at",
+      {
+        ascending: false,
+      }
+    );
 
   if (error) {
-    throw error;
+    throw new Error(
+      getErrorMessage(
+        error,
+        "Unable to load your journal."
+      )
+    );
+  }
+
+  return (
+    data ?? []
+  ) as JournalEntry[];
+}
+
+export async function getJournalEntry(
+  id: string
+): Promise<JournalEntry> {
+  if (!id) {
+    throw new Error(
+      "Journal entry ID is required."
+    );
+  }
+
+  const user =
+    await requireUser();
+
+  const {
+    data,
+    error,
+  } = await supabase
+    .from(
+      "journal_entries"
+    )
+    .select(
+      `
+        id,
+        user_id,
+        title,
+        content,
+        mood,
+        energy_level,
+        entry_date,
+        is_favorite,
+        created_at,
+        updated_at
+      `
+    )
+    .eq(
+      "id",
+      id
+    )
+    .eq(
+      "user_id",
+      user.id
+    )
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(
+      getErrorMessage(
+        error,
+        "Unable to open this reflection."
+      )
+    );
+  }
+
+  if (!data) {
+    throw new Error(
+      "This reflection could not be found."
+    );
   }
 
   return data as JournalEntry;
@@ -60,33 +287,108 @@ export async function getJournalEntry(id: string) {
 
 export async function createJournalEntry(
   input: CreateJournalEntryInput
-) {
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+): Promise<JournalEntry> {
+  const user =
+    await requireUser();
 
-  if (userError || !user) {
-    throw new Error("You must be signed in to create an entry.");
+  const title =
+    cleanRequiredText(
+      input.title,
+      "Reflection title"
+    );
+
+  const content =
+    cleanRequiredText(
+      input.content,
+      "Reflection"
+    );
+
+  if (
+    title.length > 120
+  ) {
+    throw new Error(
+      "Reflection title must be 120 characters or fewer."
+    );
   }
 
-  const { data, error } = await supabase
-    .from("journal_entries")
+  if (
+    content.length > 20000
+  ) {
+    throw new Error(
+      "Reflection must be 20,000 characters or fewer."
+    );
+  }
+
+  validateEnergy(
+    input.energy_level
+  );
+
+  const mood =
+    input.mood?.trim() ||
+    null;
+
+  /*
+   * Important:
+   *
+   * We explicitly provide the client's local calendar
+   * date rather than relying on the database's
+   * CURRENT_DATE timezone.
+   */
+  const entryDate =
+    input.entry_date ??
+    getLocalToday();
+
+  const {
+    data,
+    error,
+  } = await supabase
+    .from(
+      "journal_entries"
+    )
     .insert({
-      user_id: user.id,
-      title: input.title,
-      content: input.content,
-      mood: input.mood ?? null,
-      energy_level: input.energy_level ?? null,
+      user_id:
+        user.id,
+
+      title,
+
+      content,
+
+      mood,
+
+      energy_level:
+        input.energy_level ??
+        null,
+
       entry_date:
-        input.entry_date ??
-        new Date().toISOString().slice(0, 10),
+        entryDate,
+
+      is_favorite:
+        input.is_favorite ??
+        false,
     })
-    .select()
+    .select(
+      `
+        id,
+        user_id,
+        title,
+        content,
+        mood,
+        energy_level,
+        entry_date,
+        is_favorite,
+        created_at,
+        updated_at
+      `
+    )
     .single();
 
   if (error) {
-    throw error;
+    throw new Error(
+      getErrorMessage(
+        error,
+        "Unable to save your reflection."
+      )
+    );
   }
 
   return data as JournalEntry;
@@ -95,124 +397,412 @@ export async function createJournalEntry(
 export async function updateJournalEntry(
   id: string,
   input: UpdateJournalEntryInput
-) {
-  const { data, error } = await supabase
-    .from("journal_entries")
-    .update(input)
-    .eq("id", id)
-    .select()
-    .single();
+): Promise<JournalEntry> {
+  if (!id) {
+    throw new Error(
+      "Journal entry ID is required."
+    );
+  }
+
+  const user =
+    await requireUser();
+
+  const updates: Record<
+    string,
+    unknown
+  > = {};
+
+  if (
+    input.title !==
+    undefined
+  ) {
+    const title =
+      cleanRequiredText(
+        input.title,
+        "Reflection title"
+      );
+
+    if (
+      title.length > 120
+    ) {
+      throw new Error(
+        "Reflection title must be 120 characters or fewer."
+      );
+    }
+
+    updates.title =
+      title;
+  }
+
+  if (
+    input.content !==
+    undefined
+  ) {
+    const content =
+      cleanRequiredText(
+        input.content,
+        "Reflection"
+      );
+
+    if (
+      content.length >
+      20000
+    ) {
+      throw new Error(
+        "Reflection must be 20,000 characters or fewer."
+      );
+    }
+
+    updates.content =
+      content;
+  }
+
+  if (
+    input.mood !==
+    undefined
+  ) {
+    updates.mood =
+      input.mood?.trim() ||
+      null;
+  }
+
+  if (
+    input.energy_level !==
+    undefined
+  ) {
+    validateEnergy(
+      input.energy_level
+    );
+
+    updates.energy_level =
+      input.energy_level;
+  }
+
+  if (
+    input.entry_date !==
+    undefined
+  ) {
+    updates.entry_date =
+      input.entry_date;
+  }
+
+  if (
+    input.is_favorite !==
+    undefined
+  ) {
+    updates.is_favorite =
+      input.is_favorite;
+  }
+
+  if (
+    Object.keys(
+      updates
+    ).length === 0
+  ) {
+    return getJournalEntry(
+      id
+    );
+  }
+
+  const {
+    data,
+    error,
+  } = await supabase
+    .from(
+      "journal_entries"
+    )
+    .update(updates)
+    .eq(
+      "id",
+      id
+    )
+    .eq(
+      "user_id",
+      user.id
+    )
+    .select(
+      `
+        id,
+        user_id,
+        title,
+        content,
+        mood,
+        energy_level,
+        entry_date,
+        is_favorite,
+        created_at,
+        updated_at
+      `
+    )
+    .maybeSingle();
 
   if (error) {
-    throw error;
+    throw new Error(
+      getErrorMessage(
+        error,
+        "Unable to update this reflection."
+      )
+    );
+  }
+
+  if (!data) {
+    throw new Error(
+      "This reflection could not be found."
+    );
   }
 
   return data as JournalEntry;
 }
 
-export async function deleteJournalEntry(id: string) {
-  const { error } = await supabase
-    .from("journal_entries")
+export async function deleteJournalEntry(
+  id: string
+): Promise<void> {
+  if (!id) {
+    throw new Error(
+      "Journal entry ID is required."
+    );
+  }
+
+  const user =
+    await requireUser();
+
+  const {
+    error,
+  } = await supabase
+    .from(
+      "journal_entries"
+    )
     .delete()
-    .eq("id", id);
+    .eq(
+      "id",
+      id
+    )
+    .eq(
+      "user_id",
+      user.id
+    );
 
   if (error) {
-    throw error;
+    throw new Error(
+      getErrorMessage(
+        error,
+        "Unable to delete this reflection."
+      )
+    );
   }
-} 
-
-export async function getRecentJournalEntries(limit = 3) {
-  const { data, error } = await supabase
-    .from("journal_entries")
-    .select("*")
-    .order("entry_date", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(limit);
-
-  if (error) {
-    throw error;
-  }
-
-  return data as JournalEntry[];
 }
 
-export async function getJournalEntryCount() {
-  const { count, error } = await supabase
-    .from("journal_entries")
-    .select("*", {
-      count: "exact",
-      head: true,
-    });
+export async function getRecentJournalEntries(
+  limit = 3
+): Promise<JournalEntry[]> {
+  const user =
+    await requireUser();
+
+  const safeLimit =
+    Math.max(
+      1,
+      Math.min(
+        Math.floor(
+          limit
+        ),
+        50
+      )
+    );
+
+  const {
+    data,
+    error,
+  } = await supabase
+    .from(
+      "journal_entries"
+    )
+    .select(
+      `
+        id,
+        user_id,
+        title,
+        content,
+        mood,
+        energy_level,
+        entry_date,
+        is_favorite,
+        created_at,
+        updated_at
+      `
+    )
+    .eq(
+      "user_id",
+      user.id
+    )
+    .order(
+      "entry_date",
+      {
+        ascending: false,
+      }
+    )
+    .order(
+      "created_at",
+      {
+        ascending: false,
+      }
+    )
+    .limit(
+      safeLimit
+    );
 
   if (error) {
-    throw error;
+    throw new Error(
+      getErrorMessage(
+        error,
+        "Unable to load recent reflections."
+      )
+    );
+  }
+
+  return (
+    data ?? []
+  ) as JournalEntry[];
+}
+
+export async function getTodayJournalEntry(): Promise<
+  JournalEntry | null
+> {
+  const user =
+    await requireUser();
+
+  const today =
+    getLocalToday();
+
+  const {
+    data,
+    error,
+  } = await supabase
+    .from(
+      "journal_entries"
+    )
+    .select(
+      `
+        id,
+        user_id,
+        title,
+        content,
+        mood,
+        energy_level,
+        entry_date,
+        is_favorite,
+        created_at,
+        updated_at
+      `
+    )
+    .eq(
+      "user_id",
+      user.id
+    )
+    .eq(
+      "entry_date",
+      today
+    )
+    .order(
+      "created_at",
+      {
+        ascending: false,
+      }
+    )
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(
+      getErrorMessage(
+        error,
+        "Unable to load today's reflection."
+      )
+    );
+  }
+
+  return (
+    data as JournalEntry | null
+  );
+}
+
+export async function getJournalEntryCount(): Promise<number> {
+  const user =
+    await requireUser();
+
+  const {
+    count,
+    error,
+  } = await supabase
+    .from(
+      "journal_entries"
+    )
+    .select(
+      "id",
+      {
+        count: "exact",
+        head: true,
+      }
+    )
+    .eq(
+      "user_id",
+      user.id
+    );
+
+  if (error) {
+    throw new Error(
+      getErrorMessage(
+        error,
+        "Unable to count your reflections."
+      )
+    );
   }
 
   return count ?? 0;
 }
 
-export async function getTodayJournalEntry() {
-  const today = new Date().toISOString().slice(0, 10);
+export async function getJournalStreak(): Promise<number> {
+  const user =
+    await requireUser();
 
-  const { data, error } = await supabase
-    .from("journal_entries")
-    .select("*")
-    .eq("entry_date", today)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const {
+    data,
+    error,
+  } = await supabase
+    .from(
+      "journal_entries"
+    )
+    .select(
+      "entry_date"
+    )
+    .eq(
+      "user_id",
+      user.id
+    )
+    .order(
+      "entry_date",
+      {
+        ascending: false,
+      }
+    );
 
   if (error) {
-    throw error;
+    throw new Error(
+      getErrorMessage(
+        error,
+        "Unable to calculate your reflection streak."
+      )
+    );
   }
 
-  return data as JournalEntry | null;
-} 
+  const dates =
+    (
+      data ?? []
+    ).map(
+      (entry) =>
+        entry.entry_date
+    );
 
-export async function getJournalStreak() {
-  const { data, error } = await supabase
-    .from("journal_entries")
-    .select("entry_date")
-    .order("entry_date", { ascending: false });
-
-  if (error) {
-    throw error;
-  }
-
-  const uniqueDates = [
-    ...new Set(data.map((item) => item.entry_date)),
-  ];
-
-  if (uniqueDates.length === 0) {
-    return 0;
-  }
-
-  const dateSet = new Set(uniqueDates);
-
-  const today = new Date();
-  const current = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate()
+  return getConsecutiveDateStreak(
+    dates
   );
-
-  const formatDate = (date: Date) =>
-    `${date.getFullYear()}-${String(
-      date.getMonth() + 1
-    ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-
-  // If there isn't an entry today, allow the streak to
-  // continue from yesterday.
-  if (!dateSet.has(formatDate(current))) {
-    current.setDate(current.getDate() - 1);
-  }
-
-  let streak = 0;
-
-  while (dateSet.has(formatDate(current))) {
-    streak += 1;
-    current.setDate(current.getDate() - 1);
-  }
-
-  return streak;
 } 

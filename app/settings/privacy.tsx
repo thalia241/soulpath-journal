@@ -1,4 +1,6 @@
-import { router } from "expo-router";
+import {
+  router,
+} from "expo-router";
 
 import {
   useState,
@@ -27,6 +29,20 @@ import {
   supabase,
 } from "../../src/lib/supabase";
 
+import {
+  useUnsavedChangesGuard,
+} from "../../src/hooks/useUnsavedChangesGuard";
+
+import {
+  validateMatchingPasswords,
+  validatePassword,
+} from "../../src/utils/validation";
+
+type FormErrors = {
+  password?: string;
+  confirmPassword?: string;
+};
+
 export default function PrivacySettingsScreen() {
   const [
     password,
@@ -39,13 +55,19 @@ export default function PrivacySettingsScreen() {
   ] = useState("");
 
   const [
+    errors,
+    setErrors,
+  ] =
+    useState<FormErrors>({});
+
+  const [
     saving,
     setSaving,
   ] = useState(false);
 
   const [
-    errorMessage,
-    setErrorMessage,
+    formError,
+    setFormError,
   ] = useState("");
 
   const [
@@ -53,33 +75,77 @@ export default function PrivacySettingsScreen() {
     setSuccessMessage,
   ] = useState("");
 
-  async function changePassword() {
-    setErrorMessage("");
-    setSuccessMessage("");
+  const dirty =
+    password.length > 0 ||
+    confirmPassword.length >
+      0;
+
+  useUnsavedChangesGuard(
+    dirty && !saving,
+    {
+      title:
+        "Leave password changes?",
+      message:
+        "The password you've entered hasn't been saved.",
+    }
+  );
+
+  function validateForm(): boolean {
+    const nextErrors:
+      FormErrors = {};
+
+    const passwordResult =
+      validatePassword(
+        password
+      );
 
     if (
-      password.length < 8
+      !passwordResult.valid
     ) {
-      setErrorMessage(
-        "Your new password needs at least 8 characters."
+      nextErrors.password =
+        passwordResult.message;
+    }
+
+    const matchResult =
+      validateMatchingPasswords(
+        password,
+        confirmPassword
       );
+
+    if (
+      !matchResult.valid
+    ) {
+      nextErrors.confirmPassword =
+        matchResult.message;
+    }
+
+    setErrors(nextErrors);
+
+    return (
+      Object.keys(
+        nextErrors
+      ).length === 0
+    );
+  }
+
+  async function changePassword() {
+    if (saving) {
       return;
     }
 
-    if (
-      password !==
-      confirmPassword
-    ) {
-      setErrorMessage(
-        "Those passwords don't match yet."
-      );
+    setFormError("");
+    setSuccessMessage("");
+
+    if (!validateForm()) {
       return;
     }
 
     try {
       setSaving(true);
 
-      const { error } =
+      const {
+        error,
+      } =
         await supabase.auth.updateUser(
           {
             password,
@@ -92,12 +158,13 @@ export default function PrivacySettingsScreen() {
 
       setPassword("");
       setConfirmPassword("");
+      setErrors({});
 
       setSuccessMessage(
         "Your password has been changed."
       );
     } catch (error) {
-      setErrorMessage(
+      setFormError(
         error instanceof Error
           ? error.message
           : "Unable to change your password."
@@ -108,15 +175,27 @@ export default function PrivacySettingsScreen() {
   }
 
   async function signOut() {
-    const { error } =
-      await supabase.auth.signOut({
-        scope: "local",
-      });
+    if (
+      saving ||
+      dirty
+    ) {
+      return;
+    }
+
+    const {
+      error,
+    } =
+      await supabase.auth.signOut(
+        {
+          scope: "local",
+        }
+      );
 
     if (error) {
-      setErrorMessage(
+      setFormError(
         error.message
       );
+
       return;
     }
 
@@ -135,6 +214,7 @@ export default function PrivacySettingsScreen() {
       >
         <Pressable
           style={styles.back}
+          disabled={saving}
           onPress={() =>
             router.back()
           }
@@ -155,8 +235,8 @@ export default function PrivacySettingsScreen() {
         <Text
           style={styles.subtitle}
         >
-          A private space deserves a
-          carefully tended door.
+          A private space deserves
+          a carefully tended door.
         </Text>
 
         <SoulCard>
@@ -173,8 +253,8 @@ export default function PrivacySettingsScreen() {
               styles.cardTitle
             }
           >
-            Your records belong to your
-            account
+            Your records belong to
+            your account
           </Text>
 
           <Text
@@ -182,11 +262,13 @@ export default function PrivacySettingsScreen() {
               styles.cardText
             }
           >
-            Journal entries, spiritual
-            practices, dreams, signs,
-            and insights are requested
-            through your authenticated
-            SoulPath session.
+            Journal entries,
+            spiritual practices,
+            dreams, signs, and
+            insights are requested
+            through your
+            authenticated SoulPath
+            session.
           </Text>
         </SoulCard>
 
@@ -205,12 +287,38 @@ export default function PrivacySettingsScreen() {
             <SoulInput
               label="New password"
               value={password}
-              onChangeText={
-                setPassword
-              }
+              onChangeText={(
+                value
+              ) => {
+                setPassword(
+                  value
+                );
+
+                setErrors(
+                  (current) => ({
+                    ...current,
+                    password:
+                      undefined,
+                    confirmPassword:
+                      undefined,
+                  })
+                );
+
+                setFormError(
+                  ""
+                );
+
+                setSuccessMessage(
+                  ""
+                );
+              }}
               placeholder="At least 8 characters"
               secureTextEntry
               autoCapitalize="none"
+              editable={!saving}
+              error={
+                errors.password
+              }
             />
 
             <SoulInput
@@ -218,19 +326,43 @@ export default function PrivacySettingsScreen() {
               value={
                 confirmPassword
               }
-              onChangeText={
-                setConfirmPassword
-              }
+              onChangeText={(
+                value
+              ) => {
+                setConfirmPassword(
+                  value
+                );
+
+                setErrors(
+                  (current) => ({
+                    ...current,
+                    confirmPassword:
+                      undefined,
+                  })
+                );
+
+                setFormError(
+                  ""
+                );
+
+                setSuccessMessage(
+                  ""
+                );
+              }}
               placeholder="Repeat your new password"
               secureTextEntry
               autoCapitalize="none"
+              editable={!saving}
+              error={
+                errors.confirmPassword
+              }
             />
 
-            {errorMessage ? (
+            {formError ? (
               <FeedbackMessage
                 type="error"
                 message={
-                  errorMessage
+                  formError
                 }
               />
             ) : null}
@@ -246,6 +378,10 @@ export default function PrivacySettingsScreen() {
             <SoulButton
               title="Update password"
               loading={saving}
+              disabled={
+                saving ||
+                !dirty
+              }
               onPress={
                 changePassword
               }
@@ -290,6 +426,10 @@ export default function PrivacySettingsScreen() {
             <SoulButton
               title="Sign out of this session"
               variant="danger"
+              disabled={
+                saving ||
+                dirty
+              }
               onPress={signOut}
             />
           </View>
@@ -318,12 +458,14 @@ const styles =
     },
 
     back: {
-      alignSelf: "flex-start",
+      alignSelf:
+        "flex-start",
       paddingVertical: 8,
     },
 
     backText: {
-      color: colors.lavender,
+      color:
+        colors.lavender,
       fontFamily:
         fonts.bodySemiBold,
       fontSize: 12,
@@ -331,7 +473,8 @@ const styles =
 
     title: {
       color: colors.text,
-      fontFamily: fonts.display,
+      fontFamily:
+        fonts.display,
       fontSize: 37,
       lineHeight: 41,
       marginTop: 5,
@@ -354,7 +497,8 @@ const styles =
 
     cardTitle: {
       color: colors.text,
-      fontFamily: fonts.display,
+      fontFamily:
+        fonts.display,
       fontSize: 23,
       marginTop: 6,
     },
@@ -369,8 +513,10 @@ const styles =
     },
 
     sectionTitle: {
-      color: colors.textSoft,
-      fontFamily: fonts.display,
+      color:
+        colors.textSoft,
+      fontFamily:
+        fonts.display,
       fontSize: 21,
       marginTop: 12,
     },

@@ -1,4 +1,6 @@
-import { router } from "expo-router";
+import {
+  router,
+} from "expo-router";
 
 import {
   useEffect,
@@ -36,6 +38,16 @@ import {
   setEntryPractices,
 } from "../../src/services/practiceService";
 
+import {
+  useUnsavedChangesGuard,
+} from "../../src/hooks/useUnsavedChangesGuard";
+
+import {
+  validateEnergyLevel,
+  validateJournalContent,
+  validateJournalTitle,
+} from "../../src/utils/validation";
+
 const moods = [
   "Peaceful",
   "Happy",
@@ -46,14 +58,27 @@ const moods = [
   "Overwhelmed",
 ];
 
+type FormErrors = {
+  title?: string;
+  content?: string;
+  energy?: string;
+};
+
 export default function NewJournalEntryScreen() {
-  const [title, setTitle] =
-    useState("");
+  const [
+    title,
+    setTitle,
+  ] = useState("");
 
-  const [content, setContent] =
-    useState("");
+  const [
+    content,
+    setContent,
+  ] = useState("");
 
-  const [mood, setMood] =
+  const [
+    mood,
+    setMood,
+  ] =
     useState<string | null>(
       null
     );
@@ -69,12 +94,14 @@ export default function NewJournalEntryScreen() {
   const [
     practices,
     setPractices,
-  ] = useState<Practice[]>([]);
+  ] =
+    useState<Practice[]>([]);
 
   const [
     selectedPracticeIds,
     setSelectedPracticeIds,
-  ] = useState<string[]>([]);
+  ] =
+    useState<string[]>([]);
 
   const [
     loadingPractices,
@@ -87,17 +114,40 @@ export default function NewJournalEntryScreen() {
   ] = useState(false);
 
   const [
-    errorMessage,
-    setErrorMessage,
+    errors,
+    setErrors,
+  ] =
+    useState<FormErrors>({});
+
+  const [
+    formError,
+    setFormError,
   ] = useState("");
 
+  const [
+    dirty,
+    setDirty,
+  ] = useState(false);
+
+  useUnsavedChangesGuard(
+    dirty && !saving,
+    {
+      title:
+        "Leave this reflection?",
+      message:
+        "Your words haven't been saved yet.",
+    }
+  );
+
   useEffect(() => {
-    loadPractices();
+    void loadPractices();
   }, []);
 
   async function loadPractices() {
     try {
-      setLoadingPractices(true);
+      setLoadingPractices(
+        true
+      );
 
       const data =
         await getPractices();
@@ -108,14 +158,28 @@ export default function NewJournalEntryScreen() {
         "Unable to load practices:",
         error
       );
+
+      setFormError(
+        error instanceof Error
+          ? error.message
+          : "Unable to load spiritual practices."
+      );
     } finally {
-      setLoadingPractices(false);
+      setLoadingPractices(
+        false
+      );
     }
   }
 
   function togglePractice(
     id: string
   ) {
+    if (saving) {
+      return;
+    }
+
+    setDirty(true);
+
     setSelectedPracticeIds(
       (current) =>
         current.includes(id)
@@ -123,30 +187,68 @@ export default function NewJournalEntryScreen() {
               (item) =>
                 item !== id
             )
-          : [...current, id]
+          : [
+              ...current,
+              id,
+            ]
+    );
+  }
+
+  function validateForm(): boolean {
+    const nextErrors:
+      FormErrors = {};
+
+    const titleResult =
+      validateJournalTitle(
+        title
+      );
+
+    if (!titleResult.valid) {
+      nextErrors.title =
+        titleResult.message;
+    }
+
+    const contentResult =
+      validateJournalContent(
+        content
+      );
+
+    if (
+      !contentResult.valid
+    ) {
+      nextErrors.content =
+        contentResult.message;
+    }
+
+    const energyResult =
+      validateEnergyLevel(
+        energyLevel
+      );
+
+    if (
+      !energyResult.valid
+    ) {
+      nextErrors.energy =
+        energyResult.message;
+    }
+
+    setErrors(nextErrors);
+
+    return (
+      Object.keys(
+        nextErrors
+      ).length === 0
     );
   }
 
   async function saveEntry() {
-    const cleanTitle =
-      title.trim();
-
-    const cleanContent =
-      content.trim();
-
-    setErrorMessage("");
-
-    if (!cleanTitle) {
-      setErrorMessage(
-        "Give this reflection a small title so you can find it again."
-      );
+    if (saving) {
       return;
     }
 
-    if (!cleanContent) {
-      setErrorMessage(
-        "Write a little of what is moving through you."
-      );
+    setFormError("");
+
+    if (!validateForm()) {
       return;
     }
 
@@ -154,18 +256,27 @@ export default function NewJournalEntryScreen() {
       setSaving(true);
 
       const entry =
-        await createJournalEntry({
-          title: cleanTitle,
-          content: cleanContent,
-          mood,
-          energy_level:
-            energyLevel,
-        });
+        await createJournalEntry(
+          {
+            title:
+              title.trim(),
+
+            content:
+              content.trim(),
+
+            mood,
+
+            energy_level:
+              energyLevel,
+          }
+        );
 
       await setEntryPractices(
         entry.id,
         selectedPracticeIds
       );
+
+      setDirty(false);
 
       router.replace({
         pathname:
@@ -181,7 +292,7 @@ export default function NewJournalEntryScreen() {
         error
       );
 
-      setErrorMessage(
+      setFormError(
         error instanceof Error
           ? error.message
           : "Unable to save your reflection."
@@ -192,44 +303,104 @@ export default function NewJournalEntryScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={styles.container}
+    >
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={
+          styles.content
+        }
         keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={
+          false
+        }
       >
-        <BackButton />
+        <Pressable
+          style={styles.back}
+          disabled={saving}
+          onPress={() =>
+            router.back()
+          }
+        >
+          <Text
+            style={styles.backText}
+          >
+            ‹ Journal
+          </Text>
+        </Pressable>
 
-        <Text style={styles.symbol}>
+        <Text
+          style={styles.symbol}
+        >
           ☾
         </Text>
 
-        <Text style={styles.title}>
+        <Text
+          style={styles.title}
+        >
           A new reflection
         </Text>
 
-        <Text style={styles.subtitle}>
-          You don't have to make sense of it. Let the
-          page hold it first.
+        <Text
+          style={styles.subtitle}
+        >
+          You don't have to make
+          sense of it. Let the page
+          hold it first.
         </Text>
 
-        <View style={styles.form}>
+        <View
+          style={styles.form}
+        >
           <SoulInput
             label="A few words to remember this by"
             value={title}
-            onChangeText={setTitle}
+            onChangeText={(
+              value
+            ) => {
+              setTitle(value);
+              setDirty(true);
+
+              setErrors(
+                (current) => ({
+                  ...current,
+                  title: undefined,
+                })
+              );
+            }}
             placeholder="Title"
             maxLength={120}
+            editable={!saving}
+            error={errors.title}
           />
 
           <SoulInput
             label="What's here?"
             value={content}
-            onChangeText={setContent}
+            onChangeText={(
+              value
+            ) => {
+              setContent(value);
+              setDirty(true);
+
+              setErrors(
+                (current) => ({
+                  ...current,
+                  content:
+                    undefined,
+                })
+              );
+            }}
             placeholder="Write freely..."
             multiline
             textAlignVertical="top"
-            style={styles.largeInput}
+            editable={!saving}
+            style={
+              styles.largeInput
+            }
+            error={
+              errors.content
+            }
           />
         </View>
 
@@ -239,8 +410,12 @@ export default function NewJournalEntryScreen() {
 
         <ScrollView
           horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipRow}
+          showsHorizontalScrollIndicator={
+            false
+          }
+          contentContainerStyle={
+            styles.chipRow
+          }
         >
           {moods.map(
             (item) => {
@@ -250,22 +425,27 @@ export default function NewJournalEntryScreen() {
               return (
                 <Pressable
                   key={item}
+                  disabled={saving}
                   style={[
                     styles.chip,
+
                     selected &&
                       styles.chipSelected,
                   ]}
-                  onPress={() =>
+                  onPress={() => {
                     setMood(
                       selected
                         ? null
                         : item
-                    )
-                  }
+                    );
+
+                    setDirty(true);
+                  }}
                 >
                   <Text
                     style={[
                       styles.chipText,
+
                       selected &&
                         styles.chipTextSelected,
                     ]}
@@ -283,7 +463,9 @@ export default function NewJournalEntryScreen() {
           subtitle="1 is very low, 5 is very full."
         />
 
-        <View style={styles.energyRow}>
+        <View
+          style={styles.energyRow}
+        >
           {[1, 2, 3, 4, 5].map(
             (level) => {
               const selected =
@@ -293,22 +475,35 @@ export default function NewJournalEntryScreen() {
               return (
                 <Pressable
                   key={level}
+                  disabled={saving}
                   style={[
                     styles.energyButton,
+
                     selected &&
                       styles.energySelected,
                   ]}
-                  onPress={() =>
+                  onPress={() => {
                     setEnergyLevel(
                       selected
                         ? null
                         : level
-                    )
-                  }
+                    );
+
+                    setDirty(true);
+
+                    setErrors(
+                      (current) => ({
+                        ...current,
+                        energy:
+                          undefined,
+                      })
+                    );
+                  }}
                 >
                   <Text
                     style={[
                       styles.energyText,
+
                       selected &&
                         styles.energyTextSelected,
                     ]}
@@ -321,6 +516,16 @@ export default function NewJournalEntryScreen() {
           )}
         </View>
 
+        {errors.energy ? (
+          <Text
+            style={
+              styles.fieldError
+            }
+          >
+            {errors.energy}
+          </Text>
+        ) : null}
+
         <SectionHeading
           title="What supported you?"
           subtitle="Choose any practices that were part of your day."
@@ -328,10 +533,16 @@ export default function NewJournalEntryScreen() {
 
         {loadingPractices ? (
           <ActivityIndicator
-            color={colors.lavender}
+            color={
+              colors.lavender
+            }
           />
         ) : (
-          <View style={styles.practiceWrap}>
+          <View
+            style={
+              styles.practiceWrap
+            }
+          >
             {practices.map(
               (practice) => {
                 const selected =
@@ -341,9 +552,15 @@ export default function NewJournalEntryScreen() {
 
                 return (
                   <Pressable
-                    key={practice.id}
+                    key={
+                      practice.id
+                    }
+                    disabled={
+                      saving
+                    }
                     style={[
                       styles.practiceChip,
+
                       selected &&
                         styles.practiceSelected,
                     ]}
@@ -356,11 +573,15 @@ export default function NewJournalEntryScreen() {
                     <Text
                       style={[
                         styles.practiceText,
+
                         selected &&
                           styles.practiceTextSelected,
                       ]}
                     >
-                      ✦ {practice.name}
+                      ✦{" "}
+                      {
+                        practice.name
+                      }
                     </Text>
                   </Pressable>
                 );
@@ -369,16 +590,17 @@ export default function NewJournalEntryScreen() {
           </View>
         )}
 
-        {errorMessage ? (
+        {formError ? (
           <FeedbackMessage
             type="error"
-            message={errorMessage}
+            message={formError}
           />
         ) : null}
 
         <SoulButton
           title="Keep this reflection"
           loading={saving}
+          disabled={saving}
           onPress={saveEntry}
         />
       </ScrollView>
@@ -386,168 +608,191 @@ export default function NewJournalEntryScreen() {
   );
 }
 
-function BackButton() {
-  return (
-    <Pressable
-      style={styles.back}
-      onPress={() =>
-        router.back()
-      }
-    >
-      <Text style={styles.backText}>
-        ‹ Journal
-      </Text>
-    </Pressable>
-  );
-}
+const styles =
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor:
+        colors.background,
+    },
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
+    content: {
+      width: "100%",
+      maxWidth: 680,
+      alignSelf: "center",
+      paddingHorizontal: 24,
+      paddingTop: 24,
+      paddingBottom: 65,
+    },
 
-  content: {
-    width: "100%",
-    maxWidth: 680,
-    alignSelf: "center",
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 65,
-  },
+    back: {
+      alignSelf:
+        "flex-start",
+      paddingVertical: 8,
+    },
 
-  back: {
-    alignSelf: "flex-start",
-    paddingVertical: 8,
-  },
+    backText: {
+      color:
+        colors.lavender,
+      fontFamily:
+        fonts.bodySemiBold,
+      fontSize: 12,
+    },
 
-  backText: {
-    color: colors.lavender,
-    fontFamily: fonts.bodySemiBold,
-    fontSize: 12,
-  },
+    symbol: {
+      color: colors.gold,
+      fontSize: 20,
+      marginTop: 20,
+    },
 
-  symbol: {
-    color: colors.gold,
-    fontSize: 20,
-    marginTop: 20,
-  },
+    title: {
+      color: colors.text,
+      fontFamily:
+        fonts.display,
+      fontSize: 39,
+      marginTop: 6,
+    },
 
-  title: {
-    color: colors.text,
-    fontFamily: fonts.display,
-    fontSize: 39,
-    marginTop: 6,
-  },
+    subtitle: {
+      color:
+        colors.textMuted,
+      fontFamily:
+        fonts.displayItalic,
+      fontSize: 17,
+      lineHeight: 23,
+      marginTop: 3,
+      marginBottom: 27,
+    },
 
-  subtitle: {
-    color: colors.textMuted,
-    fontFamily: fonts.displayItalic,
-    fontSize: 17,
-    lineHeight: 23,
-    marginTop: 3,
-    marginBottom: 27,
-  },
+    form: {
+      gap: 17,
+      marginBottom: 30,
+    },
 
-  form: {
-    gap: 17,
-    marginBottom: 30,
-  },
+    largeInput: {
+      minHeight: 180,
+      paddingTop: 15,
+    },
 
-  largeInput: {
-    minHeight: 180,
-    paddingTop: 15,
-  },
+    chipRow: {
+      gap: 8,
+      paddingBottom: 29,
+    },
 
-  chipRow: {
-    gap: 8,
-    paddingBottom: 29,
-  },
+    chip: {
+      backgroundColor:
+        colors.surface,
+      borderWidth: 1,
+      borderColor:
+        colors.border,
+      borderRadius:
+        radius.pill,
+      paddingHorizontal: 14,
+      paddingVertical: 9,
+    },
 
-  chip: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.pill,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-  },
+    chipSelected: {
+      backgroundColor:
+        colors.purpleDark,
+      borderColor:
+        colors.lavenderStrong,
+    },
 
-  chipSelected: {
-    backgroundColor: colors.purpleDark,
-    borderColor: colors.lavenderStrong,
-  },
+    chipText: {
+      color:
+        colors.textMuted,
+      fontFamily:
+        fonts.bodyMedium,
+      fontSize: 11,
+    },
 
-  chipText: {
-    color: colors.textMuted,
-    fontFamily: fonts.bodyMedium,
-    fontSize: 11,
-  },
+    chipTextSelected: {
+      color: colors.white,
+    },
 
-  chipTextSelected: {
-    color: colors.white,
-  },
+    energyRow: {
+      flexDirection: "row",
+      gap: 9,
+    },
 
-  energyRow: {
-    flexDirection: "row",
-    gap: 9,
-    marginBottom: 30,
-  },
+    energyButton: {
+      flex: 1,
+      minHeight: 48,
+      backgroundColor:
+        colors.surface,
+      borderWidth: 1,
+      borderColor:
+        colors.border,
+      borderRadius:
+        radius.md,
+      justifyContent:
+        "center",
+      alignItems: "center",
+    },
 
-  energyButton: {
-    flex: 1,
-    minHeight: 48,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    justifyContent: "center",
-    alignItems: "center",
-  },
+    energySelected: {
+      backgroundColor:
+        colors.purpleDark,
+      borderColor:
+        colors.lavenderStrong,
+    },
 
-  energySelected: {
-    backgroundColor: colors.purpleDark,
-    borderColor: colors.lavenderStrong,
-  },
+    energyText: {
+      color:
+        colors.textMuted,
+      fontFamily:
+        fonts.display,
+      fontSize: 21,
+    },
 
-  energyText: {
-    color: colors.textMuted,
-    fontFamily: fonts.display,
-    fontSize: 21,
-  },
+    energyTextSelected: {
+      color: colors.white,
+    },
 
-  energyTextSelected: {
-    color: colors.white,
-  },
+    fieldError: {
+      color:
+        colors.errorText,
+      fontFamily: fonts.body,
+      fontSize: 11,
+      marginTop: 7,
+      marginBottom: 24,
+    },
 
-  practiceWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 28,
-  },
+    practiceWrap: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+      marginBottom: 28,
+    },
 
-  practiceChip: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.pill,
-    paddingHorizontal: 13,
-    paddingVertical: 9,
-  },
+    practiceChip: {
+      backgroundColor:
+        colors.surface,
+      borderWidth: 1,
+      borderColor:
+        colors.border,
+      borderRadius:
+        radius.pill,
+      paddingHorizontal: 13,
+      paddingVertical: 9,
+    },
 
-  practiceSelected: {
-    backgroundColor: colors.surfaceRaised,
-    borderColor: colors.lavenderStrong,
-  },
+    practiceSelected: {
+      backgroundColor:
+        colors.surfaceRaised,
+      borderColor:
+        colors.lavenderStrong,
+    },
 
-  practiceText: {
-    color: colors.textMuted,
-    fontFamily: fonts.body,
-    fontSize: 11,
-  },
+    practiceText: {
+      color:
+        colors.textMuted,
+      fontFamily: fonts.body,
+      fontSize: 11,
+    },
 
-  practiceTextSelected: {
-    color: colors.lavender,
-  },
-}); 
+    practiceTextSelected: {
+      color:
+        colors.lavender,
+    },
+  }); 

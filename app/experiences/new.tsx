@@ -1,4 +1,6 @@
-import { router } from "expo-router";
+import {
+  router,
+} from "expo-router";
 
 import {
   useState,
@@ -29,6 +31,24 @@ import {
   ExperienceType,
 } from "../../src/services/experienceService";
 
+import {
+  useUnsavedChangesGuard,
+} from "../../src/hooks/useUnsavedChangesGuard";
+
+import {
+  validateExperienceDescription,
+  validateExperienceTitle,
+  validateOptionalReflection,
+  validateSignificanceLevel,
+} from "../../src/utils/validation";
+
+type FormErrors = {
+  title?: string;
+  description?: string;
+  interpretation?: string;
+  significance?: string;
+};
+
 export default function NewExperienceScreen() {
   const [
     experienceType,
@@ -38,8 +58,10 @@ export default function NewExperienceScreen() {
       "dream"
     );
 
-  const [title, setTitle] =
-    useState("");
+  const [
+    title,
+    setTitle,
+  ] = useState("");
 
   const [
     description,
@@ -65,63 +87,138 @@ export default function NewExperienceScreen() {
   ] = useState(false);
 
   const [
-    errorMessage,
-    setErrorMessage,
+    dirty,
+    setDirty,
+  ] = useState(false);
+
+  const [
+    errors,
+    setErrors,
+  ] =
+    useState<FormErrors>({});
+
+  const [
+    formError,
+    setFormError,
   ] = useState("");
 
-  async function saveExperience() {
-    const cleanTitle =
-      title.trim();
+  useUnsavedChangesGuard(
+    dirty && !saving,
+    {
+      title:
+        "Leave this memory?",
+      message:
+        "What you've written hasn't been saved yet.",
+    }
+  );
 
-    const cleanDescription =
-      description.trim();
+  function validateForm(): boolean {
+    const nextErrors:
+      FormErrors = {};
 
-    if (!cleanTitle) {
-      setErrorMessage(
-        "Give this memory a small title."
+    const titleResult =
+      validateExperienceTitle(
+        title
       );
+
+    if (!titleResult.valid) {
+      nextErrors.title =
+        titleResult.message;
+    }
+
+    const descriptionResult =
+      validateExperienceDescription(
+        description
+      );
+
+    if (
+      !descriptionResult.valid
+    ) {
+      nextErrors.description =
+        descriptionResult.message;
+    }
+
+    const reflectionResult =
+      validateOptionalReflection(
+        interpretation
+      );
+
+    if (
+      !reflectionResult.valid
+    ) {
+      nextErrors.interpretation =
+        reflectionResult.message;
+    }
+
+    const significanceResult =
+      validateSignificanceLevel(
+        significance
+      );
+
+    if (
+      !significanceResult.valid
+    ) {
+      nextErrors.significance =
+        significanceResult.message;
+    }
+
+    setErrors(nextErrors);
+
+    return (
+      Object.keys(
+        nextErrors
+      ).length === 0
+    );
+  }
+
+  async function saveExperience() {
+    if (saving) {
       return;
     }
 
-    if (!cleanDescription) {
-      setErrorMessage(
-        "Write down what you remember or noticed."
-      );
+    setFormError("");
+
+    if (!validateForm()) {
       return;
     }
 
     try {
       setSaving(true);
-      setErrorMessage("");
 
       const experience =
-        await createExperience({
-          experience_type:
-            experienceType,
+        await createExperience(
+          {
+            experience_type:
+              experienceType,
 
-          title:
-            cleanTitle,
+            title:
+              title.trim(),
 
-          description:
-            cleanDescription,
+            description:
+              description.trim(),
 
-          interpretation:
-            interpretation.trim() ||
-            null,
+            interpretation:
+              interpretation.trim() ||
+              null,
 
-          significance_level:
-            significance,
-        });
+            significance_level:
+              significance,
+          }
+        );
+
+      setDirty(false);
 
       router.replace({
         pathname:
           "/experiences/[id]",
+
         params: {
-          id: experience.id,
+          id:
+            experience.id,
         },
       });
     } catch (error) {
-      setErrorMessage(
+      setFormError(
         error instanceof Error
           ? error.message
           : "Unable to save this experience."
@@ -150,6 +247,7 @@ export default function NewExperienceScreen() {
       >
         <Pressable
           style={styles.back}
+          disabled={saving}
           onPress={() =>
             router.back()
           }
@@ -167,7 +265,9 @@ export default function NewExperienceScreen() {
           {dream ? "☾" : "✦"}
         </Text>
 
-        <Text style={styles.title}>
+        <Text
+          style={styles.title}
+        >
           {dream
             ? "Remember a dream"
             : "Notice a sign"}
@@ -196,11 +296,14 @@ export default function NewExperienceScreen() {
               experienceType ===
               "dream"
             }
-            onPress={() =>
+            disabled={saving}
+            onPress={() => {
               setExperienceType(
                 "dream"
-              )
-            }
+              );
+
+              setDirty(true);
+            }}
           />
 
           <TypeCard
@@ -211,25 +314,44 @@ export default function NewExperienceScreen() {
               experienceType ===
               "synchronicity"
             }
-            onPress={() =>
+            disabled={saving}
+            onPress={() => {
               setExperienceType(
                 "synchronicity"
-              )
-            }
+              );
+
+              setDirty(true);
+            }}
           />
         </View>
 
-        <View style={styles.form}>
+        <View
+          style={styles.form}
+        >
           <SoulInput
             label="A name for this memory"
             value={title}
-            onChangeText={setTitle}
+            onChangeText={(
+              value
+            ) => {
+              setTitle(value);
+              setDirty(true);
+
+              setErrors(
+                (current) => ({
+                  ...current,
+                  title: undefined,
+                })
+              );
+            }}
             placeholder={
               dream
                 ? "The house by the ocean..."
                 : "11:11 after thinking of..."
             }
             maxLength={120}
+            editable={!saving}
+            error={errors.title}
           />
 
           <SoulInput
@@ -239,26 +361,68 @@ export default function NewExperienceScreen() {
                 : "What happened?"
             }
             value={description}
-            onChangeText={
-              setDescription
-            }
+            onChangeText={(
+              value
+            ) => {
+              setDescription(
+                value
+              );
+
+              setDirty(true);
+
+              setErrors(
+                (current) => ({
+                  ...current,
+                  description:
+                    undefined,
+                })
+              );
+            }}
             placeholder="Write what you remember..."
             multiline
             textAlignVertical="top"
-            style={styles.largeInput}
+            editable={!saving}
+            style={
+              styles.largeInput
+            }
+            error={
+              errors.description
+            }
           />
 
           <SoulInput
             label="What does it bring up for you?"
             hint="Optional. This is your own reflection, not an interpretation generated by SoulPath."
-            value={interpretation}
-            onChangeText={
-              setInterpretation
+            value={
+              interpretation
             }
+            onChangeText={(
+              value
+            ) => {
+              setInterpretation(
+                value
+              );
+
+              setDirty(true);
+
+              setErrors(
+                (current) => ({
+                  ...current,
+                  interpretation:
+                    undefined,
+                })
+              );
+            }}
             placeholder="Thoughts, symbols, feelings..."
             multiline
             textAlignVertical="top"
-            style={styles.reflectionInput}
+            editable={!saving}
+            style={
+              styles.reflectionInput
+            }
+            error={
+              errors.interpretation
+            }
           />
         </View>
 
@@ -268,7 +432,9 @@ export default function NewExperienceScreen() {
         />
 
         <View
-          style={styles.significanceRow}
+          style={
+            styles.significanceRow
+          }
         >
           {[1, 2, 3, 4, 5].map(
             (level) => {
@@ -279,22 +445,35 @@ export default function NewExperienceScreen() {
               return (
                 <Pressable
                   key={level}
+                  disabled={saving}
                   style={[
                     styles.level,
+
                     selected &&
                       styles.levelSelected,
                   ]}
-                  onPress={() =>
+                  onPress={() => {
                     setSignificance(
                       selected
                         ? null
                         : level
-                    )
-                  }
+                    );
+
+                    setDirty(true);
+
+                    setErrors(
+                      (current) => ({
+                        ...current,
+                        significance:
+                          undefined,
+                      })
+                    );
+                  }}
                 >
                   <Text
                     style={[
                       styles.levelText,
+
                       selected &&
                         styles.levelTextSelected,
                     ]}
@@ -307,26 +486,44 @@ export default function NewExperienceScreen() {
           )}
         </View>
 
+        {errors.significance ? (
+          <Text
+            style={
+              styles.fieldError
+            }
+          >
+            {
+              errors.significance
+            }
+          </Text>
+        ) : null}
+
         <View
-          style={styles.scaleLabels}
+          style={
+            styles.scaleLabels
+          }
         >
           <Text
-            style={styles.scaleText}
+            style={
+              styles.scaleText
+            }
           >
             subtle
           </Text>
 
           <Text
-            style={styles.scaleText}
+            style={
+              styles.scaleText
+            }
           >
             profound
           </Text>
         </View>
 
-        {errorMessage ? (
+        {formError ? (
           <FeedbackMessage
             type="error"
-            message={errorMessage}
+            message={formError}
           />
         ) : null}
 
@@ -337,6 +534,7 @@ export default function NewExperienceScreen() {
               : "Keep this sign"
           }
           loading={saving}
+          disabled={saving}
           onPress={
             saveExperience
           }
@@ -351,20 +549,27 @@ function TypeCard({
   title,
   subtitle,
   selected,
+  disabled,
   onPress,
 }: {
   symbol: string;
   title: string;
   subtitle: string;
   selected: boolean;
+  disabled: boolean;
   onPress: () => void;
 }) {
   return (
     <Pressable
+      disabled={disabled}
       style={[
         styles.typeCard,
+
         selected &&
           styles.typeCardSelected,
+
+        disabled &&
+          styles.disabled,
       ]}
       onPress={onPress}
     >
@@ -381,7 +586,9 @@ function TypeCard({
       </Text>
 
       <Text
-        style={styles.typeSubtitle}
+        style={
+          styles.typeSubtitle
+        }
       >
         {subtitle}
       </Text>
@@ -389,149 +596,184 @@ function TypeCard({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
+const styles =
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor:
+        colors.background,
+    },
 
-  content: {
-    width: "100%",
-    maxWidth: 680,
-    alignSelf: "center",
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 65,
-  },
+    content: {
+      width: "100%",
+      maxWidth: 680,
+      alignSelf: "center",
+      paddingHorizontal: 24,
+      paddingTop: 24,
+      paddingBottom: 65,
+    },
 
-  back: {
-    alignSelf: "flex-start",
-    paddingVertical: 8,
-  },
+    back: {
+      alignSelf:
+        "flex-start",
+      paddingVertical: 8,
+    },
 
-  backText: {
-    color: colors.lavender,
-    fontFamily: fonts.bodySemiBold,
-    fontSize: 12,
-  },
+    backText: {
+      color:
+        colors.lavender,
+      fontFamily:
+        fonts.bodySemiBold,
+      fontSize: 12,
+    },
 
-  symbol: {
-    color: colors.gold,
-    fontSize: 24,
-    marginTop: 21,
-  },
+    symbol: {
+      color: colors.gold,
+      fontSize: 24,
+      marginTop: 21,
+    },
 
-  title: {
-    color: colors.text,
-    fontFamily: fonts.display,
-    fontSize: 39,
-    marginTop: 6,
-  },
+    title: {
+      color: colors.text,
+      fontFamily:
+        fonts.display,
+      fontSize: 39,
+      marginTop: 6,
+    },
 
-  subtitle: {
-    color: colors.textMuted,
-    fontFamily: fonts.displayItalic,
-    fontSize: 17,
-    lineHeight: 23,
-    marginTop: 3,
-    marginBottom: 30,
-  },
+    subtitle: {
+      color:
+        colors.textMuted,
+      fontFamily:
+        fonts.displayItalic,
+      fontSize: 17,
+      lineHeight: 23,
+      marginTop: 3,
+      marginBottom: 30,
+    },
 
-  typeRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 30,
-  },
+    typeRow: {
+      flexDirection: "row",
+      gap: 10,
+      marginBottom: 30,
+    },
 
-  typeCard: {
-    flex: 1,
-    minHeight: 135,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.lg,
-    padding: 17,
-  },
+    typeCard: {
+      flex: 1,
+      minHeight: 135,
+      backgroundColor:
+        colors.surface,
+      borderWidth: 1,
+      borderColor:
+        colors.border,
+      borderRadius:
+        radius.lg,
+      padding: 17,
+    },
 
-  typeCardSelected: {
-    borderColor: colors.lavenderStrong,
-    backgroundColor: colors.surfaceRaised,
-  },
+    typeCardSelected: {
+      borderColor:
+        colors.lavenderStrong,
+      backgroundColor:
+        colors.surfaceRaised,
+    },
 
-  typeSymbol: {
-    color: colors.gold,
-    fontSize: 22,
-  },
+    typeSymbol: {
+      color: colors.gold,
+      fontSize: 22,
+    },
 
-  typeTitle: {
-    color: colors.text,
-    fontFamily: fonts.display,
-    fontSize: 22,
-    marginTop: 6,
-  },
+    typeTitle: {
+      color: colors.text,
+      fontFamily:
+        fonts.display,
+      fontSize: 22,
+      marginTop: 6,
+    },
 
-  typeSubtitle: {
-    color: colors.textDim,
-    fontFamily: fonts.body,
-    fontSize: 9,
-    lineHeight: 14,
-    marginTop: 3,
-  },
+    typeSubtitle: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 9,
+      lineHeight: 14,
+      marginTop: 3,
+    },
 
-  form: {
-    gap: 17,
-    marginBottom: 30,
-  },
+    form: {
+      gap: 17,
+      marginBottom: 30,
+    },
 
-  largeInput: {
-    minHeight: 155,
-  },
+    largeInput: {
+      minHeight: 155,
+    },
 
-  reflectionInput: {
-    minHeight: 120,
-  },
+    reflectionInput: {
+      minHeight: 120,
+    },
 
-  significanceRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
+    significanceRow: {
+      flexDirection: "row",
+      gap: 8,
+    },
 
-  level: {
-    flex: 1,
-    minHeight: 48,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    justifyContent: "center",
-    alignItems: "center",
-  },
+    level: {
+      flex: 1,
+      minHeight: 48,
+      borderRadius:
+        radius.md,
+      borderWidth: 1,
+      borderColor:
+        colors.border,
+      backgroundColor:
+        colors.surface,
+      justifyContent:
+        "center",
+      alignItems: "center",
+    },
 
-  levelSelected: {
-    backgroundColor: colors.purpleDark,
-    borderColor: colors.lavenderStrong,
-  },
+    levelSelected: {
+      backgroundColor:
+        colors.purpleDark,
+      borderColor:
+        colors.lavenderStrong,
+    },
 
-  levelText: {
-    color: colors.textMuted,
-    fontFamily: fonts.display,
-    fontSize: 21,
-  },
+    levelText: {
+      color:
+        colors.textMuted,
+      fontFamily:
+        fonts.display,
+      fontSize: 21,
+    },
 
-  levelTextSelected: {
-    color: colors.white,
-  },
+    levelTextSelected: {
+      color: colors.white,
+    },
 
-  scaleLabels: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 6,
-    marginBottom: 28,
-  },
+    fieldError: {
+      color:
+        colors.errorText,
+      fontFamily: fonts.body,
+      fontSize: 11,
+      marginTop: 7,
+    },
 
-  scaleText: {
-    color: colors.textDim,
-    fontFamily: fonts.body,
-    fontSize: 9,
-  },
-}); 
+    scaleLabels: {
+      flexDirection: "row",
+      justifyContent:
+        "space-between",
+      marginTop: 6,
+      marginBottom: 28,
+    },
+
+    scaleText: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 9,
+    },
+
+    disabled: {
+      opacity: 0.55,
+    },
+  }); 

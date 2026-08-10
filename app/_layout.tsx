@@ -15,6 +15,7 @@ import {
 
 import {
   Stack,
+  useRouter,
 } from "expo-router";
 
 import {
@@ -22,8 +23,13 @@ import {
 } from "expo-status-bar";
 
 import {
+  useEffect,
+} from "react";
+
+import {
   ActivityIndicator,
   StyleSheet,
+  Text,
   View,
 } from "react-native";
 
@@ -34,17 +40,55 @@ import {
 
 import {
   colors,
+  fonts,
 } from "../src/theme";
 
 function RootNavigator() {
   const {
     session,
     loading,
-  } = useAuth();
+    authExitReason,
+    acknowledgeAuthExit,
+  } =
+    useAuth();
+
+  const router =
+    useRouter();
+
+  /*
+   * If AuthContext specifically determined that the
+   * existing session expired or became unrecoverable,
+   * send the user straight to Login rather than making
+   * them wonder why they returned to the welcome page.
+   */
+  useEffect(() => {
+    if (
+      loading ||
+      session ||
+      authExitReason !==
+        "expired"
+    ) {
+      return;
+    }
+
+    router.replace(
+      "/login"
+    );
+
+    acknowledgeAuthExit();
+  }, [
+    session,
+    loading,
+    authExitReason,
+    router,
+    acknowledgeAuthExit,
+  ]);
 
   if (loading) {
     return (
-      <LoadingScreen />
+      <LoadingScreen
+        message="Opening your SoulPath..."
+      />
     );
   }
 
@@ -138,53 +182,69 @@ function RootNavigator() {
   );
 }
 
-function LoadingScreen() {
+function LoadingScreen({
+  message,
+}: {
+  message?: string;
+}) {
   return (
     <View
       style={
         styles.loadingContainer
       }
     >
-      <TextLogo />
+      <Text
+        style={
+          styles.loadingSymbol
+        }
+      >
+        ☾ ✦
+      </Text>
 
       <ActivityIndicator
         size="small"
-        color={colors.lavender}
+        color={
+          colors.lavender
+        }
       />
+
+      {message ? (
+        <Text
+          style={
+            styles.loadingText
+          }
+        >
+          {message}
+        </Text>
+      ) : null}
     </View>
-  );
-}
-
-function TextLogo() {
-  const { Text } =
-    require("react-native");
-
-  return (
-    <Text
-      style={styles.loadingSymbol}
-    >
-      ☾ ✦
-    </Text>
   );
 }
 
 export default function RootLayout() {
   const [
     cormorantLoaded,
-  ] = useCormorantFonts({
-    CormorantGaramond_400Regular,
-    CormorantGaramond_400Regular_Italic,
-    CormorantGaramond_600SemiBold,
-  });
+  ] =
+    useCormorantFonts({
+      CormorantGaramond_400Regular,
+
+      CormorantGaramond_400Regular_Italic,
+
+      CormorantGaramond_600SemiBold,
+    });
 
   const [
     nunitoLoaded,
-  ] = useNunitoFonts({
-    Nunito_400Regular,
-    Nunito_500Medium,
-    Nunito_600SemiBold,
-    Nunito_700Bold,
-  });
+  ] =
+    useNunitoFonts({
+      Nunito_400Regular,
+
+      Nunito_500Medium,
+
+      Nunito_600SemiBold,
+
+      Nunito_700Bold,
+    });
 
   const fontsLoaded =
     cormorantLoaded &&
@@ -211,17 +271,31 @@ const styles =
   StyleSheet.create({
     loadingContainer: {
       flex: 1,
+
       backgroundColor:
         colors.background,
 
       alignItems: "center",
-      justifyContent: "center",
 
-      gap: 18,
+      justifyContent:
+        "center",
+
+      gap: 15,
     },
 
     loadingSymbol: {
       color: colors.gold,
+
       fontSize: 31,
+    },
+
+    loadingText: {
+      color:
+        colors.textMuted,
+
+      fontFamily:
+        fonts.body,
+
+      fontSize: 11,
     },
   }); 

@@ -27,7 +27,6 @@ import {
   colors,
   fonts,
   radius,
-  spacing,
 } from "../../src/theme";
 
 import {
@@ -35,31 +34,19 @@ import {
   JournalEntry,
 } from "../../src/services/journalService";
 
+import {
+  formatLocalDate,
+  isWithinLastDays,
+} from "../../src/utils/date";
+
 type MoodFilter =
   | "all"
-  | "Peaceful"
-  | "Happy"
-  | "Reflective"
-  | "Neutral"
-  | "Anxious"
-  | "Sad"
-  | "Overwhelmed";
+  | string;
 
 type DateFilter =
   | "all"
   | "7"
   | "30";
-
-const moodFilters: MoodFilter[] = [
-  "all",
-  "Peaceful",
-  "Happy",
-  "Reflective",
-  "Neutral",
-  "Anxious",
-  "Sad",
-  "Overwhelmed",
-];
 
 export default function JournalScreen() {
   const [
@@ -71,61 +58,101 @@ export default function JournalScreen() {
   const [
     loading,
     setLoading,
-  ] = useState(true);
+  ] =
+    useState(true);
 
   const [
     errorMessage,
     setErrorMessage,
-  ] = useState("");
+  ] =
+    useState("");
 
   const [
     searchText,
     setSearchText,
-  ] = useState("");
+  ] =
+    useState("");
 
   const [
     moodFilter,
     setMoodFilter,
   ] =
-    useState<MoodFilter>("all");
+    useState<MoodFilter>(
+      "all"
+    );
 
   const [
     dateFilter,
     setDateFilter,
   ] =
-    useState<DateFilter>("all");
+    useState<DateFilter>(
+      "all"
+    );
 
   const loadEntries =
-    useCallback(async () => {
-      try {
-        setLoading(true);
-        setErrorMessage("");
+    useCallback(
+      async () => {
+        try {
+          setLoading(true);
+          setErrorMessage("");
 
-        const data =
-          await getJournalEntries();
+          const data =
+            await getJournalEntries();
 
-        setEntries(data);
-      } catch (error) {
-        console.error(
-          "Unable to load journal entries:",
-          error
-        );
+          setEntries(data);
+        } catch (error) {
+          console.error(
+            "Unable to load journal entries:",
+            error
+          );
 
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "Unable to load your journal."
-        );
-      } finally {
-        setLoading(false);
-      }
-    }, []);
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : "Unable to open your journal."
+          );
+        } finally {
+          setLoading(false);
+        }
+      },
+      []
+    );
 
   useFocusEffect(
     useCallback(() => {
-      loadEntries();
+      void loadEntries();
     }, [loadEntries])
   );
+
+  /*
+   * Derive mood options from the user's actual journal
+   * instead of maintaining a hard-coded list.
+   *
+   * This makes filtering work even if we add new moods
+   * later or older records contain another value.
+   */
+  const moodOptions =
+    useMemo(() => {
+      const moods =
+        entries
+          .map(
+            (entry) =>
+              entry.mood?.trim()
+          )
+          .filter(
+            (
+              mood
+            ): mood is string =>
+              Boolean(mood)
+          );
+
+      return Array.from(
+        new Set(moods)
+      ).sort(
+        (a, b) =>
+          a.localeCompare(b)
+      );
+    }, [entries]);
 
   const filteredEntries =
     useMemo(() => {
@@ -134,63 +161,42 @@ export default function JournalScreen() {
           .trim()
           .toLowerCase();
 
-      const now =
-        new Date();
-
       return entries.filter(
         (entry) => {
-          const matchesSearch =
-            !normalizedSearch ||
+          const title =
             entry.title
-              .toLowerCase()
-              .includes(
-                normalizedSearch
-              ) ||
+              .toLowerCase();
+
+          const content =
             entry.content
-              .toLowerCase()
-              .includes(
-                normalizedSearch
-              );
+              .toLowerCase();
+
+          const matchesSearch =
+            normalizedSearch ===
+              "" ||
+            title.includes(
+              normalizedSearch
+            ) ||
+            content.includes(
+              normalizedSearch
+            );
 
           const matchesMood =
-            moodFilter === "all" ||
+            moodFilter ===
+              "all" ||
             entry.mood ===
               moodFilter;
 
-          let matchesDate = true;
-
-          if (
-            dateFilter !== "all"
-          ) {
-            const days =
-              Number(
-                dateFilter
-              );
-
-            const startDate =
-              new Date(now);
-
-            startDate.setHours(
-              0,
-              0,
-              0,
-              0
-            );
-
-            startDate.setDate(
-              startDate.getDate() -
-                (days - 1)
-            );
-
-            const entryDate =
-              new Date(
-                `${entry.entry_date}T00:00:00`
-              );
-
-            matchesDate =
-              entryDate >=
-              startDate;
-          }
+          const matchesDate =
+            dateFilter ===
+            "all"
+              ? true
+              : isWithinLastDays(
+                  entry.entry_date,
+                  Number(
+                    dateFilter
+                  )
+                );
 
           return (
             matchesSearch &&
@@ -207,9 +213,8 @@ export default function JournalScreen() {
     ]);
 
   const hasActiveFilters =
-    searchText
-      .trim()
-      .length > 0 ||
+    searchText.trim() !==
+      "" ||
     moodFilter !== "all" ||
     dateFilter !== "all";
 
@@ -233,15 +238,15 @@ export default function JournalScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View
-          style={
-            styles.header
-          }
+          style={styles.header}
         >
-          <View style={{ flex: 1 }}>
+          <View
+            style={
+              styles.headerText
+            }
+          >
             <Text
-              style={
-                styles.title
-              }
+              style={styles.title}
             >
               Journal
             </Text>
@@ -257,9 +262,14 @@ export default function JournalScreen() {
           </View>
 
           <Pressable
-            style={
-              styles.newButton
-            }
+            accessibilityRole="button"
+            accessibilityLabel="Write a new reflection"
+            style={({ pressed }) => [
+              styles.newButton,
+
+              pressed &&
+                styles.pressed,
+            ]}
             onPress={() =>
               router.push(
                 "/journal/new"
@@ -290,24 +300,26 @@ export default function JournalScreen() {
           </Text>
 
           <TextInput
-            style={
-              styles.searchInput
-            }
-            value={
-              searchText
-            }
+            value={searchText}
             onChangeText={
               setSearchText
+            }
+            style={
+              styles.searchInput
             }
             placeholder="Search your reflections..."
             placeholderTextColor={
               colors.textDim
             }
+            autoCorrect
+            autoCapitalize="sentences"
+            returnKeyType="search"
           />
 
-          {searchText.length >
-          0 ? (
+          {searchText ? (
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Clear search"
               onPress={() =>
                 setSearchText("")
               }
@@ -332,128 +344,104 @@ export default function JournalScreen() {
             styles.filterRow
           }
         >
-          {(
-            [
-              [
-                "all",
-                "All time",
-              ],
-              [
-                "7",
-                "7 days",
-              ],
-              [
-                "30",
-                "30 days",
-              ],
-            ] as [
-              DateFilter,
-              string
-            ][]
-          ).map(
-            ([
-              value,
-              label,
-            ]) => {
-              const selected =
-                dateFilter ===
-                value;
-
-              return (
-                <Pressable
-                  key={value}
-                  style={[
-                    styles.filterChip,
-
-                    selected &&
-                      styles.filterChipSelected,
-                  ]}
-                  onPress={() =>
-                    setDateFilter(
-                      value
-                    )
-                  }
-                >
-                  <Text
-                    style={[
-                      styles.filterChipText,
-
-                      selected &&
-                        styles.filterChipTextSelected,
-                    ]}
-                  >
-                    {label}
-                  </Text>
-                </Pressable>
-              );
+          <FilterChip
+            label="All time"
+            selected={
+              dateFilter ===
+              "all"
             }
-          )}
+            onPress={() =>
+              setDateFilter(
+                "all"
+              )
+            }
+          />
+
+          <FilterChip
+            label="7 days"
+            selected={
+              dateFilter === "7"
+            }
+            onPress={() =>
+              setDateFilter("7")
+            }
+          />
+
+          <FilterChip
+            label="30 days"
+            selected={
+              dateFilter ===
+              "30"
+            }
+            onPress={() =>
+              setDateFilter("30")
+            }
+          />
         </View>
 
-        <SectionHeading
-          title="How it felt"
-        />
+        {moodOptions.length >
+        0 ? (
+          <>
+            <SectionHeading
+              title="How it felt"
+            />
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={
-            false
-          }
-          contentContainerStyle={
-            styles.moodFilters
-          }
-        >
-          {moodFilters.map(
-            (mood) => {
-              const selected =
-                moodFilter ===
-                mood;
-
-              return (
-                <Pressable
-                  key={mood}
-                  style={[
-                    styles.filterChip,
-
-                    selected &&
-                      styles.filterChipSelected,
-                  ]}
-                  onPress={() =>
-                    setMoodFilter(
-                      mood
-                    )
-                  }
-                >
-                  <Text
-                    style={[
-                      styles.filterChipText,
-
-                      selected &&
-                        styles.filterChipTextSelected,
-                    ]}
-                  >
-                    {mood ===
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={
+                false
+              }
+              contentContainerStyle={
+                styles.moodRow
+              }
+            >
+              <FilterChip
+                label="All moods"
+                selected={
+                  moodFilter ===
+                  "all"
+                }
+                onPress={() =>
+                  setMoodFilter(
                     "all"
-                      ? "All moods"
-                      : mood}
-                  </Text>
-                </Pressable>
-              );
-            }
-          )}
-        </ScrollView>
+                  )
+                }
+              />
+
+              {moodOptions.map(
+                (mood) => (
+                  <FilterChip
+                    key={mood}
+                    label={mood}
+                    selected={
+                      moodFilter ===
+                      mood
+                    }
+                    onPress={() =>
+                      setMoodFilter(
+                        mood
+                      )
+                    }
+                  />
+                )
+              )}
+            </ScrollView>
+          </>
+        ) : null}
 
         <View
           style={
-            styles.resultHeader
+            styles.resultsHeader
           }
         >
           <Text
             style={
-              styles.resultCount
+              styles.resultsText
             }
           >
-            {filteredEntries.length}{" "}
+            {
+              filteredEntries.length
+            }{" "}
             {filteredEntries.length ===
             1
               ? "reflection"
@@ -462,6 +450,7 @@ export default function JournalScreen() {
 
           {hasActiveFilters ? (
             <Pressable
+              accessibilityRole="button"
               onPress={
                 clearFilters
               }
@@ -471,7 +460,7 @@ export default function JournalScreen() {
                   styles.clearFilters
                 }
               >
-                Clear
+                Clear filters
               </Text>
             </Pressable>
           ) : null}
@@ -498,9 +487,7 @@ export default function JournalScreen() {
               journal...
             </Text>
           </View>
-        ) : null}
-
-        {errorMessage ? (
+        ) : errorMessage ? (
           <View
             style={
               styles.errorBox
@@ -513,22 +500,36 @@ export default function JournalScreen() {
             >
               {errorMessage}
             </Text>
-          </View>
-        ) : null}
 
-        {!loading &&
-        filteredEntries.length ===
+            <Pressable
+              style={
+                styles.retryButton
+              }
+              onPress={() =>
+                void loadEntries()
+              }
+            >
+              <Text
+                style={
+                  styles.retryText
+                }
+              >
+                Try again
+              </Text>
+            </Pressable>
+          </View>
+        ) : filteredEntries.length ===
           0 ? (
           <EmptyState
             symbol="☾"
             title={
               hasActiveFilters
-                ? "Nothing here just yet"
+                ? "Nothing surfaced here"
                 : "Your pages are waiting"
             }
             description={
               hasActiveFilters
-                ? "Try another word, mood, or time window."
+                ? "Try another word, mood, or stretch of time."
                 : "Your reflections will gather here as you write."
             }
             actionTitle={
@@ -555,11 +556,13 @@ export default function JournalScreen() {
               (entry) => (
                 <Pressable
                   key={entry.id}
-                  style={({ pressed }) => [
+                  style={({
+                    pressed,
+                  }) => [
                     styles.entryCard,
 
                     pressed &&
-                      styles.entryPressed,
+                      styles.pressed,
                   ]}
                   onPress={() =>
                     router.push({
@@ -577,9 +580,9 @@ export default function JournalScreen() {
                       styles.entryDate
                     }
                   >
-                    {
+                    {formatLocalDate(
                       entry.entry_date
-                    }
+                    )}
                   </Text>
 
                   <Text
@@ -617,14 +620,14 @@ export default function JournalScreen() {
                             styles.metaText
                           }
                         >
-                          {
-                            entry.mood
-                          }
+                          ◉{" "}
+                          {entry.mood}
                         </Text>
                       </View>
                     ) : null}
 
-                    {entry.energy_level ? (
+                    {entry.energy_level !==
+                    null ? (
                       <View
                         style={
                           styles.metaChip
@@ -635,7 +638,7 @@ export default function JournalScreen() {
                             styles.metaText
                           }
                         >
-                          Energy{" "}
+                          ✧ Energy{" "}
                           {
                             entry.energy_level
                           }
@@ -654,126 +657,222 @@ export default function JournalScreen() {
   );
 }
 
+function FilterChip({
+  label,
+  selected,
+  onPress,
+}: {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{
+        selected,
+      }}
+      style={({ pressed }) => [
+        styles.filterChip,
+
+        selected &&
+          styles.filterChipSelected,
+
+        pressed &&
+          styles.pressed,
+      ]}
+      onPress={onPress}
+    >
+      <Text
+        style={[
+          styles.filterChipText,
+
+          selected &&
+            styles.filterChipTextSelected,
+        ]}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 const styles =
   StyleSheet.create({
     container: {
       flex: 1,
+
       backgroundColor:
         colors.background,
     },
 
     content: {
       width: "100%",
+
       maxWidth: 720,
+
       alignSelf: "center",
+
       paddingHorizontal: 24,
+
       paddingTop: 34,
+
       paddingBottom: 115,
     },
 
     header: {
       flexDirection: "row",
+
       alignItems: "center",
+
       gap: 16,
+
       marginBottom: 30,
+    },
+
+    headerText: {
+      flex: 1,
     },
 
     title: {
       color: colors.text,
+
       fontFamily:
         fonts.display,
+
       fontSize: 40,
+
       lineHeight: 43,
     },
 
     subtitle: {
       color:
         colors.textMuted,
-      fontFamily: fonts.body,
-      fontSize: 13,
-      lineHeight: 20,
+
+      fontFamily:
+        fonts.displayItalic,
+
+      fontSize: 16,
+
+      lineHeight: 22,
+
       marginTop: 3,
     },
 
     newButton: {
       width: 50,
+
       height: 50,
+
       borderRadius: 25,
+
       backgroundColor:
         colors.purple,
+
       alignItems: "center",
+
       justifyContent:
         "center",
     },
 
     newButtonText: {
       color: colors.white,
+
       fontFamily:
         fonts.bodyMedium,
-      fontSize: 26,
-      lineHeight: 28,
+
+      fontSize: 27,
+
+      lineHeight: 29,
     },
 
     searchBox: {
       flexDirection: "row",
+
       alignItems: "center",
+
       backgroundColor:
         colors.surface,
+
       borderWidth: 1,
+
       borderColor:
         colors.border,
-      borderRadius: radius.lg,
+
+      borderRadius:
+        radius.lg,
+
       paddingHorizontal: 15,
+
       marginBottom: 30,
     },
 
     searchSymbol: {
       color: colors.gold,
+
       fontSize: 14,
+
       marginRight: 9,
     },
 
     searchInput: {
       flex: 1,
+
       color: colors.text,
+
       fontFamily: fonts.body,
+
       fontSize: 14,
+
       paddingVertical: 14,
     },
 
     clearSearch: {
       color:
         colors.textMuted,
+
       fontSize: 21,
+
       paddingHorizontal: 4,
     },
 
     filterRow: {
       flexDirection: "row",
+
+      flexWrap: "wrap",
+
       gap: 8,
+
       marginBottom: 27,
     },
 
-    moodFilters: {
+    moodRow: {
       gap: 8,
+
       paddingBottom: 30,
     },
 
     filterChip: {
       backgroundColor:
         colors.surface,
+
       borderWidth: 1,
+
       borderColor:
         colors.border,
+
       borderRadius:
         radius.pill,
+
       paddingHorizontal: 14,
+
       paddingVertical: 9,
     },
 
     filterChipSelected: {
       backgroundColor:
         colors.purpleDark,
+
       borderColor:
         colors.lavenderStrong,
     },
@@ -781,8 +880,10 @@ const styles =
     filterChipText: {
       color:
         colors.textMuted,
+
       fontFamily:
         fonts.bodyMedium,
+
       fontSize: 11,
     },
 
@@ -790,55 +891,92 @@ const styles =
       color: colors.white,
     },
 
-    resultHeader: {
+    resultsHeader: {
       flexDirection: "row",
+
       justifyContent:
         "space-between",
+
       alignItems: "center",
+
       marginBottom: 15,
     },
 
-    resultCount: {
+    resultsText: {
       color: colors.textDim,
+
       fontFamily: fonts.body,
+
       fontSize: 11,
     },
 
     clearFilters: {
-      color: colors.lavender,
+      color:
+        colors.lavender,
+
       fontFamily:
         fonts.bodySemiBold,
+
       fontSize: 11,
     },
 
     loadingState: {
       alignItems: "center",
-      paddingVertical: 30,
+
+      paddingVertical: 34,
     },
 
     loadingText: {
       color: colors.textDim,
+
       fontFamily: fonts.body,
+
       marginTop: 10,
+
       fontSize: 12,
     },
 
     errorBox: {
       backgroundColor:
         colors.errorBackground,
+
       borderWidth: 1,
+
       borderColor:
         colors.errorBorder,
+
       borderRadius:
         radius.md,
-      padding: 13,
-      marginBottom: 15,
+
+      padding: 16,
     },
 
     errorText: {
-      color: colors.errorText,
+      color:
+        colors.errorText,
+
       fontFamily: fonts.body,
+
       fontSize: 12,
+
+      lineHeight: 18,
+    },
+
+    retryButton: {
+      alignSelf:
+        "flex-start",
+
+      marginTop: 12,
+    },
+
+    retryText: {
+      color:
+        colors.lavender,
+
+      fontFamily:
+        fonts.bodySemiBold,
+
+      fontSize: 11,
     },
 
     entryList: {
@@ -848,61 +986,84 @@ const styles =
     entryCard: {
       backgroundColor:
         colors.surface,
+
       borderWidth: 1,
+
       borderColor:
         colors.border,
+
       borderRadius:
         radius.xl,
+
       padding: 20,
     },
 
-    entryPressed: {
-      opacity: 0.8,
+    pressed: {
+      opacity: 0.78,
     },
 
     entryDate: {
       color: colors.textDim,
+
       fontFamily: fonts.body,
+
       fontSize: 10,
     },
 
     entryTitle: {
       color: colors.text,
+
       fontFamily:
         fonts.display,
+
       fontSize: 24,
+
       lineHeight: 28,
+
       marginTop: 5,
     },
 
     entryPreview: {
       color:
         colors.textMuted,
+
       fontFamily: fonts.body,
+
       fontSize: 12,
+
       lineHeight: 19,
+
       marginTop: 7,
     },
 
     metadata: {
       flexDirection: "row",
+
       flexWrap: "wrap",
+
       gap: 7,
+
       marginTop: 14,
     },
 
     metaChip: {
       backgroundColor:
         colors.surfaceRaised,
+
       borderRadius:
         radius.pill,
+
       paddingHorizontal: 10,
+
       paddingVertical: 5,
     },
 
     metaText: {
-      color: colors.lavender,
+      color:
+        colors.lavender,
+
       fontFamily: fonts.body,
+
       fontSize: 10,
     },
   }); 

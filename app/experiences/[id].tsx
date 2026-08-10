@@ -37,6 +37,15 @@ import {
   getExperience,
 } from "../../src/services/experienceService";
 
+import {
+  classifySoulPathError,
+  SoulPathErrorInfo,
+} from "../../src/utils/errors";
+
+import {
+  formatDateTime,
+} from "../../src/utils/date";
+
 export default function ExperienceDetailScreen() {
   const { id } =
     useLocalSearchParams<{
@@ -62,28 +71,50 @@ export default function ExperienceDetailScreen() {
   ] = useState(false);
 
   const [
-    errorMessage,
-    setErrorMessage,
-  ] = useState("");
+    errorInfo,
+    setErrorInfo,
+  ] =
+    useState<SoulPathErrorInfo | null>(
+      null
+    );
 
   const loadExperience =
     useCallback(async () => {
       if (!id) {
+        setLoading(false);
+
+        setErrorInfo({
+          kind: "not_found",
+          message:
+            "This memory could not be found.",
+          retryable: false,
+        });
+
         return;
       }
 
       try {
         setLoading(true);
+        setErrorInfo(null);
 
         const data =
-          await getExperience(id);
+          await getExperience(
+            id
+          );
 
         setExperience(data);
       } catch (error) {
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "Unable to open this memory."
+        console.error(
+          "Unable to open experience:",
+          error
+        );
+
+        setExperience(null);
+
+        setErrorInfo(
+          classifySoulPathError(
+            error
+          )
         );
       } finally {
         setLoading(false);
@@ -92,7 +123,7 @@ export default function ExperienceDetailScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadExperience();
+      void loadExperience();
     }, [loadExperience])
   );
 
@@ -103,13 +134,14 @@ export default function ExperienceDetailScreen() {
     if (
       Platform.OS === "web"
     ) {
-      if (
+      const confirmed =
         typeof window !==
           "undefined" &&
         window.confirm(
           `Let this memory go?\n\n${warning}`
-        )
-      ) {
+        );
+
+      if (confirmed) {
         void removeExperience();
       }
 
@@ -127,6 +159,7 @@ export default function ExperienceDetailScreen() {
         {
           text: "Delete",
           style: "destructive",
+
           onPress: () =>
             void removeExperience(),
         },
@@ -135,27 +168,44 @@ export default function ExperienceDetailScreen() {
   }
 
   async function removeExperience() {
-    if (!id) {
+    if (
+      !id ||
+      deleting
+    ) {
       return;
     }
 
     try {
       setDeleting(true);
+      setErrorInfo(null);
 
-      await deleteExperience(id);
+      await deleteExperience(
+        id
+      );
 
       router.replace(
         "/experiences"
       );
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Unable to delete this memory."
+      console.error(
+        "Unable to delete experience:",
+        error
+      );
+
+      setErrorInfo(
+        classifySoulPathError(
+          error
+        )
       );
     } finally {
       setDeleting(false);
     }
+  }
+
+  function handleAuthRecovery() {
+    router.replace(
+      "/login"
+    );
   }
 
   if (loading) {
@@ -163,14 +213,25 @@ export default function ExperienceDetailScreen() {
       <SafeAreaView
         style={styles.centered}
       >
+        <Text
+          style={styles.loadingSymbol}
+        >
+          ☾
+        </Text>
+
         <ActivityIndicator
-          color={colors.lavender}
+          color={
+            colors.lavender
+          }
         />
 
         <Text
-          style={styles.loadingText}
+          style={
+            styles.loadingText
+          }
         >
-          Returning to this memory...
+          Returning to this
+          memory...
         </Text>
       </SafeAreaView>
     );
@@ -182,17 +243,67 @@ export default function ExperienceDetailScreen() {
         style={styles.centered}
       >
         <Text
-          style={styles.missingTitle}
+          style={
+            styles.missingSymbol
+          }
         >
-          This memory couldn't be found.
+          ☾
         </Text>
 
-        {errorMessage ? (
-          <FeedbackMessage
-            type="error"
-            message={errorMessage}
-          />
-        ) : null}
+        <Text
+          style={
+            styles.missingTitle
+          }
+        >
+          {errorInfo?.kind ===
+          "not_found"
+            ? "This memory has moved on."
+            : "This memory couldn't be opened."}
+        </Text>
+
+        <Text
+          style={
+            styles.missingText
+          }
+        >
+          {errorInfo?.message ??
+            "Something unexpected happened."}
+        </Text>
+
+        <View
+          style={
+            styles.recoveryActions
+          }
+        >
+          {errorInfo?.retryable ? (
+            <SoulButton
+              title="Try again"
+              onPress={() =>
+                void loadExperience()
+              }
+            />
+          ) : null}
+
+          {errorInfo?.kind ===
+          "auth" ? (
+            <SoulButton
+              title="Return to sign in"
+              onPress={
+                handleAuthRecovery
+              }
+            />
+          ) : (
+            <SoulButton
+              title="Back to Dreams & Signs"
+              variant="secondary"
+              onPress={() =>
+                router.replace(
+                  "/experiences"
+                )
+              }
+            />
+          )}
+        </View>
       </SafeAreaView>
     );
   }
@@ -202,10 +313,16 @@ export default function ExperienceDetailScreen() {
     "dream";
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={styles.container}
+    >
       <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
+        contentContainerStyle={
+          styles.content
+        }
+        showsVerticalScrollIndicator={
+          false
+        }
       >
         <Pressable
           style={styles.back}
@@ -213,248 +330,402 @@ export default function ExperienceDetailScreen() {
             router.back()
           }
         >
-          <Text style={styles.backText}>
+          <Text
+            style={styles.backText}
+          >
             ‹ Dreams & Signs
           </Text>
         </Pressable>
 
-        <Text style={styles.symbol}>
+        <Text
+          style={styles.symbol}
+        >
           {dream ? "☾" : "✦"}
         </Text>
 
-        <Text style={styles.type}>
+        <Text
+          style={styles.type}
+        >
           {dream
             ? "A dream remembered"
             : "A synchronicity noticed"}
         </Text>
 
-        <Text style={styles.title}>
+        <Text
+          style={styles.title}
+        >
           {experience.title}
         </Text>
 
-        <Text style={styles.date}>
-          {new Date(
+        <Text
+          style={styles.date}
+        >
+          {formatDateTime(
             experience.experienced_at
-          ).toLocaleString()}
+          )}
         </Text>
 
         {experience.significance_level ? (
-          <View style={styles.significance}>
+          <View
+            style={
+              styles.significance
+            }
+          >
             <Text
-              style={styles.significanceText}
+              style={
+                styles.significanceText
+              }
             >
               ✦ Stayed with you{" "}
-              {experience.significance_level}/5
+              {
+                experience.significance_level
+              }
+              /5
             </Text>
           </View>
         ) : null}
 
-        <View style={styles.divider} />
+        <View
+          style={styles.divider}
+        />
 
-        <Text style={styles.sectionTitle}>
+        <Text
+          style={
+            styles.sectionTitle
+          }
+        >
           What happened
         </Text>
 
-        <Text style={styles.body}>
+        <Text
+          style={styles.body}
+        >
           {experience.description}
         </Text>
 
         {experience.interpretation ? (
           <SoulCard
-            style={styles.reflectionCard}
+            style={
+              styles.reflectionCard
+            }
           >
             <Text
-              style={styles.reflectionSymbol}
+              style={
+                styles.reflectionSymbol
+              }
             >
               ✦
             </Text>
 
             <Text
-              style={styles.reflectionTitle}
+              style={
+                styles.reflectionTitle
+              }
             >
-              What it brought up for you
+              What it brought up
+              for you
             </Text>
 
             <Text
-              style={styles.reflectionText}
+              style={
+                styles.reflectionText
+              }
             >
-              {experience.interpretation}
+              {
+                experience.interpretation
+              }
             </Text>
           </SoulCard>
         ) : null}
 
-        {errorMessage ? (
-          <FeedbackMessage
-            type="error"
-            message={errorMessage}
-          />
+        {errorInfo ? (
+          <View
+            style={styles.errorArea}
+          >
+            <FeedbackMessage
+              type="error"
+              message={
+                errorInfo.message
+              }
+            />
+
+            {errorInfo.retryable ? (
+              <Pressable
+                onPress={() =>
+                  setErrorInfo(
+                    null
+                  )
+                }
+              >
+                <Text
+                  style={
+                    styles.dismissError
+                  }
+                >
+                  Dismiss
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
         ) : null}
 
-        <View style={styles.actions}>
+        <View
+          style={styles.actions}
+        >
           <SoulButton
-            title="Return to this memory"
+            title="Edit this memory"
             onPress={() =>
               router.push({
                 pathname:
                   "/experiences/edit/[id]",
+
                 params: {
-                  id: experience.id,
+                  id:
+                    experience.id,
                 },
               })
             }
           />
 
           <SoulButton
-            title="Let this memory go"
-            variant="danger"
-            loading={deleting}
-            onPress={requestDelete}
+            title="Back to Dreams & Signs"
+            variant="secondary"
+            onPress={() =>
+              router.replace(
+                "/experiences"
+              )
+            }
           />
+
+          <View
+            style={
+              styles.deleteSpacing
+            }
+          >
+            <SoulButton
+              title="Let this memory go"
+              variant="danger"
+              loading={deleting}
+              disabled={deleting}
+              onPress={
+                requestDelete
+              }
+            />
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
+const styles =
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor:
+        colors.background,
+    },
 
-  centered: {
-    flex: 1,
-    backgroundColor: colors.background,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 15,
-    padding: 28,
-  },
+    centered: {
+      flex: 1,
+      backgroundColor:
+        colors.background,
+      justifyContent:
+        "center",
+      alignItems: "center",
+      padding: 28,
+    },
 
-  content: {
-    width: "100%",
-    maxWidth: 690,
-    alignSelf: "center",
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 65,
-  },
+    content: {
+      width: "100%",
+      maxWidth: 690,
+      alignSelf: "center",
+      paddingHorizontal: 24,
+      paddingTop: 24,
+      paddingBottom: 65,
+    },
 
-  back: {
-    alignSelf: "flex-start",
-    paddingVertical: 8,
-    marginBottom: 26,
-  },
+    back: {
+      alignSelf:
+        "flex-start",
+      paddingVertical: 8,
+      marginBottom: 26,
+    },
 
-  backText: {
-    color: colors.lavender,
-    fontFamily: fonts.bodySemiBold,
-    fontSize: 12,
-  },
+    backText: {
+      color:
+        colors.lavender,
+      fontFamily:
+        fonts.bodySemiBold,
+      fontSize: 12,
+    },
 
-  symbol: {
-    color: colors.gold,
-    fontSize: 25,
-  },
+    symbol: {
+      color: colors.gold,
+      fontSize: 25,
+    },
 
-  type: {
-    color: colors.lavender,
-    fontFamily: fonts.bodySemiBold,
-    fontSize: 10,
-    marginTop: 8,
-  },
+    type: {
+      color:
+        colors.lavender,
+      fontFamily:
+        fonts.bodySemiBold,
+      fontSize: 10,
+      marginTop: 8,
+    },
 
-  title: {
-    color: colors.text,
-    fontFamily: fonts.display,
-    fontSize: 41,
-    lineHeight: 45,
-    marginTop: 5,
-  },
+    title: {
+      color: colors.text,
+      fontFamily:
+        fonts.display,
+      fontSize: 41,
+      lineHeight: 45,
+      marginTop: 5,
+    },
 
-  date: {
-    color: colors.textDim,
-    fontFamily: fonts.body,
-    fontSize: 10,
-    marginTop: 7,
-  },
+    date: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 10,
+      marginTop: 7,
+    },
 
-  significance: {
-    alignSelf: "flex-start",
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: radius.pill,
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-    marginTop: 14,
-  },
+    significance: {
+      alignSelf:
+        "flex-start",
+      backgroundColor:
+        colors.surfaceRaised,
+      borderRadius:
+        radius.pill,
+      paddingHorizontal: 11,
+      paddingVertical: 6,
+      marginTop: 14,
+    },
 
-  significanceText: {
-    color: colors.goldSoft,
-    fontFamily: fonts.body,
-    fontSize: 10,
-  },
+    significanceText: {
+      color:
+        colors.goldSoft,
+      fontFamily: fonts.body,
+      fontSize: 10,
+    },
 
-  divider: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginVertical: 29,
-  },
+    divider: {
+      height: 1,
+      backgroundColor:
+        colors.border,
+      marginVertical: 29,
+    },
 
-  sectionTitle: {
-    color: colors.text,
-    fontFamily: fonts.display,
-    fontSize: 23,
-  },
+    sectionTitle: {
+      color: colors.text,
+      fontFamily:
+        fonts.display,
+      fontSize: 23,
+    },
 
-  body: {
-    color: colors.textSoft,
-    fontFamily: fonts.body,
-    fontSize: 14,
-    lineHeight: 24,
-    marginTop: 8,
-  },
+    body: {
+      color:
+        colors.textSoft,
+      fontFamily: fonts.body,
+      fontSize: 14,
+      lineHeight: 24,
+      marginTop: 8,
+    },
 
-  reflectionCard: {
-    backgroundColor: "#18122B",
-    borderColor: colors.borderStrong,
-    marginTop: 30,
-  },
+    reflectionCard: {
+      backgroundColor:
+        "#18122B",
+      borderColor:
+        colors.borderStrong,
+      marginTop: 30,
+    },
 
-  reflectionSymbol: {
-    color: colors.gold,
-    fontSize: 16,
-  },
+    reflectionSymbol: {
+      color: colors.gold,
+      fontSize: 16,
+    },
 
-  reflectionTitle: {
-    color: colors.text,
-    fontFamily: fonts.displayItalic,
-    fontSize: 22,
-    marginTop: 7,
-  },
+    reflectionTitle: {
+      color: colors.text,
+      fontFamily:
+        fonts.displayItalic,
+      fontSize: 22,
+      marginTop: 7,
+    },
 
-  reflectionText: {
-    color: colors.textMuted,
-    fontFamily: fonts.body,
-    fontSize: 12,
-    lineHeight: 20,
-    marginTop: 8,
-  },
+    reflectionText: {
+      color:
+        colors.textMuted,
+      fontFamily: fonts.body,
+      fontSize: 12,
+      lineHeight: 20,
+      marginTop: 8,
+    },
 
-  actions: {
-    gap: 10,
-    marginTop: 28,
-  },
+    actions: {
+      gap: 10,
+      marginTop: 30,
+    },
 
-  loadingText: {
-    color: colors.textDim,
-    fontFamily: fonts.body,
-    fontSize: 11,
-  },
+    deleteSpacing: {
+      marginTop: 7,
+    },
 
-  missingTitle: {
-    color: colors.text,
-    fontFamily: fonts.display,
-    fontSize: 27,
-    textAlign: "center",
-  },
-}); 
+    errorArea: {
+      marginTop: 24,
+      gap: 8,
+    },
+
+    dismissError: {
+      color:
+        colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 10,
+      textAlign: "center",
+    },
+
+    loadingSymbol: {
+      color: colors.gold,
+      fontSize: 25,
+      marginBottom: 18,
+    },
+
+    loadingText: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 11,
+      marginTop: 12,
+    },
+
+    missingSymbol: {
+      color: colors.gold,
+      fontSize: 30,
+    },
+
+    missingTitle: {
+      color: colors.text,
+      fontFamily:
+        fonts.display,
+      fontSize: 28,
+      textAlign: "center",
+      marginTop: 13,
+    },
+
+    missingText: {
+      color:
+        colors.textMuted,
+      fontFamily: fonts.body,
+      fontSize: 12,
+      lineHeight: 19,
+      textAlign: "center",
+      maxWidth: 420,
+      marginTop: 8,
+    },
+
+    recoveryActions: {
+      width: "100%",
+      maxWidth: 400,
+      gap: 10,
+      marginTop: 25,
+    },
+  }); 

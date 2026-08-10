@@ -1,4 +1,10 @@
-import { supabase } from "../lib/supabase";
+import {
+  supabase,
+} from "../lib/supabase";
+
+import {
+  getStartDateForDays,
+} from "../utils/date";
 
 export type MoodInsight = {
   mood: string;
@@ -18,68 +24,95 @@ export type PracticeInsight = {
 
 export type TrendPeriod = {
   days: number;
+
   entryCount: number;
-  averageEnergy: number | null;
-  mostCommonMood: string | null;
-  moodDistribution: MoodInsight[];
+
+  averageEnergy:
+    | number
+    | null;
+
+  mostCommonMood:
+    | string
+    | null;
+
+  moodDistribution:
+    MoodInsight[];
 };
 
 export type PracticeObservation = {
   practiceId: string;
+
   practiceName: string;
 
   timesRecorded: number;
 
-  averageEnergy: number | null;
+  averageEnergy:
+    | number
+    | null;
 
-  mostCommonMood: string | null;
+  mostCommonMood:
+    | string
+    | null;
 
-  energyDifferenceFromOverall: number | null;
+  energyDifferenceFromOverall:
+    | number
+    | null;
 };
 
 export type SoulPathInsights = {
   totalEntries: number;
 
-  averageEnergy: number | null;
+  averageEnergy:
+    | number
+    | null;
 
-  mostCommonMood: string | null;
+  mostCommonMood:
+    | string
+    | null;
 
-  moodDistribution: MoodInsight[];
+  moodDistribution:
+    MoodInsight[];
 
-  energyDistribution: EnergyInsight[];
+  energyDistribution:
+    EnergyInsight[];
 
-  practiceUsage: PracticeInsight[];
+  practiceUsage:
+    PracticeInsight[];
 
-  mostUsedPractice: PracticeInsight | null;
+  mostUsedPractice:
+    | PracticeInsight
+    | null;
 
   dreamCount: number;
 
   synchronicityCount: number;
 
-  sevenDayTrend: TrendPeriod;
+  sevenDayTrend:
+    TrendPeriod;
 
-  thirtyDayTrend: TrendPeriod;
+  thirtyDayTrend:
+    TrendPeriod;
 
-  practiceObservations: PracticeObservation[];
+  practiceObservations:
+    PracticeObservation[];
 
   observations: string[];
 };
 
-type JournalInsightRow = {
+type InsightJournalEntry = {
   id: string;
 
-  mood: string | null;
+  mood:
+    | string
+    | null;
 
-  energy_level: number | null;
+  energy_level:
+    | number
+    | null;
 
   entry_date: string;
 
   created_at: string;
-};
-
-type PracticeRelation = {
-  id: string;
-  name: string;
 };
 
 type EntryPracticeRow = {
@@ -88,222 +121,620 @@ type EntryPracticeRow = {
   practice_id: string;
 
   practice:
-    | PracticeRelation
-    | PracticeRelation[]
+    | {
+        id: string;
+        name: string;
+      }
+    | {
+        id: string;
+        name: string;
+      }[]
     | null;
 };
 
-function getLocalDateString(
-  date: Date
-) {
-  const year = date.getFullYear();
+function getErrorMessage(
+  error: unknown,
+  fallback: string
+): string {
+  if (
+    error instanceof Error
+  ) {
+    return error.message;
+  }
 
-  const month = String(
-    date.getMonth() + 1
-  ).padStart(2, "0");
+  if (
+    typeof error ===
+      "object" &&
+    error !== null &&
+    "message" in error
+  ) {
+    const message =
+      (
+        error as {
+          message?: unknown;
+        }
+      ).message;
 
-  const day = String(
-    date.getDate()
-  ).padStart(2, "0");
+    if (
+      typeof message ===
+      "string"
+    ) {
+      return message;
+    }
+  }
 
-  return `${year}-${month}-${day}`;
+  return fallback;
 }
 
-function getStartDate(
-  days: number
-) {
-  const date = new Date();
+async function requireUser() {
+  const {
+    data: {
+      user,
+    },
+    error,
+  } =
+    await supabase.auth.getUser();
 
-  date.setHours(0, 0, 0, 0);
+  if (
+    error ||
+    !user
+  ) {
+    throw new Error(
+      "Your SoulPath session has expired. Please sign in again."
+    );
+  }
 
-  date.setDate(
-    date.getDate() - (days - 1)
+  return user;
+}
+
+function roundOne(
+  value: number
+): number {
+  return Math.round(
+    value * 10
+  ) / 10;
+}
+
+function calculateAverageEnergy(
+  entries: InsightJournalEntry[]
+): number | null {
+  const values =
+    entries
+      .map(
+        (entry) =>
+          entry.energy_level
+      )
+      .filter(
+        (
+          value
+        ): value is number =>
+          value !== null
+      );
+
+  if (
+    values.length === 0
+  ) {
+    return null;
+  }
+
+  const total =
+    values.reduce(
+      (
+        sum,
+        value
+      ) =>
+        sum + value,
+      0
+    );
+
+  return roundOne(
+    total /
+      values.length
   );
-
-  return getLocalDateString(date);
 }
 
 function calculateMoodDistribution(
-  entries: JournalInsightRow[]
+  entries: InsightJournalEntry[]
 ): MoodInsight[] {
   const counts =
-    new Map<string, number>();
+    new Map<
+      string,
+      number
+    >();
 
-  for (const entry of entries) {
-    if (!entry.mood) {
+  for (
+    const entry of entries
+  ) {
+    const mood =
+      entry.mood?.trim();
+
+    if (!mood) {
       continue;
     }
 
     counts.set(
-      entry.mood,
-
-      (counts.get(entry.mood) ?? 0) +
-        1
+      mood,
+      (
+        counts.get(
+          mood
+        ) ?? 0
+      ) + 1
     );
   }
 
   return Array.from(
     counts.entries()
   )
-    .map(([mood, count]) => ({
-      mood,
-      count,
-    }))
-
+    .map(
+      ([
+        mood,
+        count,
+      ]) => ({
+        mood,
+        count,
+      })
+    )
     .sort(
-      (a, b) => b.count - a.count
+      (a, b) => {
+        if (
+          b.count !==
+          a.count
+        ) {
+          return (
+            b.count -
+            a.count
+          );
+        }
+
+        return a.mood.localeCompare(
+          b.mood
+        );
+      }
     );
 }
 
-function calculateEnergyDistribution(
-  entries: JournalInsightRow[]
-): EnergyInsight[] {
-  return [1, 2, 3, 4, 5].map(
-    (level) => ({
-      level,
+function calculateMostCommonMood(
+  entries: InsightJournalEntry[]
+): string | null {
+  const distribution =
+    calculateMoodDistribution(
+      entries
+    );
 
-      count: entries.filter(
-        (entry) =>
-          entry.energy_level ===
-          level
-      ).length,
+  return (
+    distribution[0]
+      ?.mood ?? null
+  );
+}
+
+function calculateEnergyDistribution(
+  entries: InsightJournalEntry[]
+): EnergyInsight[] {
+  const counts =
+    new Map<
+      number,
+      number
+    >();
+
+  for (
+    let level = 1;
+    level <= 5;
+    level++
+  ) {
+    counts.set(
+      level,
+      0
+    );
+  }
+
+  for (
+    const entry of entries
+  ) {
+    if (
+      entry.energy_level ===
+      null
+    ) {
+      continue;
+    }
+
+    counts.set(
+      entry.energy_level,
+      (
+        counts.get(
+          entry.energy_level
+        ) ?? 0
+      ) + 1
+    );
+  }
+
+  return Array.from(
+    counts.entries()
+  ).map(
+    ([
+      level,
+      count,
+    ]) => ({
+      level,
+      count,
     })
   );
 }
 
-function calculateAverageEnergy(
-  entries: JournalInsightRow[]
-) {
-  const values = entries
-    .map(
-      (entry) =>
-        entry.energy_level
-    )
-    .filter(
-      (
-        value
-      ): value is number =>
-        value !== null
-    );
-
-  if (values.length === 0) {
-    return null;
-  }
-
-  const total = values.reduce(
-    (sum, value) =>
-      sum + value,
-    0
-  );
-
-  return Number(
-    (
-      total / values.length
-    ).toFixed(1)
-  );
-}
-
-function getMostCommonMood(
-  entries: JournalInsightRow[]
-) {
-  return (
-    calculateMoodDistribution(
-      entries
-    )[0]?.mood ?? null
-  );
-}
-
-function calculateTrend(
-  allEntries: JournalInsightRow[],
+function createTrend(
+  entries: InsightJournalEntry[],
   days: number
 ): TrendPeriod {
   const startDate =
-    getStartDate(days);
+    getStartDateForDays(
+      days
+    );
 
-  const entries =
-    allEntries.filter(
+  /*
+   * entry_date is YYYY-MM-DD.
+   *
+   * Because the format sorts lexicographically in the
+   * same order as calendar dates, we can compare strings
+   * safely without converting back through UTC.
+   */
+  const filtered =
+    entries.filter(
       (entry) =>
-        entry.entry_date >= startDate
+        entry.entry_date >=
+        startDate
     );
 
   return {
     days,
 
-    entryCount: entries.length,
+    entryCount:
+      filtered.length,
 
     averageEnergy:
       calculateAverageEnergy(
-        entries
+        filtered
       ),
 
     mostCommonMood:
-      getMostCommonMood(entries),
+      calculateMostCommonMood(
+        filtered
+      ),
 
     moodDistribution:
       calculateMoodDistribution(
-        entries
+        filtered
       ),
   };
 }
 
-function calculatePracticeUsage(
-  rows: EntryPracticeRow[]
-): PracticeInsight[] {
-  const map =
-    new Map<
-      string,
-      PracticeInsight
-    >();
+function getPracticeFromRelation(
+  relation:
+    | EntryPracticeRow["practice"]
+): {
+  id: string;
+  name: string;
+} | null {
+  if (!relation) {
+    return null;
+  }
 
-  for (const row of rows) {
-    const practice =
-      Array.isArray(row.practice)
-        ? row.practice[0]
-        : row.practice;
+  if (
+    Array.isArray(
+      relation
+    )
+  ) {
+    return (
+      relation[0] ??
+      null
+    );
+  }
 
-    if (!practice) {
-      continue;
-    }
+  return relation;
+}
 
-    const current =
-      map.get(practice.id);
+function buildObservations(
+  insights: Omit<
+    SoulPathInsights,
+    "observations"
+  >
+): string[] {
+  const observations:
+    string[] = [];
 
-    if (current) {
-      current.count += 1;
+  if (
+    insights.mostCommonMood
+  ) {
+    observations.push(
+      `${insights.mostCommonMood} is the mood you've recorded most often so far.`
+    );
+  }
+
+  if (
+    insights.averageEnergy !==
+    null
+  ) {
+    observations.push(
+      `Across entries with an energy rating, your recorded average is ${insights.averageEnergy}/5.`
+    );
+  }
+
+  const sevenEnergy =
+    insights
+      .sevenDayTrend
+      .averageEnergy;
+
+  const thirtyEnergy =
+    insights
+      .thirtyDayTrend
+      .averageEnergy;
+
+  if (
+    sevenEnergy !==
+      null &&
+    thirtyEnergy !==
+      null
+  ) {
+    const difference =
+      roundOne(
+        sevenEnergy -
+          thirtyEnergy
+      );
+
+    if (
+      difference >= 0.3
+    ) {
+      observations.push(
+        `Your recorded energy over the last 7 days is ${difference.toFixed(
+          1
+        )} points higher than your 30-day recorded average.`
+      );
+    } else if (
+      difference <=
+      -0.3
+    ) {
+      observations.push(
+        `Your recorded energy over the last 7 days is ${Math.abs(
+          difference
+        ).toFixed(
+          1
+        )} points lower than your 30-day recorded average.`
+      );
     } else {
-      map.set(practice.id, {
-        id: practice.id,
-
-        name: practice.name,
-
-        count: 1,
-      });
+      observations.push(
+        "Your 7-day and 30-day recorded energy averages are fairly similar."
+      );
     }
   }
 
-  return Array.from(
-    map.values()
-  ).sort(
-    (a, b) =>
-      b.count - a.count
+  const topPractice =
+    insights
+      .practiceObservations[0];
+
+  if (
+    topPractice &&
+    topPractice.timesRecorded >=
+      2
+  ) {
+    if (
+      topPractice.averageEnergy !==
+        null &&
+      topPractice.mostCommonMood
+    ) {
+      observations.push(
+        `${topPractice.practiceName} appears in ${topPractice.timesRecorded} reflections. On those entries, recorded energy averaged ${topPractice.averageEnergy}/5 and ${topPractice.mostCommonMood} appeared most often.`
+      );
+    } else {
+      observations.push(
+        `${topPractice.practiceName} is one of the practices you've recorded most often.`
+      );
+    }
+  }
+
+  if (
+    insights.dreamCount >
+      0 ||
+    insights.synchronicityCount >
+      0
+  ) {
+    observations.push(
+      `You've recorded ${insights.dreamCount} ${
+        insights.dreamCount ===
+        1
+          ? "dream"
+          : "dreams"
+      } and ${insights.synchronicityCount} ${
+        insights.synchronicityCount ===
+        1
+          ? "synchronicity"
+          : "synchronicities"
+      }.`
+    );
+  }
+
+  if (
+    observations.length ===
+    0
+  ) {
+    observations.push(
+      "As you record more reflections, moods, energy, and practices, gentle patterns will begin to appear here."
+    );
+  }
+
+  return observations.slice(
+    0,
+    6
   );
 }
 
-function calculatePracticeObservations(
-  entries: JournalInsightRow[],
+export async function getSoulPathInsights(): Promise<SoulPathInsights> {
+  const user =
+    await requireUser();
 
-  practiceRows: EntryPracticeRow[],
+  const [
+    entriesResponse,
+    practiceResponse,
+    dreamResponse,
+    synchronicityResponse,
+  ] =
+    await Promise.all([
+      supabase
+        .from(
+          "journal_entries"
+        )
+        .select(
+          `
+            id,
+            mood,
+            energy_level,
+            entry_date,
+            created_at
+          `
+        )
+        .eq(
+          "user_id",
+          user.id
+        )
+        .order(
+          "entry_date",
+          {
+            ascending: false,
+          }
+        )
+        .order(
+          "created_at",
+          {
+            ascending: false,
+          }
+        ),
 
-  overallAverageEnergy:
-    number | null
-): PracticeObservation[] {
-  const entryMap = new Map<
-    string,
-    JournalInsightRow
-  >();
+      supabase
+        .from(
+          "entry_practices"
+        )
+        .select(
+          `
+            entry_id,
+            practice_id,
+            practice:practices (
+              id,
+              name
+            )
+          `
+        )
+        .eq(
+          "user_id",
+          user.id
+        ),
 
-  for (const entry of entries) {
-    entryMap.set(entry.id, entry);
+      supabase
+        .from(
+          "experiences"
+        )
+        .select(
+          "id",
+          {
+            count: "exact",
+            head: true,
+          }
+        )
+        .eq(
+          "user_id",
+          user.id
+        )
+        .eq(
+          "experience_type",
+          "dream"
+        ),
+
+      supabase
+        .from(
+          "experiences"
+        )
+        .select(
+          "id",
+          {
+            count: "exact",
+            head: true,
+          }
+        )
+        .eq(
+          "user_id",
+          user.id
+        )
+        .eq(
+          "experience_type",
+          "synchronicity"
+        ),
+    ]);
+
+  if (
+    entriesResponse.error
+  ) {
+    throw new Error(
+      getErrorMessage(
+        entriesResponse.error,
+        "Unable to read your reflection history."
+      )
+    );
+  }
+
+  if (
+    practiceResponse.error
+  ) {
+    throw new Error(
+      getErrorMessage(
+        practiceResponse.error,
+        "Unable to read your practice history."
+      )
+    );
+  }
+
+  if (
+    dreamResponse.error
+  ) {
+    throw new Error(
+      getErrorMessage(
+        dreamResponse.error,
+        "Unable to count your dreams."
+      )
+    );
+  }
+
+  if (
+    synchronicityResponse.error
+  ) {
+    throw new Error(
+      getErrorMessage(
+        synchronicityResponse.error,
+        "Unable to count your synchronicities."
+      )
+    );
+  }
+
+  const entries =
+    (
+      entriesResponse.data ??
+      []
+    ) as InsightJournalEntry[];
+
+  const practiceRows =
+    (
+      practiceResponse.data ??
+      []
+    ) as unknown as EntryPracticeRow[];
+
+  const entryMap =
+    new Map<
+      string,
+      InsightJournalEntry
+    >();
+
+  for (
+    const entry of entries
+  ) {
+    entryMap.set(
+      entry.id,
+      entry
+    );
   }
 
   const practiceGroups =
@@ -316,11 +747,14 @@ function calculatePracticeObservations(
       }
     >();
 
-  for (const row of practiceRows) {
+  for (
+    const row of
+    practiceRows
+  ) {
     const practice =
-      Array.isArray(row.practice)
-        ? row.practice[0]
-        : row.practice;
+      getPracticeFromRelation(
+        row.practice
+      );
 
     if (!practice) {
       continue;
@@ -335,425 +769,213 @@ function calculatePracticeObservations(
       existing.entryIds.add(
         row.entry_id
       );
-    } else {
-      practiceGroups.set(
-        practice.id,
-        {
-          id: practice.id,
 
-          name: practice.name,
-
-          entryIds: new Set([
-            row.entry_id,
-          ]),
-        }
-      );
-    }
-  }
-
-  const results:
-    PracticeObservation[] = [];
-
-  for (const group of Array.from(
-    practiceGroups.values()
-  )) {
-    const practiceEntries =
-      Array.from(
-        group.entryIds
-      )
-        .map((entryId) =>
-          entryMap.get(entryId)
-        )
-        .filter(
-          (
-            entry
-          ): entry is JournalInsightRow =>
-            entry !== undefined
-        );
-
-    if (
-      practiceEntries.length === 0
-    ) {
       continue;
     }
 
-    const practiceAverageEnergy =
-      calculateAverageEnergy(
-        practiceEntries
-      );
+    practiceGroups.set(
+      practice.id,
+      {
+        id:
+          practice.id,
 
-    let energyDifference:
-      number | null = null;
+        name:
+          practice.name,
 
-    if (
-      practiceAverageEnergy !==
-        null &&
-      overallAverageEnergy !== null
-    ) {
-      energyDifference = Number(
-        (
-          practiceAverageEnergy -
-          overallAverageEnergy
-        ).toFixed(1)
-      );
-    }
-
-    results.push({
-      practiceId: group.id,
-
-      practiceName: group.name,
-
-      timesRecorded:
-        practiceEntries.length,
-
-      averageEnergy:
-        practiceAverageEnergy,
-
-      mostCommonMood:
-        getMostCommonMood(
-          practiceEntries
-        ),
-
-      energyDifferenceFromOverall:
-        energyDifference,
-    });
-  }
-
-  return results.sort(
-    (a, b) =>
-      b.timesRecorded -
-      a.timesRecorded
-  );
-}
-
-function buildObservations(
-  totalEntries: number,
-
-  averageEnergy: number | null,
-
-  mostCommonMood: string | null,
-
-  sevenDayTrend: TrendPeriod,
-
-  thirtyDayTrend: TrendPeriod,
-
-  practiceObservations:
-    PracticeObservation[],
-
-  dreamCount: number,
-
-  synchronicityCount: number
-) {
-  const observations:
-    string[] = [];
-
-  if (totalEntries === 0) {
-    return [
-      "Your patterns will begin appearing as you record more reflections.",
-    ];
-  }
-
-  if (mostCommonMood) {
-    observations.push(
-      `${mostCommonMood} is your most frequently recorded mood overall.`
+        entryIds:
+          new Set([
+            row.entry_id,
+          ]),
+      }
     );
   }
 
-  if (averageEnergy !== null) {
-    observations.push(
-      `Your overall recorded average energy is ${averageEnergy} out of 5.`
-    );
-  }
+  const practiceUsage =
+    Array.from(
+      practiceGroups.values()
+    )
+      .map(
+        (group) => ({
+          id:
+            group.id,
 
-  if (
-    sevenDayTrend.averageEnergy !==
-      null &&
-    thirtyDayTrend.averageEnergy !==
-      null
-  ) {
-    const difference = Number(
-      (
-        sevenDayTrend.averageEnergy -
-        thirtyDayTrend.averageEnergy
-      ).toFixed(1)
-    );
+          name:
+            group.name,
 
-    if (difference >= 0.3) {
-      observations.push(
-        `Your 7-day recorded energy average is ${Math.abs(
-          difference
-        ).toFixed(
-          1
-        )} points higher than your 30-day average.`
-      );
-    } else if (
-      difference <= -0.3
-    ) {
-      observations.push(
-        `Your 7-day recorded energy average is ${Math.abs(
-          difference
-        ).toFixed(
-          1
-        )} points lower than your 30-day average.`
-      );
-    } else {
-      observations.push(
-        "Your 7-day and 30-day recorded energy averages are fairly similar."
-      );
-    }
-  }
-
-  const strongestPractice =
-    practiceObservations.find(
-      (practice) =>
-        practice.timesRecorded >=
-          2 &&
-        practice.averageEnergy !==
-          null
-    );
-
-  if (strongestPractice) {
-    let practiceText =
-      `${strongestPractice.practiceName} appears in ${strongestPractice.timesRecorded} recorded reflections`;
-
-    if (
-      strongestPractice.averageEnergy !==
-      null
-    ) {
-      practiceText += `, with an average recorded energy of ${strongestPractice.averageEnergy}/5`;
-    }
-
-    if (
-      strongestPractice.mostCommonMood
-    ) {
-      practiceText += ` and ${strongestPractice.mostCommonMood} as the most frequently recorded mood on those entries`;
-    }
-
-    practiceText += ".";
-
-    observations.push(
-      practiceText
-    );
-  }
-
-  if (
-    dreamCount > 0 ||
-    synchronicityCount > 0
-  ) {
-    observations.push(
-      `You have recorded ${dreamCount} ${
-        dreamCount === 1
-          ? "dream"
-          : "dreams"
-      } and ${synchronicityCount} ${
-        synchronicityCount === 1
-          ? "synchronicity"
-          : "synchronicities"
-      }.`
-    );
-  }
-
-  return observations.slice(
-    0,
-    6
-  );
-}
-
-export async function getSoulPathInsights(): Promise<SoulPathInsights> {
-  const [
-    journalResponse,
-
-    practiceResponse,
-
-    dreamResponse,
-
-    synchronicityResponse,
-  ] = await Promise.all([
-    supabase
-      .from("journal_entries")
-
-      .select(
-        `
-          id,
-          mood,
-          energy_level,
-          entry_date,
-          created_at
-        `
+          count:
+            group.entryIds
+              .size,
+        })
       )
+      .sort(
+        (a, b) => {
+          if (
+            b.count !==
+            a.count
+          ) {
+            return (
+              b.count -
+              a.count
+            );
+          }
 
-      .order(
-        "entry_date",
-        {
-          ascending: false,
+          return a.name.localeCompare(
+            b.name
+          );
         }
-      ),
+      );
 
-    supabase
-      .from("entry_practices")
-
-      .select(
-        `
-          entry_id,
-          practice_id,
-          practice:practices (
-            id,
-            name
-          )
-        `
-      ),
-
-    supabase
-      .from("experiences")
-
-      .select("*", {
-        count: "exact",
-        head: true,
-      })
-
-      .eq(
-        "experience_type",
-        "dream"
-      ),
-
-    supabase
-      .from("experiences")
-
-      .select("*", {
-        count: "exact",
-        head: true,
-      })
-
-      .eq(
-        "experience_type",
-        "synchronicity"
-      ),
-  ]);
-
-  if (journalResponse.error) {
-    throw journalResponse.error;
-  }
-
-  if (practiceResponse.error) {
-    throw practiceResponse.error;
-  }
-
-  if (dreamResponse.error) {
-    throw dreamResponse.error;
-  }
-
-  if (
-    synchronicityResponse.error
-  ) {
-    throw synchronicityResponse.error;
-  }
-
-  const entries =
-    (journalResponse.data ??
-      []) as JournalInsightRow[];
-
-  const practiceRows =
-    (practiceResponse.data ??
-      []) as unknown as EntryPracticeRow[];
-
-  const averageEnergy =
+  const overallAverageEnergy =
     calculateAverageEnergy(
       entries
     );
 
-  const moodDistribution =
-    calculateMoodDistribution(
-      entries
-    );
-
-  const energyDistribution =
-    calculateEnergyDistribution(
-      entries
-    );
-
-  const practiceUsage =
-    calculatePracticeUsage(
-      practiceRows
-    );
-
-  const sevenDayTrend =
-    calculateTrend(
-      entries,
-      7
-    );
-
-  const thirtyDayTrend =
-    calculateTrend(
-      entries,
-      30
-    );
-
   const practiceObservations =
-    calculatePracticeObservations(
-      entries,
+    Array.from(
+      practiceGroups.values()
+    )
+      .map(
+        (
+          group
+        ): PracticeObservation => {
+          const practiceEntries =
+            Array.from(
+              group.entryIds
+            )
+              .map(
+                (entryId) =>
+                  entryMap.get(
+                    entryId
+                  )
+              )
+              .filter(
+                (
+                  entry
+                ): entry is InsightJournalEntry =>
+                  Boolean(entry)
+              );
 
-      practiceRows,
+          const averageEnergy =
+            calculateAverageEnergy(
+              practiceEntries
+            );
 
-      averageEnergy
-    );
+          let energyDifferenceFromOverall:
+            | number
+            | null = null;
 
-  const dreamCount =
-    dreamResponse.count ?? 0;
+          if (
+            averageEnergy !==
+              null &&
+            overallAverageEnergy !==
+              null
+          ) {
+            energyDifferenceFromOverall =
+              roundOne(
+                averageEnergy -
+                  overallAverageEnergy
+              );
+          }
 
-  const synchronicityCount =
-    synchronicityResponse.count ??
-    0;
+          return {
+            practiceId:
+              group.id,
 
-  const mostCommonMood =
-    moodDistribution[0]?.mood ??
-    null;
+            practiceName:
+              group.name,
 
-  const observations =
-    buildObservations(
-      entries.length,
+            timesRecorded:
+              practiceEntries.length,
 
-      averageEnergy,
+            averageEnergy,
 
-      mostCommonMood,
+            mostCommonMood:
+              calculateMostCommonMood(
+                practiceEntries
+              ),
 
-      sevenDayTrend,
+            energyDifferenceFromOverall,
+          };
+        }
+      )
+      .sort(
+        (a, b) => {
+          if (
+            b.timesRecorded !==
+            a.timesRecorded
+          ) {
+            return (
+              b.timesRecorded -
+              a.timesRecorded
+            );
+          }
 
-      thirtyDayTrend,
+          return a.practiceName.localeCompare(
+            b.practiceName
+          );
+        }
+      );
 
-      practiceObservations,
-
-      dreamCount,
-
-      synchronicityCount
-    );
-
-  return {
+  const baseInsights: Omit<
+    SoulPathInsights,
+    "observations"
+  > = {
     totalEntries:
       entries.length,
 
-    averageEnergy,
+    averageEnergy:
+      overallAverageEnergy,
 
-    mostCommonMood,
+    mostCommonMood:
+      calculateMostCommonMood(
+        entries
+      ),
 
-    moodDistribution,
+    moodDistribution:
+      calculateMoodDistribution(
+        entries
+      ),
 
-    energyDistribution,
+    energyDistribution:
+      calculateEnergyDistribution(
+        entries
+      ),
 
     practiceUsage,
 
     mostUsedPractice:
-      practiceUsage[0] ?? null,
+      practiceUsage[0] ??
+      null,
 
-    dreamCount,
+    dreamCount:
+      dreamResponse.count ??
+      0,
 
-    synchronicityCount,
+    synchronicityCount:
+      synchronicityResponse.count ??
+      0,
 
-    sevenDayTrend,
+    sevenDayTrend:
+      createTrend(
+        entries,
+        7
+      ),
 
-    thirtyDayTrend,
+    thirtyDayTrend:
+      createTrend(
+        entries,
+        30
+      ),
 
     practiceObservations,
+  };
 
-    observations,
+  return {
+    ...baseInsights,
+
+    observations:
+      buildObservations(
+        baseInsights
+      ),
   };
 } 

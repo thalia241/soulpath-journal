@@ -42,13 +42,25 @@ import {
   getEntryPractices,
 } from "../../src/services/practiceService";
 
+import {
+  classifySoulPathError,
+  SoulPathErrorInfo,
+} from "../../src/utils/errors";
+
+import {
+  formatLocalDate,
+} from "../../src/utils/date";
+
 export default function JournalDetailScreen() {
   const { id } =
     useLocalSearchParams<{
       id: string;
     }>();
 
-  const [entry, setEntry] =
+  const [
+    entry,
+    setEntry,
+  ] =
     useState<JournalEntry | null>(
       null
     );
@@ -70,38 +82,65 @@ export default function JournalDetailScreen() {
   ] = useState(false);
 
   const [
-    errorMessage,
-    setErrorMessage,
-  ] = useState("");
+    errorInfo,
+    setErrorInfo,
+  ] =
+    useState<SoulPathErrorInfo | null>(
+      null
+    );
 
   const loadEntry =
     useCallback(async () => {
       if (!id) {
+        setLoading(false);
+
+        setErrorInfo({
+          kind: "not_found",
+          message:
+            "This reflection could not be found.",
+          retryable: false,
+        });
+
         return;
       }
 
       try {
         setLoading(true);
-        setErrorMessage("");
+        setErrorInfo(null);
 
         const [
           journalEntry,
           entryPractices,
         ] =
           await Promise.all([
-            getJournalEntry(id),
-            getEntryPractices(id),
+            getJournalEntry(
+              id
+            ),
+
+            getEntryPractices(
+              id
+            ),
           ]);
 
-        setEntry(journalEntry);
+        setEntry(
+          journalEntry
+        );
+
         setPractices(
           entryPractices
         );
       } catch (error) {
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "Unable to open this reflection."
+        console.error(
+          "Unable to open reflection:",
+          error
+        );
+
+        setEntry(null);
+
+        setErrorInfo(
+          classifySoulPathError(
+            error
+          )
         );
       } finally {
         setLoading(false);
@@ -110,7 +149,7 @@ export default function JournalDetailScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadEntry();
+      void loadEntry();
     }, [loadEntry])
   );
 
@@ -121,13 +160,14 @@ export default function JournalDetailScreen() {
     if (
       Platform.OS === "web"
     ) {
-      if (
+      const confirmed =
         typeof window !==
           "undefined" &&
         window.confirm(
           `Let this reflection go?\n\n${warning}`
-        )
-      ) {
+        );
+
+      if (confirmed) {
         void removeEntry();
       }
 
@@ -145,6 +185,7 @@ export default function JournalDetailScreen() {
         {
           text: "Delete",
           style: "destructive",
+
           onPress: () =>
             void removeEntry(),
         },
@@ -153,12 +194,16 @@ export default function JournalDetailScreen() {
   }
 
   async function removeEntry() {
-    if (!id) {
+    if (
+      !id ||
+      deleting
+    ) {
       return;
     }
 
     try {
       setDeleting(true);
+      setErrorInfo(null);
 
       await deleteJournalEntry(
         id
@@ -168,10 +213,10 @@ export default function JournalDetailScreen() {
         "/journal"
       );
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Unable to delete this reflection."
+      setErrorInfo(
+        classifySoulPathError(
+          error
+        )
       );
     } finally {
       setDeleting(false);
@@ -183,8 +228,16 @@ export default function JournalDetailScreen() {
       <SafeAreaView
         style={styles.centered}
       >
+        <Text
+          style={styles.loadingSymbol}
+        >
+          ☾
+        </Text>
+
         <ActivityIndicator
-          color={colors.lavender}
+          color={
+            colors.lavender
+          }
         />
 
         <Text
@@ -202,36 +255,75 @@ export default function JournalDetailScreen() {
         style={styles.centered}
       >
         <Text
-          style={styles.missingTitle}
+          style={styles.missingSymbol}
         >
-          This page couldn't be found.
+          ☾
         </Text>
 
-        {errorMessage ? (
-          <FeedbackMessage
-            type="error"
-            message={errorMessage}
-          />
-        ) : null}
+        <Text
+          style={styles.missingTitle}
+        >
+          {errorInfo?.kind ===
+          "not_found"
+            ? "This page is no longer here."
+            : "This page couldn't be opened."}
+        </Text>
 
-        <SoulButton
-          title="Return to journal"
-          variant="secondary"
-          onPress={() =>
-            router.replace(
-              "/journal"
-            )
-          }
-        />
+        <Text
+          style={styles.missingText}
+        >
+          {errorInfo?.message}
+        </Text>
+
+        <View
+          style={styles.recoveryActions}
+        >
+          {errorInfo?.retryable ? (
+            <SoulButton
+              title="Try again"
+              onPress={() =>
+                void loadEntry()
+              }
+            />
+          ) : null}
+
+          {errorInfo?.kind ===
+          "auth" ? (
+            <SoulButton
+              title="Return to sign in"
+              onPress={() =>
+                router.replace(
+                  "/login"
+                )
+              }
+            />
+          ) : (
+            <SoulButton
+              title="Back to journal"
+              variant="secondary"
+              onPress={() =>
+                router.replace(
+                  "/journal"
+                )
+              }
+            />
+          )}
+        </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={styles.container}
+    >
       <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
+        contentContainerStyle={
+          styles.content
+        }
+        showsVerticalScrollIndicator={
+          false
+        }
       >
         <Pressable
           style={styles.back}
@@ -239,55 +331,94 @@ export default function JournalDetailScreen() {
             router.back()
           }
         >
-          <Text style={styles.backText}>
+          <Text
+            style={styles.backText}
+          >
             ‹ Journal
           </Text>
         </Pressable>
 
-        <Text style={styles.date}>
-          {entry.entry_date}
+        <Text
+          style={styles.date}
+        >
+          {formatLocalDate(
+            entry.entry_date
+          )}
         </Text>
 
-        <Text style={styles.title}>
+        <Text
+          style={styles.title}
+        >
           {entry.title}
         </Text>
 
-        <View style={styles.metadata}>
+        <View
+          style={styles.metadata}
+        >
           {entry.mood ? (
-            <View style={styles.metaChip}>
-              <Text style={styles.metaText}>
+            <View
+              style={styles.metaChip}
+            >
+              <Text
+                style={styles.metaText}
+              >
                 ◉ {entry.mood}
               </Text>
             </View>
           ) : null}
 
-          {entry.energy_level ? (
-            <View style={styles.metaChip}>
-              <Text style={styles.metaText}>
-                ✧ Energy {entry.energy_level}/5
+          {entry.energy_level !==
+          null ? (
+            <View
+              style={styles.metaChip}
+            >
+              <Text
+                style={styles.metaText}
+              >
+                ✧ Energy{" "}
+                {
+                  entry.energy_level
+                }
+                /5
               </Text>
             </View>
           ) : null}
         </View>
 
-        {practices.length > 0 ? (
-          <View style={styles.practiceArea}>
-            <Text style={styles.practiceHeading}>
+        {practices.length >
+        0 ? (
+          <View
+            style={styles.practiceArea}
+          >
+            <Text
+              style={
+                styles.practiceHeading
+              }
+            >
               What supported you
             </Text>
 
-            <View style={styles.practiceWrap}>
+            <View
+              style={
+                styles.practiceWrap
+              }
+            >
               {practices.map(
                 (item) => (
                   <View
                     key={item.id}
-                    style={styles.practiceChip}
+                    style={
+                      styles.practiceChip
+                    }
                   >
                     <Text
-                      style={styles.practiceText}
+                      style={
+                        styles.practiceText
+                      }
                     >
                       ✦{" "}
-                      {item.practice?.name ??
+                      {item.practice
+                        ?.name ??
                         "Practice"}
                     </Text>
                   </View>
@@ -297,37 +428,61 @@ export default function JournalDetailScreen() {
           </View>
         ) : null}
 
-        <View style={styles.divider} />
+        <View
+          style={styles.divider}
+        />
 
-        <Text style={styles.contentText}>
+        <Text
+          style={
+            styles.contentText
+          }
+        >
           {entry.content}
         </Text>
 
-        <SoulCard style={styles.closingCard}>
-          <Text style={styles.closingSymbol}>
+        <SoulCard
+          style={
+            styles.closingCard
+          }
+        >
+          <Text
+            style={
+              styles.closingSymbol
+            }
+          >
             ☾
           </Text>
 
-          <Text style={styles.closingText}>
-            A reflection doesn't have to be finished to
+          <Text
+            style={
+              styles.closingText
+            }
+          >
+            A reflection doesn't
+            have to be finished to
             be worth keeping.
           </Text>
         </SoulCard>
 
-        {errorMessage ? (
+        {errorInfo ? (
           <FeedbackMessage
             type="error"
-            message={errorMessage}
+            message={
+              errorInfo.message
+            }
           />
         ) : null}
 
-        <View style={styles.actions}>
+        <View
+          style={styles.actions}
+        >
           <SoulButton
-            title="Continue this reflection"
+            title="Edit this reflection"
             onPress={() =>
               router.push({
                 pathname:
                   "/journal/edit/[id]",
+
                 params: {
                   id: entry.id,
                 },
@@ -336,165 +491,241 @@ export default function JournalDetailScreen() {
           />
 
           <SoulButton
-            title="Let this reflection go"
-            variant="danger"
-            loading={deleting}
-            onPress={requestDelete}
+            title="Back to journal"
+            variant="secondary"
+            onPress={() =>
+              router.replace(
+                "/journal"
+              )
+            }
           />
+
+          <View
+            style={
+              styles.deleteSpacing
+            }
+          >
+            <SoulButton
+              title="Let this reflection go"
+              variant="danger"
+              loading={deleting}
+              disabled={deleting}
+              onPress={
+                requestDelete
+              }
+            />
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
+const styles =
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor:
+        colors.background,
+    },
 
-  centered: {
-    flex: 1,
-    backgroundColor: colors.background,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 28,
-    gap: 18,
-  },
+    centered: {
+      flex: 1,
+      backgroundColor:
+        colors.background,
+      justifyContent:
+        "center",
+      alignItems: "center",
+      padding: 28,
+    },
 
-  content: {
-    width: "100%",
-    maxWidth: 700,
-    alignSelf: "center",
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 65,
-  },
+    content: {
+      width: "100%",
+      maxWidth: 700,
+      alignSelf: "center",
+      paddingHorizontal: 24,
+      paddingTop: 24,
+      paddingBottom: 65,
+    },
 
-  back: {
-    alignSelf: "flex-start",
-    paddingVertical: 8,
-    marginBottom: 28,
-  },
+    back: {
+      alignSelf:
+        "flex-start",
+      paddingVertical: 8,
+      marginBottom: 28,
+    },
 
-  backText: {
-    color: colors.lavender,
-    fontFamily: fonts.bodySemiBold,
-    fontSize: 12,
-  },
+    backText: {
+      color:
+        colors.lavender,
+      fontFamily:
+        fonts.bodySemiBold,
+      fontSize: 12,
+    },
 
-  date: {
-    color: colors.textDim,
-    fontFamily: fonts.body,
-    fontSize: 10,
-  },
+    date: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 10,
+    },
 
-  title: {
-    color: colors.text,
-    fontFamily: fonts.display,
-    fontSize: 41,
-    lineHeight: 45,
-    marginTop: 5,
-  },
+    title: {
+      color: colors.text,
+      fontFamily:
+        fonts.display,
+      fontSize: 41,
+      lineHeight: 45,
+      marginTop: 5,
+    },
 
-  metadata: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 16,
-  },
+    metadata: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+      marginTop: 16,
+    },
 
-  metaChip: {
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: radius.pill,
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-  },
+    metaChip: {
+      backgroundColor:
+        colors.surfaceRaised,
+      borderRadius:
+        radius.pill,
+      paddingHorizontal: 11,
+      paddingVertical: 6,
+    },
 
-  metaText: {
-    color: colors.lavender,
-    fontFamily: fonts.body,
-    fontSize: 10,
-  },
+    metaText: {
+      color:
+        colors.lavender,
+      fontFamily: fonts.body,
+      fontSize: 10,
+    },
 
-  practiceArea: {
-    marginTop: 26,
-  },
+    practiceArea: {
+      marginTop: 26,
+    },
 
-  practiceHeading: {
-    color: colors.textSoft,
-    fontFamily: fonts.display,
-    fontSize: 20,
-    marginBottom: 10,
-  },
+    practiceHeading: {
+      color:
+        colors.textSoft,
+      fontFamily:
+        fonts.display,
+      fontSize: 20,
+      marginBottom: 10,
+    },
 
-  practiceWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 7,
-  },
+    practiceWrap: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 7,
+    },
 
-  practiceChip: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
+    practiceChip: {
+      borderWidth: 1,
+      borderColor:
+        colors.border,
+      borderRadius:
+        radius.pill,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+    },
 
-  practiceText: {
-    color: colors.goldSoft,
-    fontFamily: fonts.body,
-    fontSize: 10,
-  },
+    practiceText: {
+      color:
+        colors.goldSoft,
+      fontFamily: fonts.body,
+      fontSize: 10,
+    },
 
-  divider: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginVertical: 30,
-  },
+    divider: {
+      height: 1,
+      backgroundColor:
+        colors.border,
+      marginVertical: 30,
+    },
 
-  contentText: {
-    color: colors.textSoft,
-    fontFamily: fonts.body,
-    fontSize: 15,
-    lineHeight: 26,
-  },
+    contentText: {
+      color:
+        colors.textSoft,
+      fontFamily: fonts.body,
+      fontSize: 15,
+      lineHeight: 26,
+    },
 
-  closingCard: {
-    marginTop: 34,
-    backgroundColor: "#18122B",
-    borderColor: colors.borderStrong,
-  },
+    closingCard: {
+      marginTop: 34,
+      backgroundColor:
+        "#18122B",
+      borderColor:
+        colors.borderStrong,
+    },
 
-  closingSymbol: {
-    color: colors.gold,
-    fontSize: 17,
-  },
+    closingSymbol: {
+      color: colors.gold,
+      fontSize: 17,
+    },
 
-  closingText: {
-    color: colors.textMuted,
-    fontFamily: fonts.displayItalic,
-    fontSize: 18,
-    lineHeight: 25,
-    marginTop: 7,
-  },
+    closingText: {
+      color:
+        colors.textMuted,
+      fontFamily:
+        fonts.displayItalic,
+      fontSize: 18,
+      lineHeight: 25,
+      marginTop: 7,
+    },
 
-  actions: {
-    gap: 10,
-    marginTop: 26,
-  },
+    actions: {
+      gap: 10,
+      marginTop: 26,
+    },
 
-  loadingText: {
-    color: colors.textDim,
-    fontFamily: fonts.body,
-    fontSize: 11,
-  },
+    deleteSpacing: {
+      marginTop: 7,
+    },
 
-  missingTitle: {
-    color: colors.text,
-    fontFamily: fonts.display,
-    fontSize: 27,
-    textAlign: "center",
-  },
-}); 
+    loadingSymbol: {
+      color: colors.gold,
+      fontSize: 26,
+      marginBottom: 18,
+    },
+
+    loadingText: {
+      color: colors.textDim,
+      fontFamily: fonts.body,
+      fontSize: 11,
+      marginTop: 12,
+    },
+
+    missingSymbol: {
+      color: colors.gold,
+      fontSize: 30,
+    },
+
+    missingTitle: {
+      color: colors.text,
+      fontFamily:
+        fonts.display,
+      fontSize: 28,
+      marginTop: 13,
+      textAlign: "center",
+    },
+
+    missingText: {
+      color:
+        colors.textMuted,
+      fontFamily: fonts.body,
+      fontSize: 12,
+      lineHeight: 19,
+      textAlign: "center",
+      maxWidth: 420,
+      marginTop: 8,
+    },
+
+    recoveryActions: {
+      width: "100%",
+      maxWidth: 400,
+      gap: 10,
+      marginTop: 25,
+    },
+  }); 

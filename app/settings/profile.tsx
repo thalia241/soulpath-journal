@@ -1,4 +1,6 @@
-import { router } from "expo-router";
+import {
+  router,
+} from "expo-router";
 
 import {
   useEffect,
@@ -33,6 +35,14 @@ import {
   supabase,
 } from "../../src/lib/supabase";
 
+import {
+  useUnsavedChangesGuard,
+} from "../../src/hooks/useUnsavedChangesGuard";
+
+import {
+  validateDisplayName,
+} from "../../src/utils/validation";
+
 export default function ProfileSettingsScreen() {
   const { session } =
     useAuth();
@@ -40,6 +50,16 @@ export default function ProfileSettingsScreen() {
   const [
     displayName,
     setDisplayName,
+  ] = useState("");
+
+  const [
+    originalName,
+    setOriginalName,
+  ] = useState("");
+
+  const [
+    nameError,
+    setNameError,
   ] = useState("");
 
   const [
@@ -53,8 +73,8 @@ export default function ProfileSettingsScreen() {
   ] = useState(false);
 
   const [
-    errorMessage,
-    setErrorMessage,
+    formError,
+    setFormError,
   ] = useState("");
 
   const [
@@ -66,21 +86,42 @@ export default function ProfileSettingsScreen() {
     session?.user.email ||
     "";
 
+  const dirty =
+    !loading &&
+    displayName.trim() !==
+      originalName.trim();
+
+  useUnsavedChangesGuard(
+    dirty && !saving,
+    {
+      title:
+        "Leave your profile changes?",
+      message:
+        "Your new display name hasn't been saved yet.",
+    }
+  );
+
   useEffect(() => {
-    loadProfile();
+    void loadProfile();
   }, []);
 
   async function loadProfile() {
     try {
       setLoading(true);
+      setFormError("");
 
       const {
-        data: { user },
+        data: {
+          user,
+        },
         error,
       } =
         await supabase.auth.getUser();
 
-      if (error || !user) {
+      if (
+        error ||
+        !user
+      ) {
         throw new Error(
           "Unable to open your profile."
         );
@@ -88,27 +129,38 @@ export default function ProfileSettingsScreen() {
 
       const {
         data,
-        error: profileError,
+        error:
+          profileError,
       } = await supabase
         .from("profiles")
         .select(
           "display_name"
         )
-        .eq("id", user.id)
+        .eq(
+          "id",
+          user.id
+        )
         .maybeSingle();
 
       if (profileError) {
         throw profileError;
       }
 
-      setDisplayName(
+      const initialName =
         data?.display_name ||
-          user.user_metadata
-            ?.display_name ||
-          ""
+        user.user_metadata
+          ?.display_name ||
+        "";
+
+      setDisplayName(
+        initialName
+      );
+
+      setOriginalName(
+        initialName
       );
     } catch (error) {
-      setErrorMessage(
+      setFormError(
         error instanceof Error
           ? error.message
           : "Unable to load your profile."
@@ -119,53 +171,80 @@ export default function ProfileSettingsScreen() {
   }
 
   async function saveProfile() {
-    const name =
-      displayName.trim();
-
-    if (!name) {
-      setErrorMessage(
-        "What would you like SoulPath to call you?"
-      );
+    if (
+      saving ||
+      !dirty
+    ) {
       return;
     }
 
+    setNameError("");
+    setFormError("");
+    setSuccessMessage("");
+
+    const result =
+      validateDisplayName(
+        displayName
+      );
+
+    if (!result.valid) {
+      setNameError(
+        result.message
+      );
+
+      return;
+    }
+
+    const cleanName =
+      displayName.trim();
+
     try {
       setSaving(true);
-      setErrorMessage("");
-      setSuccessMessage("");
 
       const {
-        data: { user },
+        data: {
+          user,
+        },
         error,
       } =
         await supabase.auth.getUser();
 
-      if (error || !user) {
+      if (
+        error ||
+        !user
+      ) {
         throw new Error(
           "Your session could not be found."
         );
       }
 
       const {
-        error: profileError,
+        error:
+          profileError,
       } = await supabase
         .from("profiles")
         .update({
-          display_name: name,
+          display_name:
+            cleanName,
         })
-        .eq("id", user.id);
+        .eq(
+          "id",
+          user.id
+        );
 
       if (profileError) {
         throw profileError;
       }
 
       const {
-        error: authError,
+        error:
+          authError,
       } =
         await supabase.auth.updateUser(
           {
             data: {
-              display_name: name,
+              display_name:
+                cleanName,
             },
           }
         );
@@ -174,13 +253,19 @@ export default function ProfileSettingsScreen() {
         throw authError;
       }
 
-      setDisplayName(name);
+      setDisplayName(
+        cleanName
+      );
+
+      setOriginalName(
+        cleanName
+      );
 
       setSuccessMessage(
         "Your name has been saved."
       );
     } catch (error) {
-      setErrorMessage(
+      setFormError(
         error instanceof Error
           ? error.message
           : "Unable to save your changes."
@@ -200,7 +285,19 @@ export default function ProfileSettingsScreen() {
         }
         keyboardShouldPersistTaps="handled"
       >
-        <BackButton />
+        <Pressable
+          style={styles.back}
+          disabled={saving}
+          onPress={() =>
+            router.back()
+          }
+        >
+          <Text
+            style={styles.backText}
+          >
+            ‹ Settings
+          </Text>
+        </Pressable>
 
         <Text
           style={styles.title}
@@ -212,8 +309,8 @@ export default function ProfileSettingsScreen() {
           style={styles.subtitle}
         >
           A small piece of you that
-          SoulPath carries from page to
-          page.
+          SoulPath carries from page
+          to page.
         </Text>
 
         <View
@@ -239,19 +336,37 @@ export default function ProfileSettingsScreen() {
             <SoulInput
               label="What should we call you?"
               value={displayName}
-              onChangeText={
-                setDisplayName
-              }
+              onChangeText={(
+                value
+              ) => {
+                setDisplayName(
+                  value
+                );
+
+                setNameError("");
+
+                setFormError("");
+
+                setSuccessMessage(
+                  ""
+                );
+              }}
               placeholder="Display name"
               maxLength={60}
               autoCapitalize="words"
+              editable={!saving}
+              error={nameError}
             />
 
             <View
-              style={styles.emailArea}
+              style={
+                styles.emailArea
+              }
             >
               <Text
-                style={styles.label}
+                style={
+                  styles.label
+                }
               >
                 Email
               </Text>
@@ -271,19 +386,21 @@ export default function ProfileSettingsScreen() {
               </View>
 
               <Text
-                style={styles.hint}
+                style={
+                  styles.hint
+                }
               >
                 Email changes aren't
-                part of this version of
-                SoulPath yet.
+                part of this version
+                of SoulPath yet.
               </Text>
             </View>
 
-            {errorMessage ? (
+            {formError ? (
               <FeedbackMessage
                 type="error"
                 message={
-                  errorMessage
+                  formError
                 }
               />
             ) : null}
@@ -297,11 +414,21 @@ export default function ProfileSettingsScreen() {
             ) : null}
 
             <View
-              style={styles.action}
+              style={
+                styles.action
+              }
             >
               <SoulButton
-                title="Save changes"
+                title={
+                  dirty
+                    ? "Save changes"
+                    : "Everything is saved"
+                }
                 loading={saving}
+                disabled={
+                  saving ||
+                  !dirty
+                }
                 onPress={
                   saveProfile
                 }
@@ -311,23 +438,6 @@ export default function ProfileSettingsScreen() {
         )}
       </ScrollView>
     </SafeAreaView>
-  );
-}
-
-function BackButton() {
-  return (
-    <Pressable
-      style={styles.back}
-      onPress={() =>
-        router.back()
-      }
-    >
-      <Text
-        style={styles.backText}
-      >
-        ‹ Settings
-      </Text>
-    </Pressable>
   );
 }
 
@@ -350,12 +460,14 @@ const styles =
     },
 
     back: {
-      alignSelf: "flex-start",
+      alignSelf:
+        "flex-start",
       paddingVertical: 8,
     },
 
     backText: {
-      color: colors.lavender,
+      color:
+        colors.lavender,
       fontFamily:
         fonts.bodySemiBold,
       fontSize: 12,
@@ -363,7 +475,8 @@ const styles =
 
     title: {
       color: colors.text,
-      fontFamily: fonts.display,
+      fontFamily:
+        fonts.display,
       fontSize: 39,
       marginTop: 5,
     },
@@ -403,7 +516,8 @@ const styles =
     },
 
     label: {
-      color: colors.textSoft,
+      color:
+        colors.textSoft,
       fontFamily:
         fonts.bodySemiBold,
       fontSize: 13,
@@ -422,14 +536,17 @@ const styles =
     },
 
     email: {
-      color: colors.textMuted,
-      fontFamily: fonts.body,
+      color:
+        colors.textMuted,
+      fontFamily:
+        fonts.body,
       fontSize: 14,
     },
 
     hint: {
       color: colors.textDim,
-      fontFamily: fonts.body,
+      fontFamily:
+        fonts.body,
       fontSize: 10,
       marginTop: 6,
     },
