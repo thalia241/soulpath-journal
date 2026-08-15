@@ -10,6 +10,18 @@ SoulPath was built as a portfolio-quality mobile application with an emphasis on
 
 ---
 
+## ✦ App Preview
+
+<p align="center">
+  <img src="docs/screenshots/07-soulpath-launch.png" alt="SoulPath Journal launch screen" width="320" />
+</p>
+
+<p align="center">
+  <em>A private space for the journey within.</em>
+</p>
+
+---
+
 ## ✦ Core Features
 
 ### Daily Reflection
@@ -24,9 +36,29 @@ Create and revisit personal journal entries with:
 * Search and filtering
 * Multiple reflections per day
 
+<p align="center">
+  <img src="docs/screenshots/01-today.png" alt="SoulPath Today dashboard" width="320" />
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/02-journal.png" alt="SoulPath Journal screen" width="320" />
+</p>
+
+---
+
+### Journal Details
+
+Each reflection can include mood, energy, written content, and linked practices.
+
+Users can revisit, edit, or delete individual reflections through a dedicated detail workflow.
+
+<p align="center">
+  <img src="docs/screenshots/03-reflection.png" alt="SoulPath journal reflection detail screen" width="320" />
+</p>
+
+---
+
 ### Dreams & Signs
 
-Record experiences such as:
+SoulPath includes a separate space for recording meaningful experiences such as:
 
 * Dreams
 * Synchronicities
@@ -35,6 +67,12 @@ Record experiences such as:
 * Exact date and time
 
 SoulPath presents these experiences as personal observations rather than predictions or claims about their meaning.
+
+<p align="center">
+  <img src="docs/screenshots/04-dreams-signs.png" alt="SoulPath Dreams and Signs screen" width="320" />
+</p>
+
+---
 
 ### Spiritual Practices
 
@@ -51,6 +89,10 @@ Journal entries can be connected with practices including:
 * Ayurvedic routines
 * Dream Interpretation
 
+Practice relationships are stored separately from journal entries and linked through relational database records.
+
+---
+
 ### Insights
 
 SoulPath creates observational summaries from the user's own records.
@@ -61,9 +103,17 @@ Insights can surface patterns involving:
 * Mood
 * Energy
 * Practices
-* Dreams and synchronicities
+* Dreams
+* Synchronicities
+* Recent activity periods
 
 The application intentionally avoids medical, causal, predictive, or divinatory claims.
+
+<p align="center">
+  <img src="docs/screenshots/05-insights.png" alt="SoulPath Insights dashboard" width="320" />
+</p>
+
+---
 
 ### Search & Filters
 
@@ -73,7 +123,15 @@ Journal records can be filtered by:
 * Mood
 * Recent time periods
 
+Dreams & Signs can be filtered by:
+
+* Experience type
+* Recent time periods
+* Significance level
+
 Filtering is designed around a personal journal dataset while maintaining a simple and responsive interface.
+
+---
 
 ### Data Export
 
@@ -85,15 +143,19 @@ Supported export formats:
 * **TXT** — lightweight portable text backup
 * **JSON** — structured data export with a versioned schema
 
-Native Android/iOS exports use the system share sheet, while web exports use browser-compatible download and printing behavior.
+Native Android and iOS exports use the system share sheet, while web exports use browser-compatible download and printing behavior.
 
 Authentication credentials, passwords, access tokens, refresh tokens, and application secrets are never included in exports.
+
+<p align="center">
+  <img src="docs/screenshots/06-data-export.png" alt="SoulPath Data and Export screen" width="320" />
+</p>
 
 ---
 
 ## ☾ Privacy & Security
 
-SoulPath is designed around private user-owned data.
+SoulPath is designed around private, user-owned data.
 
 Security features include:
 
@@ -133,7 +195,8 @@ SoulPath Journal
 │   ├── SoulInput
 │   ├── SoulCard
 │   ├── EmptyState
-│   └── FeedbackMessage
+│   ├── FeedbackMessage
+│   └── AnimatedSoulPathLaunch
 │
 ├── Application Services
 │   ├── Journal Service
@@ -153,27 +216,27 @@ SoulPath Journal
 
 ## Tech Stack
 
-| Area                 | Technology                  |
-| -------------------- | --------------------------- |
-| Mobile/Web           | React Native                |
-| Framework            | Expo SDK 57                 |
-| Language             | TypeScript                  |
-| Routing              | Expo Router                 |
-| Authentication       | Supabase Auth               |
-| Database             | PostgreSQL / Supabase       |
-| Authorization        | Row Level Security          |
-| Storage / local APIs | Expo APIs                   |
-| PDF Export           | Expo Print                  |
-| File Export          | Expo FileSystem             |
-| Native Sharing       | Expo Sharing                |
-| Fonts                | Cormorant Garamond + Nunito |
-| Android Builds       | EAS Build                   |
+| Area                | Technology                  |
+| ------------------- | --------------------------- |
+| Mobile / Web        | React Native                |
+| Framework           | Expo SDK 57                 |
+| Language            | TypeScript                  |
+| Routing             | Expo Router                 |
+| Authentication      | Supabase Auth               |
+| Database            | PostgreSQL / Supabase       |
+| Authorization       | Row Level Security          |
+| Local / Native APIs | Expo APIs                   |
+| PDF Export          | Expo Print                  |
+| File Export         | Expo FileSystem             |
+| Native Sharing      | Expo Sharing                |
+| Fonts               | Cormorant Garamond + Nunito |
+| Android Builds      | EAS Build                   |
 
 ---
 
 ## Reliability Engineering
 
-SoulPath includes several application-hardening features beyond basic CRUD functionality.
+SoulPath includes application-hardening features beyond basic CRUD functionality.
 
 ### Fault-Tolerant Dashboard
 
@@ -203,7 +266,7 @@ This prevents partially updated journal/practice relationships.
 
 Journal entries represent calendar dates rather than timestamps.
 
-SoulPath avoids parsing date-only values as UTC timestamps, preventing common previous-day/next-day errors caused by timezone conversion.
+SoulPath avoids parsing date-only values as UTC timestamps, preventing common previous-day or next-day errors caused by timezone conversion.
 
 ### Validation
 
@@ -215,13 +278,22 @@ Shared validation handles:
 * Display names
 * Journal titles
 * Journal content
-* Dream/sign content
+* Dream and sign content
 * Energy ratings
 * Significance ratings
 
 ### Unsaved Changes Protection
 
 Editing forms detect unsaved changes and warn users before accidental navigation removes their work.
+
+### Error Recovery
+
+Detail screens and dashboard sections include user-friendly recovery behavior for:
+
+* Network failures
+* Missing records
+* Authentication expiration
+* Partial data-loading failures
 
 ---
 
@@ -235,10 +307,11 @@ SoulPath includes:
 * Minimum touch targets
 * Accessible button labels
 * Accessible form labels
-* Selected/disabled accessibility states
+* Selected and disabled accessibility states
 * Screen-reader-aware controls
 * Keyboard-aware forms
 * Dynamic text-friendly sizing
+* Android status-bar and bottom-inset handling
 
 The interface has been tested as an actual Android development build rather than only through a browser or simulator.
 
@@ -258,33 +331,81 @@ SoulPath uses a custom dark visual system built around:
 
 The visual direction is intended to feel reflective and soulful without sacrificing readability or usability.
 
+### Brand Identity
+
+**Logo motif:** North Star + path
+
+**Primary visual themes:**
+
+* Guidance
+* Reflection
+* Inner growth
+* Clarity
+* Personal meaning
+
+**Tagline:**
+
+> A private space for the journey within.
+
 ---
 
-## Screenshots
+## Screenshot Gallery
 
-### Today
+### Today Dashboard
 
-![SoulPath Today](docs/screenshots/01-today.png)
+Personalized greeting, daily reflection prompt, mood and energy check-in, practice activity, and quick navigation.
+
+<p align="center">
+  <img src="docs/screenshots/01-today.png" alt="SoulPath Today dashboard" width="340" />
+</p>
 
 ### Journal
 
-![SoulPath Journal](docs/screenshots/02-journal.png)
+Searchable and filterable reflection history with mood and energy metadata.
 
-### Reflection
+<p align="center">
+  <img src="docs/screenshots/02-journal.png" alt="SoulPath Journal list" width="340" />
+</p>
 
-![SoulPath Reflection](docs/screenshots/03-reflection.png)
+### Reflection Detail
+
+A complete journal entry with mood, energy, linked spiritual practices, content, and CRUD actions.
+
+<p align="center">
+  <img src="docs/screenshots/03-reflection.png" alt="SoulPath reflection detail" width="340" />
+</p>
 
 ### Dreams & Signs
 
-![SoulPath Dreams and Signs](docs/screenshots/04-dreams-signs.png)
+A separate experience journal with dream and synchronicity tracking, search, date filters, and significance filtering.
+
+<p align="center">
+  <img src="docs/screenshots/04-dreams-signs.png" alt="SoulPath Dreams and Signs" width="340" />
+</p>
 
 ### Insights
 
-![SoulPath Insights](docs/screenshots/05-insights.png)
+Observational summaries built from the user's recorded reflections and patterns.
+
+<p align="center">
+  <img src="docs/screenshots/05-insights.png" alt="SoulPath Insights" width="340" />
+</p>
 
 ### Data & Export
 
-![SoulPath Data Export](docs/screenshots/06-data-export.png)
+User-controlled data portability through PDF, plain-text, and structured JSON exports.
+
+<p align="center">
+  <img src="docs/screenshots/06-data-export.png" alt="SoulPath Data and Export" width="340" />
+</p>
+
+### Launch Experience
+
+SoulPath includes a branded native splash screen followed by a custom animated launch transition.
+
+<p align="center">
+  <img src="docs/screenshots/07-soulpath-launch.png" alt="SoulPath branded launch experience" width="340" />
+</p>
 
 ---
 
@@ -316,6 +437,10 @@ app/
 │   └── edit/
 │
 └── settings/
+    ├── profile.tsx
+    ├── privacy.tsx
+    ├── data.tsx
+    └── about.tsx
 
 src/
 ├── components/
@@ -326,7 +451,102 @@ src/
 ├── services/
 ├── theme/
 └── utils/
+
+docs/
+└── screenshots/
+    ├── 01-today.png
+    ├── 02-journal.png
+    ├── 03-reflection.png
+    ├── 04-dreams-signs.png
+    ├── 05-insights.png
+    ├── 06-data-export.png
+    └── 07-soulpath-launch.png
 ```
+
+---
+
+## Database Design
+
+SoulPath uses a relational PostgreSQL schema through Supabase.
+
+Primary data areas include:
+
+### Profiles
+
+Stores user-facing profile information separately from authentication data.
+
+### Journal Entries
+
+Stores:
+
+* Title
+* Reflection content
+* Mood
+* Energy
+* Local journal date
+* Creation and update timestamps
+
+### Practices
+
+Stores supported spiritual practice definitions.
+
+### Entry Practices
+
+Connects journal entries to practices through a relational join table.
+
+### Experiences
+
+Stores:
+
+* Dream or synchronicity type
+* Title
+* Description
+* Personal reflection
+* Significance
+* Exact experience timestamp
+
+Each user-owned table is protected through Row Level Security.
+
+---
+
+## Data Portability
+
+SoulPath treats export as a first-class feature rather than an afterthought.
+
+The structured JSON format includes a versioned schema:
+
+```json
+{
+  "schema": {
+    "name": "soulpath-journal-export",
+    "version": 1
+  }
+}
+```
+
+This creates a foundation for future data-import and migration tools.
+
+Exports may include:
+
+* Display name
+* Email
+* Journal records
+* Mood values
+* Energy values
+* Linked practices
+* Dreams
+* Synchronicities
+* Personal interpretations
+* Significance ratings
+* Timestamps
+
+Exports do not include:
+
+* Passwords
+* Access tokens
+* Refresh tokens
+* Supabase secrets
+* Service-role credentials
 
 ---
 
@@ -361,7 +581,7 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_publishable_key
 
 Do not commit `.env`.
 
-Verify dependency compatibility:
+Verify Expo dependency compatibility:
 
 ```bash
 npx expo-doctor
@@ -391,22 +611,57 @@ npx expo start --dev-client
 
 SoulPath uses EAS Build.
 
-Development APK:
+### Development APK
 
 ```bash
 npx eas-cli@latest build --platform android --profile development
 ```
 
-Internal preview APK:
+Used for native development and device testing.
+
+### Internal Preview APK
 
 ```bash
 npx eas-cli@latest build --platform android --profile preview
 ```
 
-Production Android build:
+Used for standalone release-quality testing without Metro.
+
+### Production Android Build
 
 ```bash
 npx eas-cli@latest build --platform android --profile production
+```
+
+Used to generate the production Android artifact for store distribution.
+
+---
+
+## Quality Assurance
+
+The project includes release-focused QA for:
+
+* Android safe areas
+* Bottom tab persistence
+* Keyboard handling
+* Multiple screen widths
+* Tablet layouts
+* Text scaling
+* Screen-reader semantics
+* Touch-target sizing
+* Session recovery
+* Network failure behavior
+* Export integrity
+* Date handling
+* TypeScript validation
+* Expo dependency compatibility
+
+Current project health:
+
+```text
+Expo Doctor: 21/21 checks passed
+TypeScript: no compile errors
+Android development build: verified on physical device
 ```
 
 ---
@@ -432,6 +687,7 @@ SoulPath currently includes:
 * Session recovery
 * Android development builds
 * Custom SoulPath visual identity
+* Native splash screen
 * Animated application launch transition
 
 ---
@@ -449,6 +705,8 @@ Potential future development includes:
 * Improved tablet layouts
 * Native iOS release
 * Additional accessibility testing
+* Optional local-only journal mode
+* Automated backup workflows
 
 ---
 
@@ -474,6 +732,8 @@ The project includes practical examples of:
 * Cross-platform file generation
 * Data portability
 * Native Android development and testing
+* Release hardening
+* Expo/EAS build configuration
 
 ---
 
@@ -487,5 +747,7 @@ GitHub: **thalia241**
 
 ---
 
-*SoulPath Journal — A private space for the journey within.*
-
+<p align="center">
+  <strong>SoulPath Journal</strong><br />
+  <em>A private space for the journey within.</em>
+</p>
