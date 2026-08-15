@@ -10,7 +10,6 @@ import {
 import {
   ActivityIndicator,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,6 +18,7 @@ import {
 
 import SoulButton from "../../src/components/SoulButton";
 import SoulInput from "../../src/components/SoulInput";
+import SoulScreen from "../../src/components/SoulScreen";
 import FeedbackMessage from "../../src/components/FeedbackMessage";
 import SectionHeading from "../../src/components/SectionHeading";
 
@@ -60,7 +60,9 @@ const moods = [
 
 type FormErrors = {
   title?: string;
+
   content?: string;
+
   energy?: string;
 };
 
@@ -117,7 +119,9 @@ export default function NewJournalEntryScreen() {
     errors,
     setErrors,
   ] =
-    useState<FormErrors>({});
+    useState<FormErrors>(
+      {}
+    );
 
   const [
     formError,
@@ -134,6 +138,7 @@ export default function NewJournalEntryScreen() {
     {
       title:
         "Leave this reflection?",
+
       message:
         "Your words haven't been saved yet.",
     }
@@ -154,11 +159,6 @@ export default function NewJournalEntryScreen() {
 
       setPractices(data);
     } catch (error) {
-      console.error(
-        "Unable to load practices:",
-        error
-      );
-
       setFormError(
         error instanceof Error
           ? error.message
@@ -194,7 +194,7 @@ export default function NewJournalEntryScreen() {
     );
   }
 
-  function validateForm(): boolean {
+  function validateForm() {
     const nextErrors:
       FormErrors = {};
 
@@ -203,31 +203,27 @@ export default function NewJournalEntryScreen() {
         title
       );
 
-    if (!titleResult.valid) {
-      nextErrors.title =
-        titleResult.message;
-    }
-
     const contentResult =
       validateJournalContent(
         content
       );
-
-    if (
-      !contentResult.valid
-    ) {
-      nextErrors.content =
-        contentResult.message;
-    }
 
     const energyResult =
       validateEnergyLevel(
         energyLevel
       );
 
-    if (
-      !energyResult.valid
-    ) {
+    if (!titleResult.valid) {
+      nextErrors.title =
+        titleResult.message;
+    }
+
+    if (!contentResult.valid) {
+      nextErrors.content =
+        contentResult.message;
+    }
+
+    if (!energyResult.valid) {
       nextErrors.energy =
         energyResult.message;
     }
@@ -287,11 +283,6 @@ export default function NewJournalEntryScreen() {
         },
       });
     } catch (error) {
-      console.error(
-        "Unable to save reflection:",
-        error
-      );
-
       setFormError(
         error instanceof Error
           ? error.message
@@ -303,397 +294,436 @@ export default function NewJournalEntryScreen() {
   }
 
   return (
-    <SafeAreaView
-      style={styles.container}
+    <SoulScreen
+      keyboard
+      contentStyle={
+        styles.content
+      }
     >
-      <ScrollView
-        contentContainerStyle={
-          styles.content
-        }
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={
-          false
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Back to journal"
+        style={styles.back}
+        disabled={saving}
+        onPress={() =>
+          router.back()
         }
       >
-        <Pressable
-          style={styles.back}
-          disabled={saving}
-          onPress={() =>
-            router.back()
-          }
-        >
-          <Text
-            style={styles.backText}
-          >
-            ‹ Journal
-          </Text>
-        </Pressable>
-
         <Text
-          style={styles.symbol}
+          style={styles.backText}
         >
-          ☾
+          ‹ Journal
         </Text>
+      </Pressable>
 
-        <Text
-          style={styles.title}
-        >
-          A new reflection
-        </Text>
+      <Text
+        style={styles.symbol}
+      >
+        ☾
+      </Text>
 
-        <Text
-          style={styles.subtitle}
-        >
-          You don't have to make
-          sense of it. Let the page
-          hold it first.
-        </Text>
+      <Text
+        style={styles.title}
+      >
+        A new reflection
+      </Text>
 
-        <View
-          style={styles.form}
-        >
-          <SoulInput
-            label="A few words to remember this by"
-            value={title}
-            onChangeText={(
-              value
-            ) => {
-              setTitle(value);
-              setDirty(true);
+      <Text
+        style={styles.subtitle}
+      >
+        You don't have to make
+        sense of it. Let the page
+        hold it first.
+      </Text>
 
-              setErrors(
-                (current) => ({
-                  ...current,
-                  title: undefined,
-                })
-              );
-            }}
-            placeholder="Title"
-            maxLength={120}
-            editable={!saving}
-            error={errors.title}
-          />
+      <View
+        style={styles.form}
+      >
+        <SoulInput
+          label="A few words to remember this by"
+          value={title}
+          onChangeText={(
+            value
+          ) => {
+            setTitle(value);
+            setDirty(true);
 
-          <SoulInput
-            label="What's here?"
-            value={content}
-            onChangeText={(
-              value
-            ) => {
-              setContent(value);
-              setDirty(true);
+            setErrors(
+              (current) => ({
+                ...current,
 
-              setErrors(
-                (current) => ({
-                  ...current,
-                  content:
-                    undefined,
-                })
-              );
-            }}
-            placeholder="Write freely..."
-            multiline
-            textAlignVertical="top"
-            editable={!saving}
-            style={
-              styles.largeInput
-            }
-            error={
-              errors.content
-            }
-          />
-        </View>
-
-        <SectionHeading
-          title="How does today feel?"
+                title: undefined,
+              })
+            );
+          }}
+          placeholder="Title"
+          maxLength={120}
+          editable={!saving}
+          error={errors.title}
         />
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={
-            false
-          }
-          contentContainerStyle={
-            styles.chipRow
-          }
-        >
-          {moods.map(
-            (item) => {
-              const selected =
-                mood === item;
+        <SoulInput
+          label="What's here?"
+          value={content}
+          onChangeText={(
+            value
+          ) => {
+            setContent(value);
+            setDirty(true);
 
-              return (
-                <Pressable
-                  key={item}
-                  disabled={saving}
+            setErrors(
+              (current) => ({
+                ...current,
+
+                content:
+                  undefined,
+              })
+            );
+          }}
+          placeholder="Write freely..."
+          multiline
+          textAlignVertical="top"
+          editable={!saving}
+          style={
+            styles.largeInput
+          }
+          error={
+            errors.content
+          }
+        />
+      </View>
+
+      <SectionHeading
+        title="How does today feel?"
+      />
+
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={
+          false
+        }
+        contentContainerStyle={
+          styles.chipRow
+        }
+      >
+        {moods.map(
+          (item) => {
+            const selected =
+              mood === item;
+
+            return (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{
+                  selected,
+                }}
+                key={item}
+                disabled={saving}
+                style={[
+                  styles.chip,
+
+                  selected &&
+                    styles.chipSelected,
+                ]}
+                onPress={() => {
+                  setMood(
+                    selected
+                      ? null
+                      : item
+                  );
+
+                  setDirty(true);
+                }}
+              >
+                <Text
                   style={[
-                    styles.chip,
+                    styles.chipText,
 
                     selected &&
-                      styles.chipSelected,
+                      styles.chipTextSelected,
                   ]}
-                  onPress={() => {
-                    setMood(
-                      selected
-                        ? null
-                        : item
-                    );
-
-                    setDirty(true);
-                  }}
                 >
-                  <Text
-                    style={[
-                      styles.chipText,
+                  {item}
+                </Text>
+              </Pressable>
+            );
+          }
+        )}
+      </ScrollView>
 
-                      selected &&
-                        styles.chipTextSelected,
-                    ]}
-                  >
-                    {item}
-                  </Text>
-                </Pressable>
-              );
-            }
-          )}
-        </ScrollView>
+      <SectionHeading
+        title="Where is your energy?"
+        subtitle="1 is very low, 5 is very full."
+      />
 
-        <SectionHeading
-          title="Where is your energy?"
-          subtitle="1 is very low, 5 is very full."
-        />
+      <View
+        style={styles.energyRow}
+      >
+        {[1, 2, 3, 4, 5].map(
+          (level) => {
+            const selected =
+              energyLevel ===
+              level;
 
-        <View
-          style={styles.energyRow}
-        >
-          {[1, 2, 3, 4, 5].map(
-            (level) => {
-              const selected =
-                energyLevel ===
-                level;
+            return (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Energy ${level} out of 5`}
+                accessibilityState={{
+                  selected,
+                }}
+                key={level}
+                disabled={saving}
+                style={[
+                  styles.energyButton,
 
-              return (
-                <Pressable
-                  key={level}
-                  disabled={saving}
+                  selected &&
+                    styles.energySelected,
+                ]}
+                onPress={() => {
+                  setEnergyLevel(
+                    selected
+                      ? null
+                      : level
+                  );
+
+                  setDirty(true);
+
+                  setErrors(
+                    (current) => ({
+                      ...current,
+
+                      energy:
+                        undefined,
+                    })
+                  );
+                }}
+              >
+                <Text
                   style={[
-                    styles.energyButton,
+                    styles.energyText,
 
                     selected &&
-                      styles.energySelected,
+                      styles.energyTextSelected,
                   ]}
-                  onPress={() => {
-                    setEnergyLevel(
-                      selected
-                        ? null
-                        : level
-                    );
-
-                    setDirty(true);
-
-                    setErrors(
-                      (current) => ({
-                        ...current,
-                        energy:
-                          undefined,
-                      })
-                    );
-                  }}
                 >
-                  <Text
-                    style={[
-                      styles.energyText,
+                  {level}
+                </Text>
+              </Pressable>
+            );
+          }
+        )}
+      </View>
 
-                      selected &&
-                        styles.energyTextSelected,
-                    ]}
-                  >
-                    {level}
-                  </Text>
-                </Pressable>
-              );
-            }
-          )}
-        </View>
-
-        {errors.energy ? (
-          <Text
-            style={
-              styles.fieldError
-            }
-          >
-            {errors.energy}
-          </Text>
-        ) : null}
-
-        <SectionHeading
-          title="What supported you?"
-          subtitle="Choose any practices that were part of your day."
+      {errors.energy ? (
+        <Text
+          accessibilityRole="alert"
+          style={
+            styles.fieldError
+          }
+        >
+          {errors.energy}
+        </Text>
+      ) : (
+        <View
+          style={
+            styles.energySpacing
+          }
         />
+      )}
 
-        {loadingPractices ? (
+      <SectionHeading
+        title="What supported you?"
+        subtitle="Choose any practices that were part of your day."
+      />
+
+      {loadingPractices ? (
+        <View
+          style={
+            styles.loadingPractices
+          }
+        >
           <ActivityIndicator
             color={
               colors.lavender
             }
           />
-        ) : (
-          <View
-            style={
-              styles.practiceWrap
-            }
-          >
-            {practices.map(
-              (practice) => {
-                const selected =
-                  selectedPracticeIds.includes(
-                    practice.id
-                  );
+        </View>
+      ) : (
+        <View
+          style={
+            styles.practiceWrap
+          }
+        >
+          {practices.map(
+            (practice) => {
+              const selected =
+                selectedPracticeIds.includes(
+                  practice.id
+                );
 
-                return (
-                  <Pressable
-                    key={
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{
+                    selected,
+                  }}
+                  accessibilityLabel={
+                    practice.name
+                  }
+                  key={
+                    practice.id
+                  }
+                  disabled={saving}
+                  style={[
+                    styles.practiceChip,
+
+                    selected &&
+                      styles.practiceSelected,
+                  ]}
+                  onPress={() =>
+                    togglePractice(
                       practice.id
-                    }
-                    disabled={
-                      saving
-                    }
+                    )
+                  }
+                >
+                  <Text
                     style={[
-                      styles.practiceChip,
+                      styles.practiceText,
 
                       selected &&
-                        styles.practiceSelected,
+                        styles.practiceTextSelected,
                     ]}
-                    onPress={() =>
-                      togglePractice(
-                        practice.id
-                      )
-                    }
                   >
-                    <Text
-                      style={[
-                        styles.practiceText,
+                    ✦{" "}
+                    {practice.name}
+                  </Text>
+                </Pressable>
+              );
+            }
+          )}
+        </View>
+      )}
 
-                        selected &&
-                          styles.practiceTextSelected,
-                      ]}
-                    >
-                      ✦{" "}
-                      {
-                        practice.name
-                      }
-                    </Text>
-                  </Pressable>
-                );
-              }
-            )}
-          </View>
-        )}
-
-        {formError ? (
-          <FeedbackMessage
-            type="error"
-            message={formError}
-          />
-        ) : null}
-
-        <SoulButton
-          title="Keep this reflection"
-          loading={saving}
-          disabled={saving}
-          onPress={saveEntry}
+      {formError ? (
+        <FeedbackMessage
+          type="error"
+          message={formError}
         />
-      </ScrollView>
-    </SafeAreaView>
+      ) : null}
+
+      <SoulButton
+        title="Keep this reflection"
+        loading={saving}
+        disabled={saving}
+        onPress={saveEntry}
+      />
+    </SoulScreen>
   );
 }
 
 const styles =
   StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor:
-        colors.background,
-    },
-
     content: {
-      width: "100%",
       maxWidth: 680,
-      alignSelf: "center",
-      paddingHorizontal: 24,
-      paddingTop: 24,
-      paddingBottom: 65,
     },
 
     back: {
       alignSelf:
         "flex-start",
-      paddingVertical: 8,
+
+      paddingVertical: 10,
     },
 
     backText: {
       color:
         colors.lavender,
+
       fontFamily:
         fonts.bodySemiBold,
+
       fontSize: 12,
     },
 
     symbol: {
       color: colors.gold,
+
       fontSize: 20,
+
       marginTop: 20,
     },
 
     title: {
       color: colors.text,
+
       fontFamily:
         fonts.display,
+
       fontSize: 39,
+
+      lineHeight: 43,
+
       marginTop: 6,
     },
 
     subtitle: {
       color:
         colors.textMuted,
+
       fontFamily:
         fonts.displayItalic,
+
       fontSize: 17,
+
       lineHeight: 23,
+
       marginTop: 3,
+
       marginBottom: 27,
     },
 
     form: {
       gap: 17,
+
       marginBottom: 30,
     },
 
     largeInput: {
-      minHeight: 180,
-      paddingTop: 15,
+      minHeight: 190,
     },
 
     chipRow: {
       gap: 8,
+
       paddingBottom: 29,
     },
 
     chip: {
+      minHeight: 42,
+
+      justifyContent:
+        "center",
+
       backgroundColor:
         colors.surface,
+
       borderWidth: 1,
+
       borderColor:
         colors.border,
+
       borderRadius:
         radius.pill,
+
       paddingHorizontal: 14,
+
       paddingVertical: 9,
     },
 
     chipSelected: {
       backgroundColor:
         colors.purpleDark,
+
       borderColor:
         colors.lavenderStrong,
     },
@@ -701,38 +731,50 @@ const styles =
     chipText: {
       color:
         colors.textMuted,
+
       fontFamily:
         fonts.bodyMedium,
+
       fontSize: 11,
     },
 
     chipTextSelected: {
-      color: colors.white,
+      color:
+        colors.white,
     },
 
     energyRow: {
       flexDirection: "row",
+
       gap: 9,
     },
 
     energyButton: {
       flex: 1,
-      minHeight: 48,
+
+      minHeight: 50,
+
       backgroundColor:
         colors.surface,
+
       borderWidth: 1,
+
       borderColor:
         colors.border,
+
       borderRadius:
         radius.md,
+
       justifyContent:
         "center",
+
       alignItems: "center",
     },
 
     energySelected: {
       backgroundColor:
         colors.purpleDark,
+
       borderColor:
         colors.lavenderStrong,
     },
@@ -740,46 +782,78 @@ const styles =
     energyText: {
       color:
         colors.textMuted,
+
       fontFamily:
         fonts.display,
+
       fontSize: 21,
     },
 
     energyTextSelected: {
-      color: colors.white,
+      color:
+        colors.white,
     },
 
     fieldError: {
       color:
         colors.errorText,
-      fontFamily: fonts.body,
+
+      fontFamily:
+        fonts.body,
+
       fontSize: 11,
+
       marginTop: 7,
+
       marginBottom: 24,
+    },
+
+    energySpacing: {
+      height: 30,
+    },
+
+    loadingPractices: {
+      paddingVertical: 20,
+
+      alignItems: "center",
     },
 
     practiceWrap: {
       flexDirection: "row",
+
       flexWrap: "wrap",
+
       gap: 8,
+
       marginBottom: 28,
     },
 
     practiceChip: {
+      minHeight: 40,
+
+      justifyContent:
+        "center",
+
       backgroundColor:
         colors.surface,
+
       borderWidth: 1,
+
       borderColor:
         colors.border,
+
       borderRadius:
         radius.pill,
+
       paddingHorizontal: 13,
+
       paddingVertical: 9,
     },
 
     practiceSelected: {
       backgroundColor:
         colors.surfaceRaised,
+
       borderColor:
         colors.lavenderStrong,
     },
@@ -787,7 +861,10 @@ const styles =
     practiceText: {
       color:
         colors.textMuted,
-      fontFamily: fonts.body,
+
+      fontFamily:
+        fonts.body,
+
       fontSize: 11,
     },
 
@@ -795,4 +872,4 @@ const styles =
       color:
         colors.lavender,
     },
-  }); 
+  });

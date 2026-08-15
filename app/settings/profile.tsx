@@ -10,8 +10,6 @@ import {
 import {
   ActivityIndicator,
   Pressable,
-  SafeAreaView,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -19,6 +17,7 @@ import {
 
 import SoulButton from "../../src/components/SoulButton";
 import SoulInput from "../../src/components/SoulInput";
+import SoulScreen from "../../src/components/SoulScreen";
 import FeedbackMessage from "../../src/components/FeedbackMessage";
 
 import {
@@ -96,6 +95,7 @@ export default function ProfileSettingsScreen() {
     {
       title:
         "Leave your profile changes?",
+
       message:
         "Your new display name hasn't been saved yet.",
     }
@@ -276,282 +276,318 @@ export default function ProfileSettingsScreen() {
   }
 
   return (
-    <SafeAreaView
-      style={styles.container}
+    <SoulScreen
+      keyboard
+      contentStyle={
+        styles.content
+      }
     >
-      <ScrollView
-        contentContainerStyle={
-          styles.content
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Back to settings"
+        style={styles.back}
+        disabled={saving}
+        onPress={() =>
+          router.back()
         }
-        keyboardShouldPersistTaps="handled"
       >
-        <Pressable
-          style={styles.back}
-          disabled={saving}
-          onPress={() =>
-            router.back()
+        <Text
+          style={styles.backText}
+        >
+          ‹ Settings
+        </Text>
+      </Pressable>
+
+      <Text
+        style={styles.title}
+      >
+        Profile
+      </Text>
+
+      <Text
+        style={styles.subtitle}
+      >
+        A small piece of you that
+        SoulPath carries from page
+        to page.
+      </Text>
+
+      <View
+        accessible
+        accessibilityLabel="SoulPath profile symbol"
+        style={styles.avatar}
+      >
+        <Text
+          style={
+            styles.avatarText
           }
         >
-          <Text
-            style={styles.backText}
-          >
-            ‹ Settings
-          </Text>
-        </Pressable>
-
-        <Text
-          style={styles.title}
-        >
-          Profile
+          ☾
         </Text>
+      </View>
 
-        <Text
-          style={styles.subtitle}
-        >
-          A small piece of you that
-          SoulPath carries from page
-          to page.
-        </Text>
-
+      {loading ? (
         <View
-          style={styles.avatar}
+          style={
+            styles.loadingArea
+          }
         >
-          <Text
-            style={
-              styles.avatarText
-            }
-          >
-            ☾
-          </Text>
-        </View>
-
-        {loading ? (
           <ActivityIndicator
             color={
               colors.lavender
             }
           />
-        ) : (
-          <>
-            <SoulInput
-              label="What should we call you?"
-              value={displayName}
-              onChangeText={(
+        </View>
+      ) : (
+        <View
+          style={styles.form}
+        >
+          <SoulInput
+            label="What should we call you?"
+            value={displayName}
+            onChangeText={(
+              value
+            ) => {
+              setDisplayName(
                 value
-              ) => {
-                setDisplayName(
-                  value
-                );
+              );
 
-                setNameError("");
+              setNameError("");
 
-                setFormError("");
+              setFormError("");
 
-                setSuccessMessage(
-                  ""
-                );
-              }}
-              placeholder="Display name"
-              maxLength={60}
-              autoCapitalize="words"
-              editable={!saving}
-              error={nameError}
+              setSuccessMessage(
+                ""
+              );
+            }}
+            placeholder="Display name"
+            maxLength={60}
+            autoCapitalize="words"
+            autoComplete="name"
+            textContentType="name"
+            editable={!saving}
+            error={nameError}
+          />
+
+          <View
+            style={
+              styles.emailArea
+            }
+          >
+            <Text
+              style={styles.label}
+            >
+              Email
+            </Text>
+
+            <View
+              accessible
+              accessibilityLabel={`Email ${email}`}
+              style={
+                styles.readOnly
+              }
+            >
+              <Text
+                style={
+                  styles.email
+                }
+              >
+                {email}
+              </Text>
+            </View>
+
+            <Text
+              style={styles.hint}
+            >
+              Email changes aren't
+              part of this version
+              of SoulPath yet.
+            </Text>
+          </View>
+
+          {formError ? (
+            <FeedbackMessage
+              type="error"
+              message={
+                formError
+              }
             />
+          ) : null}
 
-            <View
-              style={
-                styles.emailArea
+          {successMessage ? (
+            <FeedbackMessage
+              message={
+                successMessage
               }
-            >
-              <Text
-                style={
-                  styles.label
-                }
-              >
-                Email
-              </Text>
+            />
+          ) : null}
 
-              <View
-                style={
-                  styles.readOnly
-                }
-              >
-                <Text
-                  style={
-                    styles.email
-                  }
-                >
-                  {email}
-                </Text>
-              </View>
-
-              <Text
-                style={
-                  styles.hint
-                }
-              >
-                Email changes aren't
-                part of this version
-                of SoulPath yet.
-              </Text>
-            </View>
-
-            {formError ? (
-              <FeedbackMessage
-                type="error"
-                message={
-                  formError
-                }
-              />
-            ) : null}
-
-            {successMessage ? (
-              <FeedbackMessage
-                message={
-                  successMessage
-                }
-              />
-            ) : null}
-
-            <View
-              style={
-                styles.action
-              }
-            >
-              <SoulButton
-                title={
-                  dirty
-                    ? "Save changes"
-                    : "Everything is saved"
-                }
-                loading={saving}
-                disabled={
-                  saving ||
-                  !dirty
-                }
-                onPress={
-                  saveProfile
-                }
-              />
-            </View>
-          </>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+          <SoulButton
+            title={
+              dirty
+                ? "Save changes"
+                : "Everything is saved"
+            }
+            loading={saving}
+            disabled={
+              saving ||
+              !dirty
+            }
+            onPress={
+              saveProfile
+            }
+          />
+        </View>
+      )}
+    </SoulScreen>
   );
 }
 
 const styles =
   StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor:
-        colors.background,
-    },
-
     content: {
-      width: "100%",
       maxWidth: 650,
-      alignSelf: "center",
-      paddingHorizontal: 24,
-      paddingTop: 24,
-      paddingBottom: 60,
-      gap: 15,
     },
 
     back: {
       alignSelf:
         "flex-start",
-      paddingVertical: 8,
+
+      paddingVertical: 10,
     },
 
     backText: {
       color:
         colors.lavender,
+
       fontFamily:
         fonts.bodySemiBold,
+
       fontSize: 12,
     },
 
     title: {
       color: colors.text,
+
       fontFamily:
         fonts.display,
+
       fontSize: 39,
+
       marginTop: 5,
     },
 
     subtitle: {
       color:
         colors.textMuted,
+
       fontFamily:
         fonts.displayItalic,
+
       fontSize: 17,
+
       lineHeight: 23,
+
+      marginTop: 3,
     },
 
     avatar: {
       alignSelf: "center",
+
       width: 82,
+
       height: 82,
+
       borderRadius: 41,
+
       backgroundColor:
         colors.surfaceRaised,
+
       justifyContent:
         "center",
-      alignItems: "center",
-      marginVertical: 19,
+
+      alignItems:
+        "center",
+
+      marginVertical: 24,
+
       borderWidth: 1,
+
       borderColor:
         colors.border,
     },
 
     avatarText: {
       color: colors.gold,
+
       fontSize: 38,
     },
 
+    loadingArea: {
+      paddingVertical: 30,
+    },
+
+    form: {
+      gap: 17,
+    },
+
     emailArea: {
-      marginTop: 8,
+      marginTop: 3,
     },
 
     label: {
       color:
         colors.textSoft,
+
       fontFamily:
         fonts.bodySemiBold,
+
       fontSize: 13,
+
       marginBottom: 8,
     },
 
     readOnly: {
+      minHeight: 50,
+
+      justifyContent:
+        "center",
+
       backgroundColor:
         colors.backgroundSoft,
+
       borderWidth: 1,
+
       borderColor:
         colors.border,
+
       borderRadius:
         radius.md,
-      padding: 15,
+
+      paddingHorizontal: 15,
     },
 
     email: {
       color:
         colors.textMuted,
+
       fontFamily:
         fonts.body,
+
       fontSize: 14,
     },
 
     hint: {
-      color: colors.textDim,
+      color:
+        colors.textDim,
+
       fontFamily:
         fonts.body,
-      fontSize: 10,
-      marginTop: 6,
-    },
 
-    action: {
-      marginTop: 8,
+      fontSize: 10,
+
+      lineHeight: 16,
+
+      marginTop: 6,
     },
   }); 

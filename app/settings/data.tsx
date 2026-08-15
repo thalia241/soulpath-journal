@@ -1,53 +1,54 @@
-import { router } from "expo-router";
+import {
+  router,
+} from "expo-router";
 
 import {
   useState,
 } from "react";
 
 import {
-  ActivityIndicator,
   Alert,
   Platform,
   Pressable,
-  SafeAreaView,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 
+import SoulButton from "../../src/components/SoulButton";
 import SoulCard from "../../src/components/SoulCard";
+import SoulScreen from "../../src/components/SoulScreen";
 import FeedbackMessage from "../../src/components/FeedbackMessage";
 
 import {
   colors,
   fonts,
-  radius,
 } from "../../src/theme";
-
-import {
-  supabase,
-} from "../../src/lib/supabase";
 
 import {
   exportSoulPathJson,
   exportSoulPathPdf,
   exportSoulPathText,
+  SoulPathExportFormat,
+  SoulPathExportSummary,
 } from "../../src/services/exportService";
 
-type ExportType =
-  | "pdf"
-  | "text"
-  | "json"
+import {
+  supabase,
+} from "../../src/lib/supabase";
+
+type ExportState =
+  | SoulPathExportFormat
   | null;
 
 export default function DataSettingsScreen() {
   const [
     exporting,
     setExporting,
-  ] = useState<ExportType>(
-    null
-  );
+  ] =
+    useState<ExportState>(
+      null
+    );
 
   const [
     deleting,
@@ -55,79 +56,119 @@ export default function DataSettingsScreen() {
   ] = useState(false);
 
   const [
-    message,
-    setMessage,
-  ] = useState("");
-
-  const [
     errorMessage,
     setErrorMessage,
   ] = useState("");
 
-  async function handleExport(
-    type: Exclude<
-      ExportType,
-      null
-    >
+  const [
+    successMessage,
+    setSuccessMessage,
+  ] = useState("");
+
+  function formatSuccess(
+    format:
+      SoulPathExportFormat,
+    summary:
+      SoulPathExportSummary
   ) {
+    const formatLabel =
+      format.toUpperCase();
+
+    return `${formatLabel} export prepared with ${summary.journalEntries} reflections and ${summary.experiences} dreams/signs.`;
+  }
+
+  async function runExport(
+    format:
+      SoulPathExportFormat
+  ) {
+    if (
+      exporting ||
+      deleting
+    ) {
+      return;
+    }
+
+    setErrorMessage("");
+    setSuccessMessage("");
+
     try {
-      setExporting(type);
-      setMessage("");
-      setErrorMessage("");
+      setExporting(
+        format
+      );
 
-      if (type === "pdf") {
-        await exportSoulPathPdf();
+      let summary:
+        SoulPathExportSummary;
+
+      if (
+        format === "pdf"
+      ) {
+        summary =
+          await exportSoulPathPdf();
+      } else if (
+        format === "txt"
+      ) {
+        summary =
+          await exportSoulPathText();
+      } else {
+        summary =
+          await exportSoulPathJson();
       }
 
-      if (type === "text") {
-        await exportSoulPathText();
-      }
-
-      if (type === "json") {
-        await exportSoulPathJson();
-      }
-
-      setMessage(
-        type === "pdf"
-          ? "Your PDF is ready."
-          : type === "text"
-            ? "Your text copy is ready."
-            : "Your JSON copy is ready."
+      setSuccessMessage(
+        formatSuccess(
+          format,
+          summary
+        )
       );
     } catch (error) {
+      console.error(
+        `Unable to export SoulPath ${format}:`,
+        error
+      );
+
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Unable to export your data."
+          : "SoulPath couldn't prepare your export."
       );
     } finally {
-      setExporting(null);
+      setExporting(
+        null
+      );
     }
   }
 
-  function requestDelete() {
+  function confirmDeleteContent() {
+    if (
+      exporting ||
+      deleting
+    ) {
+      return;
+    }
+
     const message =
-      "This permanently removes your reflections, practice history, dreams, and synchronicities. This cannot be undone.";
+      "This permanently removes your journal reflections, dreams, signs, and journal-practice links. Your login and profile will remain.";
 
     if (
-      Platform.OS === "web"
+      Platform.OS ===
+      "web"
     ) {
       const confirmed =
         typeof window !==
           "undefined" &&
         window.confirm(
-          `Delete all SoulPath content?\n\n${message}`
+          `Let your recorded path go?\n\n${message}`
         );
 
       if (confirmed) {
-        void deleteAllData();
+        void deleteAllContent();
       }
 
       return;
     }
 
     Alert.alert(
-      "Delete all SoulPath content?",
+      "Let your recorded path go?",
       message,
       [
         {
@@ -135,69 +176,126 @@ export default function DataSettingsScreen() {
           style: "cancel",
         },
         {
-          text: "Delete Everything",
-          style: "destructive",
+          text:
+            "Delete My Content",
+
+          style:
+            "destructive",
+
           onPress: () =>
-            void deleteAllData(),
+            void deleteAllContent(),
         },
       ]
     );
   }
 
-  async function deleteAllData() {
+  async function deleteAllContent() {
+    if (
+      deleting ||
+      exporting
+    ) {
+      return;
+    }
+
+    setErrorMessage("");
+    setSuccessMessage("");
+
     try {
       setDeleting(true);
-      setMessage("");
-      setErrorMessage("");
 
       const {
-        data: { user },
-        error,
+        data: {
+          user,
+        },
+        error:
+          userError,
       } =
         await supabase.auth.getUser();
 
-      if (error || !user) {
+      if (
+        userError ||
+        !user
+      ) {
         throw new Error(
-          "Your session could not be found."
+          "Your SoulPath session has ended. Please sign in again."
         );
       }
 
+      /*
+       * Delete the child relationship first so the
+       * operation works even if cascading deletes are
+       * not configured on this database.
+       */
       const {
-        error: experienceError,
+        error:
+          entryPracticeError,
       } = await supabase
-        .from("experiences")
+        .from(
+          "entry_practices"
+        )
         .delete()
         .eq(
           "user_id",
           user.id
         );
 
-      if (experienceError) {
+      if (
+        entryPracticeError
+      ) {
+        throw entryPracticeError;
+      }
+
+      const {
+        error:
+          experienceError,
+      } = await supabase
+        .from(
+          "experiences"
+        )
+        .delete()
+        .eq(
+          "user_id",
+          user.id
+        );
+
+      if (
+        experienceError
+      ) {
         throw experienceError;
       }
 
       const {
-        error: journalError,
+        error:
+          journalError,
       } = await supabase
-        .from("journal_entries")
+        .from(
+          "journal_entries"
+        )
         .delete()
         .eq(
           "user_id",
           user.id
         );
 
-      if (journalError) {
+      if (
+        journalError
+      ) {
         throw journalError;
       }
 
-      setMessage(
-        "Your SoulPath content has been cleared."
+      setSuccessMessage(
+        "Your journal, dreams, signs, and recorded practice links have been removed. Your SoulPath account remains active."
       );
     } catch (error) {
+      console.error(
+        "Unable to delete SoulPath content:",
+        error
+      );
+
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Unable to clear your data."
+          : "SoulPath couldn't remove all of your content."
       );
     } finally {
       setDeleting(false);
@@ -205,492 +303,681 @@ export default function DataSettingsScreen() {
   }
 
   return (
-    <SafeAreaView
-      style={styles.container}
+    <SoulScreen
+      contentStyle={
+        styles.content
+      }
     >
-      <ScrollView
-        contentContainerStyle={
-          styles.content
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Back to settings"
+        style={styles.back}
+        disabled={
+          Boolean(
+            exporting
+          ) ||
+          deleting
+        }
+        onPress={() =>
+          router.back()
         }
       >
-        <Pressable
-          style={styles.back}
-          onPress={() =>
-            router.back()
+        <Text
+          style={styles.backText}
+        >
+          ‹ Settings
+        </Text>
+      </Pressable>
+
+      <Text
+        style={styles.symbol}
+      >
+        ✦
+      </Text>
+
+      <Text
+        style={styles.title}
+      >
+        Your data
+      </Text>
+
+      <Text
+        style={styles.subtitle}
+      >
+        What you record here should
+        never feel trapped here.
+      </Text>
+
+      <SoulCard
+        style={styles.introCard}
+      >
+        <Text
+          style={
+            styles.cardTitle
           }
         >
-          <Text
-            style={styles.backText}
-          >
-            ‹ Settings
-          </Text>
-        </Pressable>
-
-        <Text
-          style={styles.title}
-        >
-          Your Data
-        </Text>
-
-        <Text
-          style={styles.subtitle}
-        >
-          What you write here should
-          never feel trapped here.
+          Take your SoulPath with
+          you
         </Text>
 
         <Text
           style={
-            styles.sectionTitle
+            styles.cardText
           }
         >
-          Take your path with you
+          Export your reflections,
+          dreams, signs, mood and
+          energy records, and linked
+          spiritual practices in a
+          format that works for what
+          you need next.
         </Text>
+      </SoulCard>
 
-        <SoulCard
-          style={{ padding: 0 }}
+      <Text
+        style={
+          styles.sectionTitle
+        }
+      >
+        Choose a format
+      </Text>
+
+      <ExportCard
+        symbol="◫"
+        title="PDF"
+        description="A polished, readable copy of your SoulPath for printing, archiving, or keeping as a personal journal."
+        note={
+          Platform.OS ===
+          "web"
+            ? "Your browser will open its print dialog. Choose Save as PDF."
+            : "Your device will create a PDF and open the share sheet."
+        }
+      >
+        <SoulButton
+          title="Export as PDF"
+          loading={
+            exporting ===
+            "pdf"
+          }
+          disabled={
+            exporting !==
+              null ||
+            deleting
+          }
+          onPress={() =>
+            void runExport(
+              "pdf"
+            )
+          }
+        />
+      </ExportCard>
+
+      <ExportCard
+        symbol="≡"
+        title="Plain text"
+        description="A simple human-readable copy that can be opened by almost any text editor."
+        note="Best when you want a lightweight backup or want to move your writing somewhere else."
+      >
+        <SoulButton
+          title="Export as text"
+          variant="secondary"
+          loading={
+            exporting ===
+            "txt"
+          }
+          disabled={
+            exporting !==
+              null ||
+            deleting
+          }
+          onPress={() =>
+            void runExport(
+              "txt"
+            )
+          }
+        />
+      </ExportCard>
+
+      <ExportCard
+        symbol="{ }"
+        title="JSON"
+        description="A structured copy of your SoulPath data designed for portability, backup, and future import tools."
+        note="Includes export schema version 1. It does not include your password, session token, or Supabase authentication secrets."
+      >
+        <SoulButton
+          title="Export structured data"
+          variant="secondary"
+          loading={
+            exporting ===
+            "json"
+          }
+          disabled={
+            exporting !==
+              null ||
+            deleting
+          }
+          onPress={() =>
+            void runExport(
+              "json"
+            )
+          }
+        />
+      </ExportCard>
+
+      {errorMessage ? (
+        <View
+          style={
+            styles.feedbackArea
+          }
         >
-          <ExportRow
-            symbol="☾"
-            title="PDF Journal"
-            subtitle="A beautifully formatted copy for reading"
-            loading={
-              exporting === "pdf"
-            }
-            disabled={
-              exporting !== null ||
-              deleting
-            }
-            onPress={() =>
-              handleExport("pdf")
-            }
-          />
-
-          <View
-            style={styles.divider}
-          />
-
-          <ExportRow
-            symbol="✎"
-            title="Plain Text"
-            subtitle="Simple and readable anywhere"
-            loading={
-              exporting === "text"
-            }
-            disabled={
-              exporting !== null ||
-              deleting
-            }
-            onPress={() =>
-              handleExport("text")
-            }
-          />
-
-          <View
-            style={styles.divider}
-          />
-
-          <ExportRow
-            symbol="✦"
-            title="JSON Data"
-            subtitle="A structured portable copy"
-            loading={
-              exporting === "json"
-            }
-            disabled={
-              exporting !== null ||
-              deleting
-            }
-            onPress={() =>
-              handleExport("json")
-            }
-          />
-        </SoulCard>
-
-        {message ? (
-          <FeedbackMessage
-            message={message}
-          />
-        ) : null}
-
-        {errorMessage ? (
           <FeedbackMessage
             type="error"
             message={
               errorMessage
             }
           />
-        ) : null}
+        </View>
+      ) : null}
 
-        <SoulCard
+      {successMessage ? (
+        <View
           style={
-            styles.privacyCard
+            styles.feedbackArea
           }
         >
-          <Text
-            style={
-              styles.privacySymbol
+          <FeedbackMessage
+            message={
+              successMessage
             }
-          >
-            ◌
-          </Text>
+          />
+        </View>
+      ) : null}
 
-          <Text
-            style={
-              styles.privacyTitle
-            }
-          >
-            Keep exported pages
-            somewhere safe.
-          </Text>
-
-          <Text
-            style={
-              styles.privacyText
-            }
-          >
-            An export can contain
-            thoughts, moods, dreams,
-            spiritual practices, and
-            personal reflections that
-            you may not want others to
-            read.
-          </Text>
-        </SoulCard>
+      <SoulCard
+        style={
+          styles.privacyCard
+        }
+      >
+        <Text
+          style={
+            styles.privacySymbol
+          }
+        >
+          ☾
+        </Text>
 
         <Text
           style={
-            styles.sectionTitle
+            styles.privacyTitle
           }
         >
-          Letting go
+          What's included?
         </Text>
 
-        <View
-          style={styles.dangerCard}
+        <Text
+          style={
+            styles.cardText
+          }
         >
-          <Text
-            style={
-              styles.dangerSymbol
-            }
-          >
-            ☾
-          </Text>
+          Your export includes your
+          display name and email,
+          journal entries, mood and
+          energy values, associated
+          practices, dreams,
+          synchronicities, personal
+          reflections, and recorded
+          significance levels.
+        </Text>
 
-          <Text
-            style={
-              styles.dangerTitle
-            }
-          >
-            Clear your SoulPath
-            content
-          </Text>
+        <Text
+          style={
+            styles.privacyNote
+          }
+        >
+          Passwords, refresh tokens,
+          access tokens, database
+          credentials, and application
+          secrets are never included.
+        </Text>
+      </SoulCard>
 
-          <Text
-            style={
-              styles.dangerText
-            }
-          >
-            This permanently removes
-            journal entries, associated
-            practice history, dreams,
-            and synchronicities.
-          </Text>
+      <View
+        style={styles.divider}
+      />
 
-          <Text
-            style={
-              styles.dangerNote
-            }
-          >
-            Your login and profile will
-            remain.
-          </Text>
-
-          <Pressable
-            style={[
-              styles.deleteButton,
-              deleting &&
-                styles.disabled,
-            ]}
-            disabled={
-              deleting ||
-              exporting !== null
-            }
-            onPress={
-              requestDelete
-            }
-          >
-            {deleting ? (
-              <ActivityIndicator
-                color={
-                  colors.errorText
-                }
-              />
-            ) : (
-              <Text
-                style={
-                  styles.deleteText
-                }
-              >
-                Delete all content
-              </Text>
-            )}
-          </Pressable>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
-
-function ExportRow({
-  symbol,
-  title,
-  subtitle,
-  loading,
-  disabled,
-  onPress,
-}: {
-  symbol: string;
-  title: string;
-  subtitle: string;
-  loading: boolean;
-  disabled: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      style={[
-        styles.exportRow,
-        disabled &&
-          styles.disabled,
-      ]}
-      disabled={disabled}
-      onPress={onPress}
-    >
       <Text
         style={
-          styles.exportSymbol
+          styles.dangerEyebrow
         }
       >
-        {symbol}
+        LETTING GO
+      </Text>
+
+      <Text
+        style={
+          styles.dangerTitle
+        }
+      >
+        Delete your recorded content
+      </Text>
+
+      <Text
+        style={
+          styles.dangerText
+        }
+      >
+        This removes your journal
+        reflections, dreams, signs,
+        and journal-practice links
+        while keeping your SoulPath
+        login and profile.
       </Text>
 
       <View
-        style={{ flex: 1 }}
+        style={
+          styles.dangerAction
+        }
+      >
+        <SoulButton
+          title="Delete all of my content"
+          variant="danger"
+          loading={deleting}
+          disabled={
+            deleting ||
+            exporting !==
+              null
+          }
+          onPress={
+            confirmDeleteContent
+          }
+        />
+      </View>
+
+      <Text
+        style={
+          styles.deleteNote
+        }
+      >
+        This action cannot be undone.
+        Export a backup first if you
+        may want these records later.
+      </Text>
+    </SoulScreen>
+  );
+}
+
+function ExportCard({
+  symbol,
+  title,
+  description,
+  note,
+  children,
+}: {
+  symbol: string;
+
+  title: string;
+
+  description: string;
+
+  note: string;
+
+  children:
+    React.ReactNode;
+}) {
+  return (
+    <SoulCard
+      style={
+        styles.exportCard
+      }
+    >
+      <View
+        style={
+          styles.exportHeader
+        }
       >
         <Text
           style={
-            styles.exportTitle
+            styles.exportSymbol
           }
         >
-          {title}
+          {symbol}
         </Text>
 
-        <Text
+        <View
           style={
-            styles.exportSubtitle
+            styles.exportHeaderText
           }
         >
-          {subtitle}
-        </Text>
+          <Text
+            style={
+              styles.exportTitle
+            }
+          >
+            {title}
+          </Text>
+
+          <Text
+            style={
+              styles.exportDescription
+            }
+          >
+            {description}
+          </Text>
+        </View>
       </View>
 
-      {loading ? (
-        <ActivityIndicator
-          color={
-            colors.lavender
-          }
-        />
-      ) : (
-        <Text
-          style={styles.chevron}
-        >
-          ›
-        </Text>
-      )}
-    </Pressable>
+      <Text
+        style={
+          styles.exportNote
+        }
+      >
+        {note}
+      </Text>
+
+      <View
+        style={
+          styles.exportAction
+        }
+      >
+        {children}
+      </View>
+    </SoulCard>
   );
 }
 
 const styles =
   StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor:
-        colors.background,
-    },
-
     content: {
-      width: "100%",
-      maxWidth: 650,
-      alignSelf: "center",
-      paddingHorizontal: 24,
-      paddingTop: 24,
-      paddingBottom: 60,
-      gap: 15,
+      maxWidth: 680,
     },
 
     back: {
-      alignSelf: "flex-start",
-      paddingVertical: 8,
+      alignSelf:
+        "flex-start",
+
+      paddingVertical: 10,
     },
 
     backText: {
-      color: colors.lavender,
+      color:
+        colors.lavender,
+
       fontFamily:
         fonts.bodySemiBold,
+
       fontSize: 12,
     },
 
+    symbol: {
+      color:
+        colors.gold,
+
+      fontSize: 22,
+
+      marginTop: 20,
+    },
+
     title: {
-      color: colors.text,
-      fontFamily: fonts.display,
+      color:
+        colors.text,
+
+      fontFamily:
+        fonts.display,
+
       fontSize: 39,
-      marginTop: 5,
+
+      lineHeight: 43,
+
+      marginTop: 7,
     },
 
     subtitle: {
       color:
         colors.textMuted,
+
       fontFamily:
         fonts.displayItalic,
+
       fontSize: 17,
+
       lineHeight: 23,
-      marginBottom: 12,
+
+      marginTop: 3,
+
+      marginBottom: 27,
+    },
+
+    introCard: {
+      backgroundColor:
+        colors.surfaceRaised,
+
+      borderColor:
+        colors.borderStrong,
+
+      marginBottom: 30,
+    },
+
+    cardTitle: {
+      color:
+        colors.text,
+
+      fontFamily:
+        fonts.display,
+
+      fontSize: 23,
+
+      lineHeight: 27,
+    },
+
+    cardText: {
+      color:
+        colors.textMuted,
+
+      fontFamily:
+        fonts.body,
+
+      fontSize: 12,
+
+      lineHeight: 19,
+
+      marginTop: 7,
     },
 
     sectionTitle: {
-      color: colors.textSoft,
-      fontFamily: fonts.display,
-      fontSize: 21,
-      marginTop: 10,
+      color:
+        colors.textSoft,
+
+      fontFamily:
+        fonts.display,
+
+      fontSize: 22,
+
+      marginBottom: 12,
     },
 
-    exportRow: {
-      minHeight: 76,
-      flexDirection: "row",
-      alignItems: "center",
-      paddingHorizontal: 18,
-      paddingVertical: 14,
+    exportCard: {
+      marginBottom: 12,
+    },
+
+    exportHeader: {
+      flexDirection:
+        "row",
+
+      gap: 13,
     },
 
     exportSymbol: {
-      color: colors.gold,
-      width: 30,
-      fontSize: 16,
+      width: 32,
+
+      color:
+        colors.gold,
+
+      fontFamily:
+        fonts.display,
+
+      fontSize: 23,
+    },
+
+    exportHeaderText: {
+      flex: 1,
     },
 
     exportTitle: {
-      color: colors.textSoft,
+      color:
+        colors.text,
+
       fontFamily:
-        fonts.bodySemiBold,
-      fontSize: 13,
+        fonts.display,
+
+      fontSize: 22,
     },
 
-    exportSubtitle: {
-      color: colors.textDim,
-      fontFamily: fonts.body,
+    exportDescription: {
+      color:
+        colors.textMuted,
+
+      fontFamily:
+        fonts.body,
+
+      fontSize: 11,
+
+      lineHeight: 18,
+
+      marginTop: 4,
+    },
+
+    exportNote: {
+      color:
+        colors.textDim,
+
+      fontFamily:
+        fonts.body,
+
       fontSize: 10,
-      marginTop: 3,
+
+      lineHeight: 16,
+
+      marginTop: 13,
     },
 
-    chevron: {
-      color: colors.lavender,
-      fontSize: 23,
+    exportAction: {
+      marginTop: 17,
+    },
+
+    feedbackArea: {
+      marginTop: 4,
+
+      marginBottom: 12,
+    },
+
+    privacyCard: {
+      marginTop: 16,
+
+      backgroundColor:
+        "#18122B",
+
+      borderColor:
+        colors.borderStrong,
+    },
+
+    privacySymbol: {
+      color:
+        colors.gold,
+
+      fontSize: 18,
+    },
+
+    privacyTitle: {
+      color:
+        colors.text,
+
+      fontFamily:
+        fonts.display,
+
+      fontSize: 22,
+
+      marginTop: 6,
+    },
+
+    privacyNote: {
+      color:
+        colors.goldSoft,
+
+      fontFamily:
+        fonts.body,
+
+      fontSize: 10,
+
+      lineHeight: 16,
+
+      marginTop: 13,
     },
 
     divider: {
       height: 1,
+
       backgroundColor:
         colors.border,
-      marginLeft: 48,
+
+      marginVertical: 34,
     },
 
-    disabled: {
-      opacity: 0.5,
-    },
-
-    privacyCard: {
-      marginTop: 3,
-    },
-
-    privacySymbol: {
-      color: colors.gold,
-      fontSize: 17,
-    },
-
-    privacyTitle: {
-      color: colors.text,
-      fontFamily:
-        fonts.displayItalic,
-      fontSize: 21,
-      marginTop: 6,
-    },
-
-    privacyText: {
+    dangerEyebrow: {
       color:
-        colors.textMuted,
-      fontFamily: fonts.body,
-      fontSize: 11,
-      lineHeight: 18,
-      marginTop: 6,
-    },
+        colors.danger,
 
-    dangerCard: {
-      backgroundColor:
-        colors.errorBackground,
-      borderWidth: 1,
-      borderColor:
-        colors.errorBorder,
-      borderRadius:
-        radius.xl,
-      padding: 21,
-    },
+      fontFamily:
+        fonts.bodyBold,
 
-    dangerSymbol: {
-      color: colors.danger,
-      fontSize: 18,
+      fontSize: 9,
+
+      letterSpacing: 1.2,
     },
 
     dangerTitle: {
       color:
-        colors.errorText,
-      fontFamily: fonts.display,
-      fontSize: 24,
-      marginTop: 7,
-    },
+        colors.text,
 
-    dangerText: {
-      color: "#B58D99",
-      fontFamily: fonts.body,
-      fontSize: 11,
-      lineHeight: 18,
+      fontFamily:
+        fonts.display,
+
+      fontSize: 24,
+
       marginTop: 6,
     },
 
-    dangerNote: {
-      color: "#80646D",
-      fontFamily: fonts.body,
-      fontSize: 10,
+    dangerText: {
+      color:
+        colors.textMuted,
+
+      fontFamily:
+        fonts.body,
+
+      fontSize: 12,
+
+      lineHeight: 19,
+
       marginTop: 7,
     },
 
-    deleteButton: {
-      borderWidth: 1,
-      borderColor:
-        colors.errorBorder,
-      borderRadius:
-        radius.md,
-      paddingVertical: 13,
-      alignItems: "center",
+    dangerAction: {
       marginTop: 18,
     },
 
-    deleteText: {
+    deleteNote: {
       color:
-        colors.errorText,
+        colors.textDim,
+
       fontFamily:
-        fonts.bodySemiBold,
-      fontSize: 12,
+        fonts.body,
+
+      fontSize: 9,
+
+      lineHeight: 15,
+
+      textAlign:
+        "center",
+
+      marginTop: 10,
     },
   }); 

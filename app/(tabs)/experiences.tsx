@@ -1,1 +1,1 @@
-export { default } from "../experiences/index"; 
+export { default } from "../../src/screens/ExperiencesScreen";

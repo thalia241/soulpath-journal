@@ -1,35 +1,64 @@
-import { File, Paths } from "expo-file-system";
+import {
+  Platform,
+} from "react-native";
+
 import * as Print from "expo-print";
+
 import * as Sharing from "expo-sharing";
 
-import { Platform } from "react-native";
+import {
+  File,
+  Paths,
+} from "expo-file-system";
 
-import { supabase } from "../lib/supabase";
+import {
+  supabase,
+} from "../lib/supabase";
+
+import {
+  formatDateTime,
+  formatLocalDate,
+} from "../utils/date";
+
+export type SoulPathExportFormat =
+  | "pdf"
+  | "txt"
+  | "json";
+
+export type SoulPathExportSummary = {
+  journalEntries: number;
+
+  experiences: number;
+
+  linkedPractices: number;
+};
+
+type ExportProfile = {
+  display_name:
+    | string
+    | null;
+};
 
 type ExportJournalEntry = {
   id: string;
-  title: string;
-  content: string;
-  mood: string | null;
-  energy_level: number | null;
-  entry_date: string;
-  created_at: string;
-  updated_at: string;
 
-  entry_practices:
-    | {
-        practice:
-          | {
-              id: string;
-              name: string;
-            }
-          | {
-              id: string;
-              name: string;
-            }[]
-          | null;
-      }[]
+  title: string;
+
+  content: string;
+
+  mood:
+    | string
     | null;
+
+  energy_level:
+    | number
+    | null;
+
+  entry_date: string;
+
+  created_at: string;
+
+  updated_at: string;
 };
 
 type ExportExperience = {
@@ -58,10 +87,79 @@ type ExportExperience = {
   updated_at: string;
 };
 
-export type SoulPathExportData = {
+type ExportPractice = {
+  id: string;
+
+  name: string;
+};
+
+type ExportEntryPractice = {
+  entry_id: string;
+
+  practice_id: string;
+};
+
+export type ExportJournalRecord = {
+  id: string;
+
+  title: string;
+
+  content: string;
+
+  mood:
+    | string
+    | null;
+
+  energyLevel:
+    | number
+    | null;
+
+  entryDate: string;
+
+  createdAt: string;
+
+  updatedAt: string;
+
+  practices: string[];
+};
+
+export type ExportExperienceRecord = {
+  id: string;
+
+  type:
+    | "dream"
+    | "synchronicity";
+
+  title: string;
+
+  description: string;
+
+  personalReflection:
+    | string
+    | null;
+
+  significanceLevel:
+    | number
+    | null;
+
+  experiencedAt: string;
+
+  createdAt: string;
+
+  updatedAt: string;
+};
+
+export type SoulPathPortableExport = {
+  schema: {
+    name:
+      "soulpath-journal-export";
+
+    version: 1;
+  };
+
   exportedAt: string;
 
-  profile: {
+  account: {
     displayName:
       | string
       | null;
@@ -71,87 +169,1280 @@ export type SoulPathExportData = {
       | null;
   };
 
+  summary:
+    SoulPathExportSummary;
+
   journalEntries:
-    ExportJournalEntry[];
+    ExportJournalRecord[];
 
-  dreams:
-    ExportExperience[];
-
-  synchronicities:
-    ExportExperience[];
+  experiences:
+    ExportExperienceRecord[];
 };
 
-function escapeHtml(
-  value: string
-) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function formatDate(
-  value: string
-) {
-  const date =
-    new Date(value);
-
+function getErrorMessage(
+  error: unknown,
+  fallback: string
+): string {
   if (
-    Number.isNaN(
-      date.getTime()
-    )
+    error instanceof Error
   ) {
-    return value;
+    return error.message;
   }
 
-  return date.toLocaleDateString(
-    undefined,
-    {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    }
-  );
-}
-
-function getPracticeNames(
-  entry: ExportJournalEntry
-) {
   if (
-    !entry.entry_practices
+    typeof error ===
+      "object" &&
+    error !== null &&
+    "message" in error
   ) {
-    return [];
-  }
-
-  return entry.entry_practices
-    .map((item) => {
-      const relation =
-        item.practice;
-
-      if (
-        Array.isArray(
-          relation
-        )
-      ) {
-        return relation[0]
-          ?.name;
-      }
-
-      return relation?.name;
-    })
-    .filter(
+    const message =
       (
-        name
-      ): name is string =>
-        Boolean(name)
+        error as {
+          message?: unknown;
+        }
+      ).message;
+
+    if (
+      typeof message ===
+      "string"
+    ) {
+      return message;
+    }
+  }
+
+  return fallback;
+}
+
+function escapeHtml(
+  value:
+    | string
+    | null
+    | undefined
+): string {
+  if (!value) {
+    return "";
+  }
+
+  return value
+    .replace(
+      /&/g,
+      "&amp;"
+    )
+    .replace(
+      /</g,
+      "&lt;"
+    )
+    .replace(
+      />/g,
+      "&gt;"
+    )
+    .replace(
+      /"/g,
+      "&quot;"
+    )
+    .replace(
+      /'/g,
+      "&#039;"
     );
 }
 
-function downloadTextOnWeb(
-  content: string,
+function htmlText(
+  value:
+    | string
+    | null
+    | undefined
+): string {
+  return escapeHtml(
+    value
+  ).replace(
+    /\r?\n/g,
+    "<br />"
+  );
+}
+
+function normalizeFilePart(
+  value: string
+): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(
+      /[^a-z0-9]+/g,
+      "-"
+    )
+    .replace(
+      /^-+|-+$/g,
+      ""
+    )
+    .slice(
+      0,
+      40
+    );
+}
+
+function buildTimestampForFilename() {
+  const now =
+    new Date();
+
+  const year =
+    now.getFullYear();
+
+  const month =
+    String(
+      now.getMonth() +
+        1
+    ).padStart(
+      2,
+      "0"
+    );
+
+  const day =
+    String(
+      now.getDate()
+    ).padStart(
+      2,
+      "0"
+    );
+
+  const hours =
+    String(
+      now.getHours()
+    ).padStart(
+      2,
+      "0"
+    );
+
+  const minutes =
+    String(
+      now.getMinutes()
+    ).padStart(
+      2,
+      "0"
+    );
+
+  const seconds =
+    String(
+      now.getSeconds()
+    ).padStart(
+      2,
+      "0"
+    );
+
+  return `${year}${month}${day}-${hours}${minutes}${seconds}`;
+}
+
+function buildFilename(
+  extension:
+    | "pdf"
+    | "txt"
+    | "json",
+  displayName:
+    | string
+    | null
+): string {
+  const person =
+    displayName
+      ? normalizeFilePart(
+          displayName
+        )
+      : "";
+
+  const suffix =
+    buildTimestampForFilename();
+
+  return person
+    ? `soulpath-${person}-${suffix}.${extension}`
+    : `soulpath-export-${suffix}.${extension}`;
+}
+
+async function requireUser() {
+  const {
+    data: {
+      user,
+    },
+    error,
+  } =
+    await supabase.auth.getUser();
+
+  if (
+    error ||
+    !user
+  ) {
+    throw new Error(
+      "Your SoulPath session has ended. Please sign in again."
+    );
+  }
+
+  return user;
+}
+
+export async function buildSoulPathExport(): Promise<SoulPathPortableExport> {
+  const user =
+    await requireUser();
+
+  const [
+    profileResult,
+    journalResult,
+    experienceResult,
+    entryPracticeResult,
+    practiceResult,
+  ] =
+    await Promise.all([
+      supabase
+        .from("profiles")
+        .select(
+          "display_name"
+        )
+        .eq(
+          "id",
+          user.id
+        )
+        .maybeSingle(),
+
+      supabase
+        .from(
+          "journal_entries"
+        )
+        .select(
+          `
+          id,
+          title,
+          content,
+          mood,
+          energy_level,
+          entry_date,
+          created_at,
+          updated_at
+          `
+        )
+        .eq(
+          "user_id",
+          user.id
+        )
+        .order(
+          "entry_date",
+          {
+            ascending:
+              false,
+          }
+        )
+        .order(
+          "created_at",
+          {
+            ascending:
+              false,
+          }
+        ),
+
+      supabase
+        .from(
+          "experiences"
+        )
+        .select(
+          `
+          id,
+          experience_type,
+          title,
+          description,
+          interpretation,
+          significance_level,
+          experienced_at,
+          created_at,
+          updated_at
+          `
+        )
+        .eq(
+          "user_id",
+          user.id
+        )
+        .order(
+          "experienced_at",
+          {
+            ascending:
+              false,
+          }
+        ),
+
+      supabase
+        .from(
+          "entry_practices"
+        )
+        .select(
+          `
+          entry_id,
+          practice_id
+          `
+        )
+        .eq(
+          "user_id",
+          user.id
+        ),
+
+      supabase
+        .from(
+          "practices"
+        )
+        .select(
+          `
+          id,
+          name
+          `
+        )
+        .order(
+          "name",
+          {
+            ascending: true,
+          }
+        ),
+    ]);
+
+  if (
+    profileResult.error
+  ) {
+    throw new Error(
+      getErrorMessage(
+        profileResult.error,
+        "Unable to read your profile for export."
+      )
+    );
+  }
+
+  if (
+    journalResult.error
+  ) {
+    throw new Error(
+      getErrorMessage(
+        journalResult.error,
+        "Unable to prepare your journal entries for export."
+      )
+    );
+  }
+
+  if (
+    experienceResult.error
+  ) {
+    throw new Error(
+      getErrorMessage(
+        experienceResult.error,
+        "Unable to prepare your dreams and signs for export."
+      )
+    );
+  }
+
+  if (
+    entryPracticeResult.error
+  ) {
+    throw new Error(
+      getErrorMessage(
+        entryPracticeResult.error,
+        "Unable to prepare your practice history for export."
+      )
+    );
+  }
+
+  if (
+    practiceResult.error
+  ) {
+    throw new Error(
+      getErrorMessage(
+        practiceResult.error,
+        "Unable to prepare practice names for export."
+      )
+    );
+  }
+
+  const profile =
+    profileResult.data as
+      | ExportProfile
+      | null;
+
+  const journalEntries =
+    (
+      journalResult.data ??
+      []
+    ) as ExportJournalEntry[];
+
+  const experiences =
+    (
+      experienceResult.data ??
+      []
+    ) as ExportExperience[];
+
+  const entryPractices =
+    (
+      entryPracticeResult.data ??
+      []
+    ) as ExportEntryPractice[];
+
+  const practices =
+    (
+      practiceResult.data ??
+      []
+    ) as ExportPractice[];
+
+  const practiceNameById =
+    new Map<
+      string,
+      string
+    >(
+      practices.map(
+        (practice) => [
+          practice.id,
+          practice.name,
+        ]
+      )
+    );
+
+  const practiceNamesByEntryId =
+    new Map<
+      string,
+      string[]
+    >();
+
+  for (
+    const link of
+    entryPractices
+  ) {
+    const name =
+      practiceNameById.get(
+        link.practice_id
+      );
+
+    if (!name) {
+      continue;
+    }
+
+    const current =
+      practiceNamesByEntryId.get(
+        link.entry_id
+      ) ?? [];
+
+    current.push(name);
+
+    practiceNamesByEntryId.set(
+      link.entry_id,
+      current
+    );
+  }
+
+  for (
+    const names of
+    practiceNamesByEntryId.values()
+  ) {
+    names.sort(
+      (a, b) =>
+        a.localeCompare(b)
+    );
+  }
+
+  const portableJournal =
+    journalEntries.map(
+      (
+        entry
+      ): ExportJournalRecord => ({
+        id: entry.id,
+
+        title:
+          entry.title,
+
+        content:
+          entry.content,
+
+        mood:
+          entry.mood,
+
+        energyLevel:
+          entry.energy_level,
+
+        entryDate:
+          entry.entry_date,
+
+        createdAt:
+          entry.created_at,
+
+        updatedAt:
+          entry.updated_at,
+
+        practices:
+          practiceNamesByEntryId.get(
+            entry.id
+          ) ?? [],
+      })
+    );
+
+  const portableExperiences =
+    experiences.map(
+      (
+        experience
+      ): ExportExperienceRecord => ({
+        id:
+          experience.id,
+
+        type:
+          experience.experience_type,
+
+        title:
+          experience.title,
+
+        description:
+          experience.description,
+
+        personalReflection:
+          experience.interpretation,
+
+        significanceLevel:
+          experience.significance_level,
+
+        experiencedAt:
+          experience.experienced_at,
+
+        createdAt:
+          experience.created_at,
+
+        updatedAt:
+          experience.updated_at,
+      })
+    );
+
+  return {
+    schema: {
+      name:
+        "soulpath-journal-export",
+
+      version: 1,
+    },
+
+    exportedAt:
+      new Date().toISOString(),
+
+    account: {
+      displayName:
+        profile?.display_name ??
+        user.user_metadata
+          ?.display_name ??
+        null,
+
+      email:
+        user.email ??
+        null,
+    },
+
+    summary: {
+      journalEntries:
+        portableJournal.length,
+
+      experiences:
+        portableExperiences.length,
+
+      linkedPractices:
+        entryPractices.length,
+    },
+
+    journalEntries:
+      portableJournal,
+
+    experiences:
+      portableExperiences,
+  };
+}
+
+function createTxtExport(
+  data: SoulPathPortableExport
+): string {
+  const lines: string[] =
+    [];
+
+  lines.push(
+    "SOULPATH JOURNAL"
+  );
+
+  lines.push(
+    "A private space for the journey within."
+  );
+
+  lines.push("");
+
+  lines.push(
+    `Exported: ${formatDateTime(
+      data.exportedAt
+    )}`
+  );
+
+  if (
+    data.account.displayName
+  ) {
+    lines.push(
+      `Name: ${data.account.displayName}`
+    );
+  }
+
+  if (
+    data.account.email
+  ) {
+    lines.push(
+      `Email: ${data.account.email}`
+    );
+  }
+
+  lines.push("");
+
+  lines.push(
+    `Reflections: ${data.summary.journalEntries}`
+  );
+
+  lines.push(
+    `Dreams & signs: ${data.summary.experiences}`
+  );
+
+  lines.push("");
+
+  lines.push(
+    "========================================"
+  );
+
+  lines.push(
+    "JOURNAL"
+  );
+
+  lines.push(
+    "========================================"
+  );
+
+  if (
+    data.journalEntries
+      .length === 0
+  ) {
+    lines.push("");
+
+    lines.push(
+      "No journal reflections recorded."
+    );
+  }
+
+  for (
+    const entry of
+    data.journalEntries
+  ) {
+    lines.push("");
+
+    lines.push(
+      entry.title
+    );
+
+    lines.push(
+      formatLocalDate(
+        entry.entryDate
+      )
+    );
+
+    if (entry.mood) {
+      lines.push(
+        `Mood: ${entry.mood}`
+      );
+    }
+
+    if (
+      entry.energyLevel !==
+      null
+    ) {
+      lines.push(
+        `Energy: ${entry.energyLevel}/5`
+      );
+    }
+
+    if (
+      entry.practices
+        .length > 0
+    ) {
+      lines.push(
+        `Practices: ${entry.practices.join(
+          ", "
+        )}`
+      );
+    }
+
+    lines.push("");
+
+    lines.push(
+      entry.content
+    );
+
+    lines.push("");
+
+    lines.push(
+      "----------------------------------------"
+    );
+  }
+
+  lines.push("");
+
+  lines.push(
+    "========================================"
+  );
+
+  lines.push(
+    "DREAMS & SIGNS"
+  );
+
+  lines.push(
+    "========================================"
+  );
+
+  if (
+    data.experiences
+      .length === 0
+  ) {
+    lines.push("");
+
+    lines.push(
+      "No dreams or signs recorded."
+    );
+  }
+
+  for (
+    const experience of
+    data.experiences
+  ) {
+    lines.push("");
+
+    lines.push(
+      experience.title
+    );
+
+    lines.push(
+      experience.type ===
+        "dream"
+        ? "Dream"
+        : "Synchronicity"
+    );
+
+    lines.push(
+      formatDateTime(
+        experience.experiencedAt
+      )
+    );
+
+    if (
+      experience.significanceLevel !==
+      null
+    ) {
+      lines.push(
+        `Significance: ${experience.significanceLevel}/5`
+      );
+    }
+
+    lines.push("");
+
+    lines.push(
+      experience.description
+    );
+
+    if (
+      experience.personalReflection
+    ) {
+      lines.push("");
+
+      lines.push(
+        "What it brought up for you:"
+      );
+
+      lines.push(
+        experience.personalReflection
+      );
+    }
+
+    lines.push("");
+
+    lines.push(
+      "----------------------------------------"
+    );
+  }
+
+  lines.push("");
+
+  lines.push(
+    "End of SoulPath export."
+  );
+
+  return lines.join(
+    "\n"
+  );
+}
+
+function createPdfHtml(
+  data: SoulPathPortableExport
+): string {
+  const journalHtml =
+    data.journalEntries
+      .length === 0
+      ? `
+        <div class="empty">
+          No journal reflections recorded.
+        </div>
+      `
+      : data.journalEntries
+          .map(
+            (entry) => {
+              const meta: string[] =
+                [];
+
+              if (
+                entry.mood
+              ) {
+                meta.push(
+                  `Mood: ${escapeHtml(
+                    entry.mood
+                  )}`
+                );
+              }
+
+              if (
+                entry.energyLevel !==
+                null
+              ) {
+                meta.push(
+                  `Energy: ${entry.energyLevel}/5`
+                );
+              }
+
+              if (
+                entry.practices
+                  .length > 0
+              ) {
+                meta.push(
+                  `Practices: ${entry.practices
+                    .map(
+                      escapeHtml
+                    )
+                    .join(
+                      ", "
+                    )}`
+                );
+              }
+
+              return `
+                <section class="entry">
+                  <div class="eyebrow">
+                    ${escapeHtml(
+                      formatLocalDate(
+                        entry.entryDate
+                      )
+                    )}
+                  </div>
+
+                  <h2>
+                    ${escapeHtml(
+                      entry.title
+                    )}
+                  </h2>
+
+                  ${
+                    meta.length
+                      ? `
+                        <div class="meta">
+                          ${meta.join(
+                            " · "
+                          )}
+                        </div>
+                      `
+                      : ""
+                  }
+
+                  <div class="body">
+                    ${htmlText(
+                      entry.content
+                    )}
+                  </div>
+                </section>
+              `;
+            }
+          )
+          .join("");
+
+  const experienceHtml =
+    data.experiences
+      .length === 0
+      ? `
+        <div class="empty">
+          No dreams or signs recorded.
+        </div>
+      `
+      : data.experiences
+          .map(
+            (
+              experience
+            ) => {
+              const typeLabel =
+                experience.type ===
+                "dream"
+                  ? "Dream"
+                  : "Synchronicity";
+
+              return `
+                <section class="entry">
+                  <div class="eyebrow">
+                    ${escapeHtml(
+                      typeLabel
+                    )} ·
+                    ${escapeHtml(
+                      formatDateTime(
+                        experience.experiencedAt
+                      )
+                    )}
+                  </div>
+
+                  <h2>
+                    ${escapeHtml(
+                      experience.title
+                    )}
+                  </h2>
+
+                  ${
+                    experience.significanceLevel !==
+                    null
+                      ? `
+                        <div class="meta">
+                          Stayed with you
+                          ${experience.significanceLevel}/5
+                        </div>
+                      `
+                      : ""
+                  }
+
+                  <div class="body">
+                    ${htmlText(
+                      experience.description
+                    )}
+                  </div>
+
+                  ${
+                    experience.personalReflection
+                      ? `
+                        <div class="reflection">
+                          <div class="reflection-title">
+                            ✦ What it brought up for you
+                          </div>
+
+                          <div>
+                            ${htmlText(
+                              experience.personalReflection
+                            )}
+                          </div>
+                        </div>
+                      `
+                      : ""
+                  }
+                </section>
+              `;
+            }
+          )
+          .join("");
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  />
+
+  <title>SoulPath Journal Export</title>
+
+  <style>
+    @page {
+      margin: 42px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: #ffffff;
+      color: #211b2c;
+      font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Arial,
+        sans-serif;
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .page {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .brand {
+      border-bottom: 1px solid #ddd5e8;
+      padding-bottom: 24px;
+      margin-bottom: 30px;
+    }
+
+    .symbol {
+      color: #8F72D2;
+      font-size: 18px;
+      margin-bottom: 5px;
+    }
+
+    h1 {
+      margin: 0;
+      color: #241b33;
+      font-family:
+        Georgia,
+        "Times New Roman",
+        serif;
+      font-size: 34px;
+      font-weight: 500;
+    }
+
+    .tagline {
+      color: #756d80;
+      font-family:
+        Georgia,
+        "Times New Roman",
+        serif;
+      font-style: italic;
+      font-size: 15px;
+      margin-top: 3px;
+    }
+
+    .account {
+      margin-top: 18px;
+      color: #756d80;
+      font-size: 10px;
+      line-height: 1.6;
+    }
+
+    .summary {
+      display: flex;
+      gap: 12px;
+      margin: 24px 0 34px;
+    }
+
+    .summary-card {
+      flex: 1;
+      border: 1px solid #e5deed;
+      border-radius: 12px;
+      padding: 14px;
+    }
+
+    .summary-number {
+      color: #5E489D;
+      font-size: 22px;
+      font-family:
+        Georgia,
+        "Times New Roman",
+        serif;
+    }
+
+    .summary-label {
+      color: #91879e;
+      font-size: 9px;
+      margin-top: 2px;
+    }
+
+    h3 {
+      color: #5E489D;
+      font-family:
+        Georgia,
+        "Times New Roman",
+        serif;
+      font-size: 21px;
+      font-weight: 500;
+      margin-top: 34px;
+      margin-bottom: 14px;
+    }
+
+    .entry {
+      border-top: 1px solid #e5deed;
+      padding: 22px 0;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .eyebrow {
+      color: #91879e;
+      font-size: 9px;
+      margin-bottom: 4px;
+    }
+
+    h2 {
+      color: #2d2438;
+      font-family:
+        Georgia,
+        "Times New Roman",
+        serif;
+      font-size: 22px;
+      font-weight: 500;
+      margin: 0 0 6px;
+    }
+
+    .meta {
+      color: #7357c7;
+      font-size: 10px;
+      margin-bottom: 14px;
+    }
+
+    .body {
+      color: #38303f;
+      white-space: normal;
+    }
+
+    .reflection {
+      margin-top: 17px;
+      padding: 14px;
+      border-left: 3px solid #bca6e8;
+      background: #f7f3fb;
+      color: #51485b;
+    }
+
+    .reflection-title {
+      color: #7357c7;
+      font-family:
+        Georgia,
+        "Times New Roman",
+        serif;
+      font-style: italic;
+      margin-bottom: 6px;
+    }
+
+    .empty {
+      color: #91879e;
+      border: 1px dashed #ddd5e8;
+      border-radius: 12px;
+      padding: 18px;
+      text-align: center;
+    }
+
+    .footer {
+      border-top: 1px solid #ddd5e8;
+      margin-top: 30px;
+      padding-top: 18px;
+      color: #91879e;
+      text-align: center;
+      font-size: 9px;
+    }
+
+    @media print {
+      body {
+        -webkit-print-color-adjust:
+          exact;
+        print-color-adjust:
+          exact;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="page">
+    <header class="brand">
+      <div class="symbol">
+        ☾ ✦
+      </div>
+
+      <h1>
+        SoulPath Journal
+      </h1>
+
+      <div class="tagline">
+        A private space for the journey within.
+      </div>
+
+      <div class="account">
+        ${
+          data.account.displayName
+            ? `Export for ${escapeHtml(
+                data.account.displayName
+              )}<br />`
+            : ""
+        }
+
+        Exported
+        ${escapeHtml(
+          formatDateTime(
+            data.exportedAt
+          )
+        )}
+      </div>
+    </header>
+
+    <div class="summary">
+      <div class="summary-card">
+        <div class="summary-number">
+          ${
+            data.summary
+              .journalEntries
+          }
+        </div>
+
+        <div class="summary-label">
+          reflections
+        </div>
+      </div>
+
+      <div class="summary-card">
+        <div class="summary-number">
+          ${
+            data.summary
+              .experiences
+          }
+        </div>
+
+        <div class="summary-label">
+          dreams & signs
+        </div>
+      </div>
+
+      <div class="summary-card">
+        <div class="summary-number">
+          ${
+            data.summary
+              .linkedPractices
+          }
+        </div>
+
+        <div class="summary-label">
+          recorded practice links
+        </div>
+      </div>
+    </div>
+
+    <h3>
+      Journal
+    </h3>
+
+    ${journalHtml}
+
+    <h3>
+      Dreams & Signs
+    </h3>
+
+    ${experienceHtml}
+
+    <footer class="footer">
+      Generated from SoulPath Journal.
+      This export contains only data associated with
+      the authenticated account and does not contain
+      passwords or authentication tokens.
+    </footer>
+  </main>
+</body>
+</html>
+  `;
+}
+
+function downloadWebFile(
   filename: string,
+  content: string,
   mimeType: string
 ) {
   if (
@@ -169,7 +1460,7 @@ function downloadTextOnWeb(
     new Blob(
       [content],
       {
-        type: mimeType,
+        type: `${mimeType};charset=utf-8`,
       }
     );
 
@@ -188,171 +1479,91 @@ function downloadTextOnWeb(
   anchor.download =
     filename;
 
+  anchor.style.display =
+    "none";
+
   document.body.appendChild(
     anchor
   );
 
   anchor.click();
 
-  document.body.removeChild(
-    anchor
-  );
+  anchor.remove();
 
-  URL.revokeObjectURL(
-    url
+  setTimeout(
+    () => {
+      URL.revokeObjectURL(
+        url
+      );
+    },
+    1000
   );
 }
 
-async function shareFile(
-  uri: string,
-  mimeType: string
+async function writeNativeFile(
+  filename: string,
+  content: string
+): Promise<File> {
+  const file =
+    new File(
+      Paths.cache,
+      filename
+    );
+
+  file.create({
+    overwrite: true,
+
+    intermediates: true,
+  });
+
+  file.write(content);
+
+  return file;
+}
+
+async function shareNativeFile(
+  fileUri: string,
+  options: {
+    mimeType: string;
+
+    dialogTitle: string;
+
+    UTI?: string;
+  }
 ) {
-  const sharingAvailable =
+  const available =
     await Sharing.isAvailableAsync();
 
-  if (!sharingAvailable) {
+  if (!available) {
     throw new Error(
-      "File sharing is not available on this device."
+      "Sharing is not available on this device."
     );
   }
 
   await Sharing.shareAsync(
-    uri,
+    fileUri,
     {
-      mimeType,
+      mimeType:
+        options.mimeType,
+
       dialogTitle:
-        "Export SoulPath Data",
+        options.dialogTitle,
+
+      UTI:
+        options.UTI,
     }
   );
 }
 
-export async function getSoulPathExportData(): Promise<SoulPathExportData> {
-  const {
-    data: { user },
-    error: userError,
-  } =
-    await supabase.auth.getUser();
-
-  if (
-    userError ||
-    !user
-  ) {
-    throw new Error(
-      "You must be signed in to export your SoulPath data."
-    );
-  }
-
-  const [
-    journalResponse,
-    experienceResponse,
-  ] =
-    await Promise.all([
-      supabase
-        .from(
-          "journal_entries"
-        )
-        .select(`
-          id,
-          title,
-          content,
-          mood,
-          energy_level,
-          entry_date,
-          created_at,
-          updated_at,
-          entry_practices (
-            practice:practices (
-              id,
-              name
-            )
-          )
-        `)
-        .order(
-          "entry_date",
-          {
-            ascending: false,
-          }
-        ),
-
-      supabase
-        .from(
-          "experiences"
-        )
-        .select(`
-          id,
-          experience_type,
-          title,
-          description,
-          interpretation,
-          significance_level,
-          experienced_at,
-          created_at,
-          updated_at
-        `)
-        .order(
-          "experienced_at",
-          {
-            ascending: false,
-          }
-        ),
-    ]);
-
-  if (
-    journalResponse.error
-  ) {
-    throw journalResponse.error;
-  }
-
-  if (
-    experienceResponse.error
-  ) {
-    throw experienceResponse.error;
-  }
-
-  const journalEntries =
-    (journalResponse.data ??
-      []) as unknown as ExportJournalEntry[];
-
-  const experiences =
-    (experienceResponse.data ??
-      []) as ExportExperience[];
-
-  return {
-    exportedAt:
-      new Date().toISOString(),
-
-    profile: {
-      displayName:
-        user.user_metadata
-          ?.display_name ??
-        null,
-
-      email:
-        user.email ??
-        null,
-    },
-
-    journalEntries,
-
-    dreams:
-      experiences.filter(
-        (item) =>
-          item.experience_type ===
-          "dream"
-      ),
-
-    synchronicities:
-      experiences.filter(
-        (item) =>
-          item.experience_type ===
-          "synchronicity"
-      ),
-  };
-}
-
-export async function exportSoulPathJson() {
+export async function exportSoulPathJson(): Promise<SoulPathExportSummary> {
   const data =
-    await getSoulPathExportData();
+    await buildSoulPathExport();
+
+  const filename =
+    buildFilename(
+      "json",
+      data.account.displayName
+    );
 
   const json =
     JSON.stringify(
@@ -361,918 +1572,218 @@ export async function exportSoulPathJson() {
       2
     );
 
-  const filename =
-    `soulpath-export-${Date.now()}.json`;
-
   if (
-    Platform.OS === "web"
+    Platform.OS ===
+    "web"
   ) {
-    downloadTextOnWeb(
-      json,
+    downloadWebFile(
       filename,
+      json,
       "application/json"
     );
 
-    return;
+    return data.summary;
   }
 
   const file =
-    new File(
-      Paths.cache,
-      filename
+    await writeNativeFile(
+      filename,
+      json
     );
 
-  file.create();
-
-  file.write(json);
-
-  await shareFile(
+  await shareNativeFile(
     file.uri,
-    "application/json"
+    {
+      mimeType:
+        "application/json",
+
+      dialogTitle:
+        "Export SoulPath data",
+
+      UTI:
+        "public.json",
+    }
   );
+
+  return data.summary;
 }
 
-export async function exportSoulPathText() {
+export async function exportSoulPathText(): Promise<SoulPathExportSummary> {
   const data =
-    await getSoulPathExportData();
-
-  const lines:
-    string[] = [];
-
-  lines.push(
-    "SOULPATH JOURNAL EXPORT"
-  );
-
-  lines.push(
-    "======================="
-  );
-
-  lines.push("");
-
-  lines.push(
-    `Exported: ${formatDate(
-      data.exportedAt
-    )}`
-  );
-
-  if (
-    data.profile
-      .displayName
-  ) {
-    lines.push(
-      `Name: ${data.profile.displayName}`
-    );
-  }
-
-  if (
-    data.profile.email
-  ) {
-    lines.push(
-      `Email: ${data.profile.email}`
-    );
-  }
-
-  lines.push("");
-  lines.push("");
-
-  lines.push(
-    "JOURNAL REFLECTIONS"
-  );
-
-  lines.push(
-    "==================="
-  );
-
-  if (
-    data.journalEntries
-      .length === 0
-  ) {
-    lines.push("");
-
-    lines.push(
-      "No journal reflections recorded."
-    );
-  }
-
-  for (
-    const entry of
-    data.journalEntries
-  ) {
-    const practices =
-      getPracticeNames(
-        entry
-      );
-
-    lines.push("");
-
-    lines.push(
-      entry.title
-    );
-
-    lines.push(
-      "-".repeat(
-        Math.min(
-          Math.max(
-            entry.title
-              .length,
-            8
-          ),
-          60
-        )
-      )
-    );
-
-    lines.push(
-      `Date: ${formatDate(
-        entry.entry_date
-      )}`
-    );
-
-    if (entry.mood) {
-      lines.push(
-        `Mood: ${entry.mood}`
-      );
-    }
-
-    if (
-      entry.energy_level !==
-      null
-    ) {
-      lines.push(
-        `Energy: ${entry.energy_level}/5`
-      );
-    }
-
-    if (
-      practices.length >
-      0
-    ) {
-      lines.push(
-        `Practices: ${practices.join(
-          ", "
-        )}`
-      );
-    }
-
-    lines.push("");
-
-    lines.push(
-      entry.content
-    );
-
-    lines.push("");
-  }
-
-  lines.push("");
-  lines.push(
-    "DREAMS"
-  );
-
-  lines.push(
-    "======"
-  );
-
-  if (
-    data.dreams
-      .length === 0
-  ) {
-    lines.push("");
-
-    lines.push(
-      "No dreams recorded."
-    );
-  }
-
-  for (
-    const dream of
-    data.dreams
-  ) {
-    lines.push("");
-
-    lines.push(
-      dream.title
-    );
-
-    lines.push(
-      `Date: ${formatDate(
-        dream.experienced_at
-      )}`
-    );
-
-    if (
-      dream.significance_level !==
-      null
-    ) {
-      lines.push(
-        `Significance: ${dream.significance_level}/5`
-      );
-    }
-
-    lines.push("");
-
-    lines.push(
-      dream.description
-    );
-
-    if (
-      dream.interpretation
-    ) {
-      lines.push("");
-
-      lines.push(
-        "Personal reflection:"
-      );
-
-      lines.push(
-        dream.interpretation
-      );
-    }
-
-    lines.push("");
-  }
-
-  lines.push("");
-  lines.push(
-    "SYNCHRONICITIES"
-  );
-
-  lines.push(
-    "==============="
-  );
-
-  if (
-    data.synchronicities
-      .length === 0
-  ) {
-    lines.push("");
-
-    lines.push(
-      "No synchronicities recorded."
-    );
-  }
-
-  for (
-    const sign of
-    data.synchronicities
-  ) {
-    lines.push("");
-
-    lines.push(
-      sign.title
-    );
-
-    lines.push(
-      `Date: ${formatDate(
-        sign.experienced_at
-      )}`
-    );
-
-    if (
-      sign.significance_level !==
-      null
-    ) {
-      lines.push(
-        `Significance: ${sign.significance_level}/5`
-      );
-    }
-
-    lines.push("");
-
-    lines.push(
-      sign.description
-    );
-
-    if (
-      sign.interpretation
-    ) {
-      lines.push("");
-
-      lines.push(
-        "Personal reflection:"
-      );
-
-      lines.push(
-        sign.interpretation
-      );
-    }
-
-    lines.push("");
-  }
-
-  const text =
-    lines.join("\n");
+    await buildSoulPathExport();
 
   const filename =
-    `soulpath-export-${Date.now()}.txt`;
+    buildFilename(
+      "txt",
+      data.account.displayName
+    );
+
+  const text =
+    createTxtExport(
+      data
+    );
 
   if (
-    Platform.OS === "web"
+    Platform.OS ===
+    "web"
   ) {
-    downloadTextOnWeb(
-      text,
+    downloadWebFile(
       filename,
+      text,
       "text/plain"
     );
 
-    return;
+    return data.summary;
   }
 
   const file =
-    new File(
-      Paths.cache,
-      filename
+    await writeNativeFile(
+      filename,
+      text
     );
 
-  file.create();
-
-  file.write(text);
-
-  await shareFile(
+  await shareNativeFile(
     file.uri,
-    "text/plain"
+    {
+      mimeType:
+        "text/plain",
+
+      dialogTitle:
+        "Export SoulPath journal",
+
+      UTI:
+        "public.plain-text",
+    }
   );
+
+  return data.summary;
 }
 
-export async function exportSoulPathPdf() {
-  const data =
-    await getSoulPathExportData();
-
-  const journalHtml =
-    data.journalEntries
-      .map(
-        (entry) => {
-          const practices =
-            getPracticeNames(
-              entry
-            );
-
-          return `
-            <section class="entry">
-              <div class="entry-type">
-                DAILY REFLECTION
-              </div>
-
-              <h2>
-                ${escapeHtml(
-                  entry.title
-                )}
-              </h2>
-
-              <div class="meta">
-                ${escapeHtml(
-                  formatDate(
-                    entry.entry_date
-                  )
-                )}
-              </div>
-
-              <div class="chips">
-                ${
-                  entry.mood
-                    ? `
-                      <span class="chip">
-                        ${escapeHtml(
-                          entry.mood
-                        )}
-                      </span>
-                    `
-                    : ""
-                }
-
-                ${
-                  entry.energy_level !==
-                  null
-                    ? `
-                      <span class="chip">
-                        Energy ${entry.energy_level}/5
-                      </span>
-                    `
-                    : ""
-                }
-
-                ${practices
-                  .map(
-                    (
-                      practice
-                    ) => `
-                      <span class="chip">
-                        ${escapeHtml(
-                          practice
-                        )}
-                      </span>
-                    `
-                  )
-                  .join("")}
-              </div>
-
-              <p>
-                ${escapeHtml(
-                  entry.content
-                ).replaceAll(
-                  "\n",
-                  "<br />"
-                )}
-              </p>
-            </section>
-          `;
-        }
-      )
-      .join("");
-
-  const dreamHtml =
-    data.dreams
-      .map(
-        (dream) => `
-          <section class="entry">
-            <div class="entry-type">
-              DREAM
-            </div>
-
-            <h2>
-              ${escapeHtml(
-                dream.title
-              )}
-            </h2>
-
-            <div class="meta">
-              ${escapeHtml(
-                formatDate(
-                  dream.experienced_at
-                )
-              )}
-            </div>
-
-            ${
-              dream.significance_level !==
-              null
-                ? `
-                  <div class="chips">
-                    <span class="chip">
-                      Significance ${dream.significance_level}/5
-                    </span>
-                  </div>
-                `
-                : ""
-            }
-
-            <p>
-              ${escapeHtml(
-                dream.description
-              ).replaceAll(
-                "\n",
-                "<br />"
-              )}
-            </p>
-
-            ${
-              dream.interpretation
-                ? `
-                  <div class="reflection">
-                    <strong>
-                      Personal Reflection
-                    </strong>
-
-                    <p>
-                      ${escapeHtml(
-                        dream.interpretation
-                      ).replaceAll(
-                        "\n",
-                        "<br />"
-                      )}
-                    </p>
-                  </div>
-                `
-                : ""
-            }
-          </section>
-        `
-      )
-      .join("");
-
-  const synchronicityHtml =
-    data.synchronicities
-      .map(
-        (sign) => `
-          <section class="entry">
-            <div class="entry-type">
-              SYNCHRONICITY
-            </div>
-
-            <h2>
-              ${escapeHtml(
-                sign.title
-              )}
-            </h2>
-
-            <div class="meta">
-              ${escapeHtml(
-                formatDate(
-                  sign.experienced_at
-                )
-              )}
-            </div>
-
-            ${
-              sign.significance_level !==
-              null
-                ? `
-                  <div class="chips">
-                    <span class="chip">
-                      Significance ${sign.significance_level}/5
-                    </span>
-                  </div>
-                `
-                : ""
-            }
-
-            <p>
-              ${escapeHtml(
-                sign.description
-              ).replaceAll(
-                "\n",
-                "<br />"
-              )}
-            </p>
-
-            ${
-              sign.interpretation
-                ? `
-                  <div class="reflection">
-                    <strong>
-                      Personal Reflection
-                    </strong>
-
-                    <p>
-                      ${escapeHtml(
-                        sign.interpretation
-                      ).replaceAll(
-                        "\n",
-                        "<br />"
-                      )}
-                    </p>
-                  </div>
-                `
-                : ""
-            }
-          </section>
-        `
-      )
-      .join("");
-
-  const html = `
-    <!DOCTYPE html>
-
-    <html>
-      <head>
-        <meta charset="utf-8" />
-
-        <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1.0"
-        />
-
-        <title>
-          SoulPath Journal Export
-        </title>
-
-        <style>
-          @page {
-            margin: 42px;
-          }
-
-          * {
-            box-sizing: border-box;
-          }
-
-          body {
-            font-family:
-              -apple-system,
-              BlinkMacSystemFont,
-              "Segoe UI",
-              sans-serif;
-
-            color: #241f2d;
-
-            background: #ffffff;
-
-            font-size: 13px;
-
-            line-height: 1.65;
-
-            margin: 0;
-
-            padding: 0;
-          }
-
-          .cover {
-            padding-top: 80px;
-
-            padding-bottom: 80px;
-
-            text-align: center;
-          }
-
-          .symbol {
-            font-size: 34px;
-
-            color: #7961a7;
-          }
-
-          h1 {
-            font-size: 34px;
-
-            margin-bottom: 6px;
-
-            color: #221b2d;
-          }
-
-          .subtitle {
-            color: #786d82;
-
-            font-size: 15px;
-          }
-
-          .export-date {
-            margin-top: 30px;
-
-            color: #938a9a;
-
-            font-size: 11px;
-          }
-
-          .section-title {
-            margin-top: 40px;
-
-            border-bottom:
-              1px solid #ddd6e8;
-
-            padding-bottom: 8px;
-
-            font-size: 23px;
-
-            color: #352847;
-          }
-
-          .entry {
-            margin-top: 28px;
-
-            page-break-inside:
-              avoid;
-          }
-
-          .entry-type {
-            color: #8066a8;
-
-            font-size: 9px;
-
-            font-weight: 700;
-
-            letter-spacing:
-              1.6px;
-          }
-
-          h2 {
-            font-size: 20px;
-
-            margin-top: 5px;
-
-            margin-bottom: 4px;
-
-            color: #28202f;
-          }
-
-          .meta {
-            color: #8a8190;
-
-            font-size: 10px;
-
-            margin-bottom: 10px;
-          }
-
-          .chips {
-            margin-top: 8px;
-
-            margin-bottom: 12px;
-          }
-
-          .chip {
-            display:
-              inline-block;
-
-            background:
-              #eee8f7;
-
-            color: #65537f;
-
-            border-radius: 12px;
-
-            padding: 4px 8px;
-
-            margin-right: 5px;
-
-            margin-bottom: 5px;
-
-            font-size: 9px;
-          }
-
-          .reflection {
-            background:
-              #f5f1f8;
-
-            border-left:
-              3px solid #8b70b4;
-
-            padding: 12px 15px;
-
-            margin-top: 14px;
-          }
-
-          .empty {
-            color: #8d8493;
-
-            font-style:
-              italic;
-
-            margin-top: 14px;
-          }
-
-          .footer {
-            margin-top: 50px;
-
-            border-top:
-              1px solid #e3ddea;
-
-            padding-top: 12px;
-
-            color: #99909f;
-
-            font-size: 9px;
-
-            text-align: center;
-          }
-        </style>
-      </head>
-
-      <body>
-        <section class="cover">
-          <div class="symbol">
-            ☾ ✦
-          </div>
-
-          <h1>
-            SoulPath Journal
-          </h1>
-
-          <div class="subtitle">
-            A private record of your journey within.
-          </div>
-
-          ${
-            data.profile
-              .displayName
-              ? `
-                <div class="export-date">
-                  Prepared for
-                  ${escapeHtml(
-                    data.profile
-                      .displayName
-                  )}
-                </div>
-              `
-              : ""
-          }
-
-          <div class="export-date">
-            Exported
-            ${escapeHtml(
-              formatDate(
-                data.exportedAt
-              )
-            )}
-          </div>
-        </section>
-
-        <h1 class="section-title">
-          Journal Reflections
-        </h1>
-
-        ${
-          journalHtml ||
-          `
-            <p class="empty">
-              No journal reflections recorded.
-            </p>
-          `
-        }
-
-        <h1 class="section-title">
-          Dreams
-        </h1>
-
-        ${
-          dreamHtml ||
-          `
-            <p class="empty">
-              No dreams recorded.
-            </p>
-          `
-        }
-
-        <h1 class="section-title">
-          Synchronicities
-        </h1>
-
-        ${
-          synchronicityHtml ||
-          `
-            <p class="empty">
-              No synchronicities recorded.
-            </p>
-          `
-        }
-
-        <div class="footer">
-          Generated by SoulPath Journal.
-          This export contains personal reflection data.
-        </div>
-      </body>
-    </html>
-  `;
-
-  if (
-    Platform.OS === "web"
-  ) {
-    if (
-      typeof window ===
+export async function exportSoulPathPdf(): Promise<SoulPathExportSummary> {
+  /*
+   * IMPORTANT:
+   *
+   * Open the browser print window before any awaited
+   * Supabase request. This keeps the window creation
+   * directly tied to the user's button press and avoids
+   * common popup-blocker behavior.
+   */
+  const webPrintWindow =
+    Platform.OS ===
+      "web" &&
+    typeof window !==
       "undefined"
-    ) {
-      throw new Error(
-        "PDF printing is not available in this environment."
+      ? window.open(
+          "",
+          "_blank"
+        )
+      : null;
+
+  try {
+    const data =
+      await buildSoulPathExport();
+
+    const html =
+      createPdfHtml(
+        data
       );
-    }
-
-    const printWindow =
-      window.open(
-        "",
-        "_blank"
-      );
-
-    if (!printWindow) {
-      throw new Error(
-        "Unable to open the print window. Please allow pop-ups and try again."
-      );
-    }
-
-    printWindow.document.open();
-
-    printWindow.document.write(
-      html
-    );
-
-    printWindow.document.close();
-
-    const triggerPrint =
-      () => {
-        printWindow.focus();
-
-        printWindow.print();
-      };
 
     if (
-      printWindow.document
-        .readyState ===
-      "complete"
+      Platform.OS ===
+      "web"
     ) {
-      window.setTimeout(
-        triggerPrint,
-        250
+      if (!webPrintWindow) {
+        throw new Error(
+          "Your browser blocked the PDF window. Allow pop-ups for SoulPath and try again."
+        );
+      }
+
+      webPrintWindow.document.open();
+
+      webPrintWindow.document.write(
+        html
       );
-    } else {
-      printWindow.onload =
-        triggerPrint;
+
+      webPrintWindow.document.close();
+
+      webPrintWindow.document.title =
+        "SoulPath Journal Export";
+
+      const triggerPrint =
+        () => {
+          webPrintWindow.focus();
+
+          webPrintWindow.print();
+        };
+
+      if (
+        webPrintWindow.document.readyState ===
+        "complete"
+      ) {
+        setTimeout(
+          triggerPrint,
+          250
+        );
+      } else {
+        webPrintWindow.addEventListener(
+          "load",
+          () => {
+            setTimeout(
+              triggerPrint,
+              250
+            );
+          },
+          {
+            once: true,
+          }
+        );
+      }
+
+      return data.summary;
     }
 
-    return;
-  }
+    const result =
+      await Print.printToFileAsync(
+        {
+          html,
 
-  const result =
-    await Print.printToFileAsync(
+          width: 612,
+
+          height: 792,
+
+          base64: false,
+        }
+      );
+
+    if (!result.uri) {
+      throw new Error(
+        "SoulPath could not create the PDF file."
+      );
+    }
+
+    await shareNativeFile(
+      result.uri,
       {
-        html,
+        mimeType:
+          "application/pdf",
+
+        dialogTitle:
+          "Export SoulPath PDF",
+
+        UTI:
+          "com.adobe.pdf",
       }
     );
 
-  if (
-    !result ||
-    !result.uri
-  ) {
-    throw new Error(
-      "Unable to create the PDF export."
-    );
-  }
+    return data.summary;
+  } catch (error) {
+    if (
+      webPrintWindow &&
+      !webPrintWindow.closed
+    ) {
+      webPrintWindow.close();
+    }
 
-  await shareFile(
-    result.uri,
-    "application/pdf"
-  );
+    throw error;
+  }
 } 

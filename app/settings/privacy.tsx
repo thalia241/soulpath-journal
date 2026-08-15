@@ -8,8 +8,6 @@ import {
 
 import {
   Pressable,
-  SafeAreaView,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -18,6 +16,7 @@ import {
 import SoulButton from "../../src/components/SoulButton";
 import SoulCard from "../../src/components/SoulCard";
 import SoulInput from "../../src/components/SoulInput";
+import SoulScreen from "../../src/components/SoulScreen";
 import FeedbackMessage from "../../src/components/FeedbackMessage";
 
 import {
@@ -40,6 +39,7 @@ import {
 
 type FormErrors = {
   password?: string;
+
   confirmPassword?: string;
 };
 
@@ -58,7 +58,9 @@ export default function PrivacySettingsScreen() {
     errors,
     setErrors,
   ] =
-    useState<FormErrors>({});
+    useState<FormErrors>(
+      {}
+    );
 
   const [
     saving,
@@ -85,38 +87,35 @@ export default function PrivacySettingsScreen() {
     {
       title:
         "Leave password changes?",
+
       message:
         "The password you've entered hasn't been saved.",
     }
   );
 
-  function validateForm(): boolean {
+  function validateForm() {
     const nextErrors:
       FormErrors = {};
 
-    const passwordResult =
+    const pass =
       validatePassword(
         password
       );
 
-    if (
-      !passwordResult.valid
-    ) {
-      nextErrors.password =
-        passwordResult.message;
-    }
-
-    const matchResult =
+    const matching =
       validateMatchingPasswords(
         password,
         confirmPassword
       );
 
-    if (
-      !matchResult.valid
-    ) {
+    if (!pass.valid) {
+      nextErrors.password =
+        pass.message;
+    }
+
+    if (!matching.valid) {
       nextErrors.confirmPassword =
-        matchResult.message;
+        matching.message;
     }
 
     setErrors(nextErrors);
@@ -203,329 +202,351 @@ export default function PrivacySettingsScreen() {
   }
 
   return (
-    <SafeAreaView
-      style={styles.container}
+    <SoulScreen
+      keyboard
+      contentStyle={
+        styles.content
+      }
     >
-      <ScrollView
-        contentContainerStyle={
-          styles.content
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Back to settings"
+        style={styles.back}
+        disabled={saving}
+        onPress={() =>
+          router.back()
         }
-        keyboardShouldPersistTaps="handled"
       >
-        <Pressable
-          style={styles.back}
-          disabled={saving}
-          onPress={() =>
-            router.back()
+        <Text
+          style={styles.backText}
+        >
+          ‹ Settings
+        </Text>
+      </Pressable>
+
+      <Text
+        style={styles.title}
+      >
+        Privacy & Security
+      </Text>
+
+      <Text
+        style={styles.subtitle}
+      >
+        A private space deserves
+        a carefully tended door.
+      </Text>
+
+      <SoulCard
+        style={styles.card}
+      >
+        <Text
+          style={
+            styles.cardSymbol
           }
         >
-          <Text
-            style={styles.backText}
-          >
-            ‹ Settings
-          </Text>
-        </Pressable>
-
-        <Text
-          style={styles.title}
-        >
-          Privacy & Security
+          ◌
         </Text>
-
-        <Text
-          style={styles.subtitle}
-        >
-          A private space deserves
-          a carefully tended door.
-        </Text>
-
-        <SoulCard>
-          <Text
-            style={
-              styles.cardSymbol
-            }
-          >
-            ◌
-          </Text>
-
-          <Text
-            style={
-              styles.cardTitle
-            }
-          >
-            Your records belong to
-            your account
-          </Text>
-
-          <Text
-            style={
-              styles.cardText
-            }
-          >
-            Journal entries,
-            spiritual practices,
-            dreams, signs, and
-            insights are requested
-            through your
-            authenticated SoulPath
-            session.
-          </Text>
-        </SoulCard>
 
         <Text
           style={
-            styles.sectionTitle
+            styles.cardTitle
           }
         >
-          Change your password
+          Your records belong to
+          your account
         </Text>
-
-        <SoulCard>
-          <View
-            style={styles.form}
-          >
-            <SoulInput
-              label="New password"
-              value={password}
-              onChangeText={(
-                value
-              ) => {
-                setPassword(
-                  value
-                );
-
-                setErrors(
-                  (current) => ({
-                    ...current,
-                    password:
-                      undefined,
-                    confirmPassword:
-                      undefined,
-                  })
-                );
-
-                setFormError(
-                  ""
-                );
-
-                setSuccessMessage(
-                  ""
-                );
-              }}
-              placeholder="At least 8 characters"
-              secureTextEntry
-              autoCapitalize="none"
-              editable={!saving}
-              error={
-                errors.password
-              }
-            />
-
-            <SoulInput
-              label="One more time"
-              value={
-                confirmPassword
-              }
-              onChangeText={(
-                value
-              ) => {
-                setConfirmPassword(
-                  value
-                );
-
-                setErrors(
-                  (current) => ({
-                    ...current,
-                    confirmPassword:
-                      undefined,
-                  })
-                );
-
-                setFormError(
-                  ""
-                );
-
-                setSuccessMessage(
-                  ""
-                );
-              }}
-              placeholder="Repeat your new password"
-              secureTextEntry
-              autoCapitalize="none"
-              editable={!saving}
-              error={
-                errors.confirmPassword
-              }
-            />
-
-            {formError ? (
-              <FeedbackMessage
-                type="error"
-                message={
-                  formError
-                }
-              />
-            ) : null}
-
-            {successMessage ? (
-              <FeedbackMessage
-                message={
-                  successMessage
-                }
-              />
-            ) : null}
-
-            <SoulButton
-              title="Update password"
-              loading={saving}
-              disabled={
-                saving ||
-                !dirty
-              }
-              onPress={
-                changePassword
-              }
-            />
-          </View>
-        </SoulCard>
 
         <Text
           style={
-            styles.sectionTitle
+            styles.cardText
           }
         >
-          This session
+          Journal entries,
+          spiritual practices,
+          dreams, signs, and
+          insights are requested
+          through your
+          authenticated SoulPath
+          session.
+        </Text>
+      </SoulCard>
+
+      <Text
+        style={
+          styles.sectionTitle
+        }
+      >
+        Change your password
+      </Text>
+
+      <SoulCard
+        style={styles.card}
+      >
+        <View
+          style={styles.form}
+        >
+          <SoulInput
+            label="New password"
+            value={password}
+            onChangeText={(
+              value
+            ) => {
+              setPassword(
+                value
+              );
+
+              setErrors(
+                (current) => ({
+                  ...current,
+
+                  password:
+                    undefined,
+
+                  confirmPassword:
+                    undefined,
+                })
+              );
+
+              setFormError("");
+              setSuccessMessage("");
+            }}
+            placeholder="At least 8 characters"
+            secureTextEntry
+            autoComplete="new-password"
+            textContentType="newPassword"
+            autoCapitalize="none"
+            editable={!saving}
+            error={
+              errors.password
+            }
+          />
+
+          <SoulInput
+            label="One more time"
+            value={
+              confirmPassword
+            }
+            onChangeText={(
+              value
+            ) => {
+              setConfirmPassword(
+                value
+              );
+
+              setErrors(
+                (current) => ({
+                  ...current,
+
+                  confirmPassword:
+                    undefined,
+                })
+              );
+
+              setFormError("");
+              setSuccessMessage("");
+            }}
+            placeholder="Repeat your new password"
+            secureTextEntry
+            autoComplete="new-password"
+            textContentType="newPassword"
+            autoCapitalize="none"
+            editable={!saving}
+            returnKeyType="done"
+            onSubmitEditing={() =>
+              void changePassword()
+            }
+            error={
+              errors.confirmPassword
+            }
+          />
+
+          {formError ? (
+            <FeedbackMessage
+              type="error"
+              message={
+                formError
+              }
+            />
+          ) : null}
+
+          {successMessage ? (
+            <FeedbackMessage
+              message={
+                successMessage
+              }
+            />
+          ) : null}
+
+          <SoulButton
+            title="Update password"
+            loading={saving}
+            disabled={
+              saving ||
+              !dirty
+            }
+            onPress={
+              changePassword
+            }
+          />
+        </View>
+      </SoulCard>
+
+      <Text
+        style={
+          styles.sectionTitle
+        }
+      >
+        This session
+      </Text>
+
+      <SoulCard>
+        <Text
+          style={
+            styles.cardTitle
+          }
+        >
+          Ready to leave for now?
         </Text>
 
-        <SoulCard>
-          <Text
-            style={
-              styles.cardTitle
-            }
-          >
-            Ready to leave for now?
-          </Text>
+        <Text
+          style={
+            styles.cardText
+          }
+        >
+          Signing out here closes
+          this SoulPath session
+          without deliberately
+          ending sessions on other
+          devices.
+        </Text>
 
-          <Text
-            style={
-              styles.cardText
+        <View
+          style={
+            styles.signOutSpacing
+          }
+        >
+          <SoulButton
+            title="Sign out of this session"
+            variant="danger"
+            disabled={
+              saving ||
+              dirty
             }
-          >
-            Signing out here closes
-            this SoulPath session
-            without deliberately
-            ending sessions on other
-            devices.
-          </Text>
-
-          <View
-            style={
-              styles.buttonSpacing
-            }
-          >
-            <SoulButton
-              title="Sign out of this session"
-              variant="danger"
-              disabled={
-                saving ||
-                dirty
-              }
-              onPress={signOut}
-            />
-          </View>
-        </SoulCard>
-      </ScrollView>
-    </SafeAreaView>
+            onPress={signOut}
+          />
+        </View>
+      </SoulCard>
+    </SoulScreen>
   );
 }
 
 const styles =
   StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor:
-        colors.background,
-    },
-
     content: {
-      width: "100%",
       maxWidth: 650,
-      alignSelf: "center",
-      paddingHorizontal: 24,
-      paddingTop: 24,
-      paddingBottom: 60,
-      gap: 15,
     },
 
     back: {
       alignSelf:
         "flex-start",
-      paddingVertical: 8,
+
+      paddingVertical: 10,
     },
 
     backText: {
       color:
         colors.lavender,
+
       fontFamily:
         fonts.bodySemiBold,
+
       fontSize: 12,
     },
 
     title: {
       color: colors.text,
+
       fontFamily:
         fonts.display,
+
       fontSize: 37,
+
       lineHeight: 41,
+
       marginTop: 5,
     },
 
     subtitle: {
       color:
         colors.textMuted,
+
       fontFamily:
         fonts.displayItalic,
+
       fontSize: 17,
+
       lineHeight: 23,
-      marginBottom: 10,
+
+      marginTop: 3,
+
+      marginBottom: 20,
+    },
+
+    card: {
+      marginBottom: 24,
     },
 
     cardSymbol: {
       color: colors.gold,
+
       fontSize: 18,
     },
 
     cardTitle: {
       color: colors.text,
+
       fontFamily:
         fonts.display,
+
       fontSize: 23,
+
+      lineHeight: 27,
+
       marginTop: 6,
     },
 
     cardText: {
       color:
         colors.textMuted,
-      fontFamily: fonts.body,
+
+      fontFamily:
+        fonts.body,
+
       fontSize: 12,
+
       lineHeight: 19,
+
       marginTop: 7,
     },
 
     sectionTitle: {
       color:
         colors.textSoft,
+
       fontFamily:
         fonts.display,
+
       fontSize: 21,
-      marginTop: 12,
+
+      marginBottom: 10,
     },
 
     form: {
       gap: 15,
     },
 
-    buttonSpacing: {
+    signOutSpacing: {
       marginTop: 18,
     },
   }); 

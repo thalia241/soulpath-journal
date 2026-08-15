@@ -8,8 +8,6 @@ import {
 
 import {
   Pressable,
-  SafeAreaView,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -17,6 +15,7 @@ import {
 
 import SoulButton from "../../src/components/SoulButton";
 import SoulInput from "../../src/components/SoulInput";
+import SoulScreen from "../../src/components/SoulScreen";
 import FeedbackMessage from "../../src/components/FeedbackMessage";
 import SectionHeading from "../../src/components/SectionHeading";
 
@@ -44,8 +43,11 @@ import {
 
 type FormErrors = {
   title?: string;
+
   description?: string;
+
   interpretation?: string;
+
   significance?: string;
 };
 
@@ -95,7 +97,9 @@ export default function NewExperienceScreen() {
     errors,
     setErrors,
   ] =
-    useState<FormErrors>({});
+    useState<FormErrors>(
+      {}
+    );
 
   const [
     formError,
@@ -107,12 +111,13 @@ export default function NewExperienceScreen() {
     {
       title:
         "Leave this memory?",
+
       message:
         "What you've written hasn't been saved yet.",
     }
   );
 
-  function validateForm(): boolean {
+  function validateForm() {
     const nextErrors:
       FormErrors = {};
 
@@ -121,43 +126,37 @@ export default function NewExperienceScreen() {
         title
       );
 
-    if (!titleResult.valid) {
-      nextErrors.title =
-        titleResult.message;
-    }
-
     const descriptionResult =
       validateExperienceDescription(
         description
       );
-
-    if (
-      !descriptionResult.valid
-    ) {
-      nextErrors.description =
-        descriptionResult.message;
-    }
 
     const reflectionResult =
       validateOptionalReflection(
         interpretation
       );
 
-    if (
-      !reflectionResult.valid
-    ) {
-      nextErrors.interpretation =
-        reflectionResult.message;
-    }
-
     const significanceResult =
       validateSignificanceLevel(
         significance
       );
 
-    if (
-      !significanceResult.valid
-    ) {
+    if (!titleResult.valid) {
+      nextErrors.title =
+        titleResult.message;
+    }
+
+    if (!descriptionResult.valid) {
+      nextErrors.description =
+        descriptionResult.message;
+    }
+
+    if (!reflectionResult.valid) {
+      nextErrors.interpretation =
+        reflectionResult.message;
+    }
+
+    if (!significanceResult.valid) {
       nextErrors.significance =
         significanceResult.message;
     }
@@ -233,314 +232,319 @@ export default function NewExperienceScreen() {
     "dream";
 
   return (
-    <SafeAreaView
-      style={styles.container}
+    <SoulScreen
+      keyboard
+      contentStyle={
+        styles.content
+      }
     >
-      <ScrollView
-        contentContainerStyle={
-          styles.content
-        }
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={
-          false
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Back to Dreams and Signs"
+        style={styles.back}
+        disabled={saving}
+        onPress={() =>
+          router.back()
         }
       >
-        <Pressable
-          style={styles.back}
+        <Text
+          style={styles.backText}
+        >
+          ‹ Dreams & Signs
+        </Text>
+      </Pressable>
+
+      <Text
+        style={styles.symbol}
+      >
+        {dream ? "☾" : "✦"}
+      </Text>
+
+      <Text
+        style={styles.title}
+      >
+        {dream
+          ? "Remember a dream"
+          : "Notice a sign"}
+      </Text>
+
+      <Text
+        style={styles.subtitle}
+      >
+        {dream
+          ? "Write what remains before the edges begin to fade."
+          : "Keep the moment as you experienced it, without needing to decide what it means."}
+      </Text>
+
+      <SectionHeading
+        title="What kind of moment?"
+      />
+
+      <View
+        style={styles.typeRow}
+      >
+        <TypeCard
+          symbol="☾"
+          title="Dream"
+          subtitle="Something remembered from sleep"
+          selected={
+            experienceType ===
+            "dream"
+          }
           disabled={saving}
-          onPress={() =>
-            router.back()
-          }
-        >
-          <Text
-            style={styles.backText}
-          >
-            ‹ Dreams & Signs
-          </Text>
-        </Pressable>
-
-        <Text
-          style={styles.symbol}
-        >
-          {dream ? "☾" : "✦"}
-        </Text>
-
-        <Text
-          style={styles.title}
-        >
-          {dream
-            ? "Remember a dream"
-            : "Notice a sign"}
-        </Text>
-
-        <Text
-          style={styles.subtitle}
-        >
-          {dream
-            ? "Write what remains before the edges begin to fade."
-            : "Keep the moment as you experienced it, without needing to decide what it means."}
-        </Text>
-
-        <SectionHeading
-          title="What kind of moment?"
-        />
-
-        <View
-          style={styles.typeRow}
-        >
-          <TypeCard
-            symbol="☾"
-            title="Dream"
-            subtitle="Something remembered from sleep"
-            selected={
-              experienceType ===
+          onPress={() => {
+            setExperienceType(
               "dream"
-            }
-            disabled={saving}
-            onPress={() => {
-              setExperienceType(
-                "dream"
-              );
+            );
 
-              setDirty(true);
-            }}
-          />
-
-          <TypeCard
-            symbol="✦"
-            title="Sign"
-            subtitle="A synchronicity or meaningful coincidence"
-            selected={
-              experienceType ===
-              "synchronicity"
-            }
-            disabled={saving}
-            onPress={() => {
-              setExperienceType(
-                "synchronicity"
-              );
-
-              setDirty(true);
-            }}
-          />
-        </View>
-
-        <View
-          style={styles.form}
-        >
-          <SoulInput
-            label="A name for this memory"
-            value={title}
-            onChangeText={(
-              value
-            ) => {
-              setTitle(value);
-              setDirty(true);
-
-              setErrors(
-                (current) => ({
-                  ...current,
-                  title: undefined,
-                })
-              );
-            }}
-            placeholder={
-              dream
-                ? "The house by the ocean..."
-                : "11:11 after thinking of..."
-            }
-            maxLength={120}
-            editable={!saving}
-            error={errors.title}
-          />
-
-          <SoulInput
-            label={
-              dream
-                ? "What happened in the dream?"
-                : "What happened?"
-            }
-            value={description}
-            onChangeText={(
-              value
-            ) => {
-              setDescription(
-                value
-              );
-
-              setDirty(true);
-
-              setErrors(
-                (current) => ({
-                  ...current,
-                  description:
-                    undefined,
-                })
-              );
-            }}
-            placeholder="Write what you remember..."
-            multiline
-            textAlignVertical="top"
-            editable={!saving}
-            style={
-              styles.largeInput
-            }
-            error={
-              errors.description
-            }
-          />
-
-          <SoulInput
-            label="What does it bring up for you?"
-            hint="Optional. This is your own reflection, not an interpretation generated by SoulPath."
-            value={
-              interpretation
-            }
-            onChangeText={(
-              value
-            ) => {
-              setInterpretation(
-                value
-              );
-
-              setDirty(true);
-
-              setErrors(
-                (current) => ({
-                  ...current,
-                  interpretation:
-                    undefined,
-                })
-              );
-            }}
-            placeholder="Thoughts, symbols, feelings..."
-            multiline
-            textAlignVertical="top"
-            editable={!saving}
-            style={
-              styles.reflectionInput
-            }
-            error={
-              errors.interpretation
-            }
-          />
-        </View>
-
-        <SectionHeading
-          title="How deeply did it stay with you?"
-          subtitle="Optional — from subtle to profound."
+            setDirty(true);
+          }}
         />
 
-        <View
-          style={
-            styles.significanceRow
+        <TypeCard
+          symbol="✦"
+          title="Sign"
+          subtitle="A synchronicity or meaningful coincidence"
+          selected={
+            experienceType ===
+            "synchronicity"
           }
-        >
-          {[1, 2, 3, 4, 5].map(
-            (level) => {
-              const selected =
-                significance ===
-                level;
+          disabled={saving}
+          onPress={() => {
+            setExperienceType(
+              "synchronicity"
+            );
 
-              return (
-                <Pressable
-                  key={level}
-                  disabled={saving}
+            setDirty(true);
+          }}
+        />
+      </View>
+
+      <View
+        style={styles.form}
+      >
+        <SoulInput
+          label="A name for this memory"
+          value={title}
+          onChangeText={(
+            value
+          ) => {
+            setTitle(value);
+            setDirty(true);
+
+            setErrors(
+              (current) => ({
+                ...current,
+
+                title: undefined,
+              })
+            );
+          }}
+          placeholder={
+            dream
+              ? "The house by the ocean..."
+              : "11:11 after thinking of..."
+          }
+          maxLength={120}
+          editable={!saving}
+          error={errors.title}
+        />
+
+        <SoulInput
+          label={
+            dream
+              ? "What happened in the dream?"
+              : "What happened?"
+          }
+          value={description}
+          onChangeText={(
+            value
+          ) => {
+            setDescription(
+              value
+            );
+
+            setDirty(true);
+
+            setErrors(
+              (current) => ({
+                ...current,
+
+                description:
+                  undefined,
+              })
+            );
+          }}
+          placeholder="Write what you remember..."
+          multiline
+          textAlignVertical="top"
+          editable={!saving}
+          style={
+            styles.largeInput
+          }
+          error={
+            errors.description
+          }
+        />
+
+        <SoulInput
+          label="What does it bring up for you?"
+          hint="Optional. This is your own reflection, not an interpretation generated by SoulPath."
+          value={
+            interpretation
+          }
+          onChangeText={(
+            value
+          ) => {
+            setInterpretation(
+              value
+            );
+
+            setDirty(true);
+
+            setErrors(
+              (current) => ({
+                ...current,
+
+                interpretation:
+                  undefined,
+              })
+            );
+          }}
+          placeholder="Thoughts, symbols, feelings..."
+          multiline
+          textAlignVertical="top"
+          editable={!saving}
+          style={
+            styles.reflectionInput
+          }
+          error={
+            errors.interpretation
+          }
+        />
+      </View>
+
+      <SectionHeading
+        title="How deeply did it stay with you?"
+        subtitle="Optional — from subtle to profound."
+      />
+
+      <View
+        style={
+          styles.significanceRow
+        }
+      >
+        {[1, 2, 3, 4, 5].map(
+          (level) => {
+            const selected =
+              significance ===
+              level;
+
+            return (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Significance ${level} out of 5`}
+                accessibilityState={{
+                  selected,
+                }}
+                key={level}
+                disabled={saving}
+                style={[
+                  styles.level,
+
+                  selected &&
+                    styles.levelSelected,
+                ]}
+                onPress={() => {
+                  setSignificance(
+                    selected
+                      ? null
+                      : level
+                  );
+
+                  setDirty(true);
+
+                  setErrors(
+                    (current) => ({
+                      ...current,
+
+                      significance:
+                        undefined,
+                    })
+                  );
+                }}
+              >
+                <Text
                   style={[
-                    styles.level,
+                    styles.levelText,
 
                     selected &&
-                      styles.levelSelected,
+                      styles.levelTextSelected,
                   ]}
-                  onPress={() => {
-                    setSignificance(
-                      selected
-                        ? null
-                        : level
-                    );
-
-                    setDirty(true);
-
-                    setErrors(
-                      (current) => ({
-                        ...current,
-                        significance:
-                          undefined,
-                      })
-                    );
-                  }}
                 >
-                  <Text
-                    style={[
-                      styles.levelText,
+                  {level}
+                </Text>
+              </Pressable>
+            );
+          }
+        )}
+      </View>
 
-                      selected &&
-                        styles.levelTextSelected,
-                    ]}
-                  >
-                    {level}
-                  </Text>
-                </Pressable>
-              );
-            }
-          )}
-        </View>
-
-        {errors.significance ? (
-          <Text
-            style={
-              styles.fieldError
-            }
-          >
-            {
-              errors.significance
-            }
-          </Text>
-        ) : null}
-
-        <View
+      {errors.significance ? (
+        <Text
+          accessibilityRole="alert"
           style={
-            styles.scaleLabels
+            styles.fieldError
           }
         >
-          <Text
-            style={
-              styles.scaleText
-            }
-          >
-            subtle
-          </Text>
-
-          <Text
-            style={
-              styles.scaleText
-            }
-          >
-            profound
-          </Text>
-        </View>
-
-        {formError ? (
-          <FeedbackMessage
-            type="error"
-            message={formError}
-          />
-        ) : null}
-
-        <SoulButton
-          title={
-            dream
-              ? "Keep this dream"
-              : "Keep this sign"
+          {
+            errors.significance
           }
-          loading={saving}
-          disabled={saving}
-          onPress={
-            saveExperience
+        </Text>
+      ) : null}
+
+      <View
+        style={
+          styles.scaleLabels
+        }
+      >
+        <Text
+          style={
+            styles.scaleText
           }
+        >
+          subtle
+        </Text>
+
+        <Text
+          style={
+            styles.scaleText
+          }
+        >
+          profound
+        </Text>
+      </View>
+
+      {formError ? (
+        <FeedbackMessage
+          type="error"
+          message={formError}
         />
-      </ScrollView>
-    </SafeAreaView>
+      ) : null}
+
+      <SoulButton
+        title={
+          dream
+            ? "Keep this dream"
+            : "Keep this sign"
+        }
+        loading={saving}
+        disabled={saving}
+        onPress={
+          saveExperience
+        }
+      />
+    </SoulScreen>
   );
 }
 
@@ -553,14 +557,25 @@ function TypeCard({
   onPress,
 }: {
   symbol: string;
+
   title: string;
+
   subtitle: string;
+
   selected: boolean;
+
   disabled: boolean;
+
   onPress: () => void;
 }) {
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityState={{
+        selected,
+        disabled,
+      }}
       disabled={disabled}
       style={[
         styles.typeCard,
@@ -598,143 +613,176 @@ function TypeCard({
 
 const styles =
   StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor:
-        colors.background,
-    },
-
     content: {
-      width: "100%",
       maxWidth: 680,
-      alignSelf: "center",
-      paddingHorizontal: 24,
-      paddingTop: 24,
-      paddingBottom: 65,
     },
 
     back: {
       alignSelf:
         "flex-start",
-      paddingVertical: 8,
+
+      paddingVertical: 10,
     },
 
     backText: {
       color:
         colors.lavender,
+
       fontFamily:
         fonts.bodySemiBold,
+
       fontSize: 12,
     },
 
     symbol: {
       color: colors.gold,
+
       fontSize: 24,
+
       marginTop: 21,
     },
 
     title: {
       color: colors.text,
+
       fontFamily:
         fonts.display,
+
       fontSize: 39,
+
+      lineHeight: 43,
+
       marginTop: 6,
     },
 
     subtitle: {
       color:
         colors.textMuted,
+
       fontFamily:
         fonts.displayItalic,
+
       fontSize: 17,
+
       lineHeight: 23,
+
       marginTop: 3,
+
       marginBottom: 30,
     },
 
     typeRow: {
       flexDirection: "row",
+
       gap: 10,
+
       marginBottom: 30,
     },
 
     typeCard: {
       flex: 1,
-      minHeight: 135,
+
+      minHeight: 140,
+
       backgroundColor:
         colors.surface,
+
       borderWidth: 1,
+
       borderColor:
         colors.border,
+
       borderRadius:
         radius.lg,
+
       padding: 17,
     },
 
     typeCardSelected: {
       borderColor:
         colors.lavenderStrong,
+
       backgroundColor:
         colors.surfaceRaised,
     },
 
     typeSymbol: {
       color: colors.gold,
+
       fontSize: 22,
     },
 
     typeTitle: {
       color: colors.text,
+
       fontFamily:
         fonts.display,
+
       fontSize: 22,
+
       marginTop: 6,
     },
 
     typeSubtitle: {
-      color: colors.textDim,
-      fontFamily: fonts.body,
+      color:
+        colors.textDim,
+
+      fontFamily:
+        fonts.body,
+
       fontSize: 9,
+
       lineHeight: 14,
+
       marginTop: 3,
     },
 
     form: {
       gap: 17,
+
       marginBottom: 30,
     },
 
     largeInput: {
-      minHeight: 155,
+      minHeight: 165,
     },
 
     reflectionInput: {
-      minHeight: 120,
+      minHeight: 125,
     },
 
     significanceRow: {
       flexDirection: "row",
+
       gap: 8,
     },
 
     level: {
       flex: 1,
-      minHeight: 48,
+
+      minHeight: 50,
+
       borderRadius:
         radius.md,
+
       borderWidth: 1,
+
       borderColor:
         colors.border,
+
       backgroundColor:
         colors.surface,
+
       justifyContent:
         "center",
+
       alignItems: "center",
     },
 
     levelSelected: {
       backgroundColor:
         colors.purpleDark,
+
       borderColor:
         colors.lavenderStrong,
     },
@@ -742,8 +790,10 @@ const styles =
     levelText: {
       color:
         colors.textMuted,
+
       fontFamily:
         fonts.display,
+
       fontSize: 21,
     },
 
@@ -754,22 +804,33 @@ const styles =
     fieldError: {
       color:
         colors.errorText,
-      fontFamily: fonts.body,
+
+      fontFamily:
+        fonts.body,
+
       fontSize: 11,
+
       marginTop: 7,
     },
 
     scaleLabels: {
       flexDirection: "row",
+
       justifyContent:
         "space-between",
+
       marginTop: 6,
+
       marginBottom: 28,
     },
 
     scaleText: {
-      color: colors.textDim,
-      fontFamily: fonts.body,
+      color:
+        colors.textDim,
+
+      fontFamily:
+        fonts.body,
+
       fontSize: 9,
     },
 

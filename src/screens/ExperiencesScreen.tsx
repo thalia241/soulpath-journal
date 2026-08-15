@@ -12,7 +12,6 @@ import {
 import {
   ActivityIndicator,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -20,14 +19,15 @@ import {
   View,
 } from "react-native";
 
-import EmptyState from "../../src/components/EmptyState";
-import SectionHeading from "../../src/components/SectionHeading";
+import EmptyState from "../components/EmptyState";
+import SectionHeading from "../components/SectionHeading";
+import SoulScreen from "../components/SoulScreen";
 
 import {
   colors,
   fonts,
   radius,
-} from "../../src/theme";
+} from "../theme";
 
 import {
   Experience,
@@ -35,7 +35,7 @@ import {
   getDreamCount,
   getExperiences,
   getSynchronicityCount,
-} from "../../src/services/experienceService";
+} from "../services/experienceService";
 
 type TypeFilter =
   | "all"
@@ -251,18 +251,10 @@ export default function ExperiencesScreen() {
   }
 
   return (
-    <SafeAreaView
-      style={styles.container}
+    <SoulScreen
+      bottomPadding={115}
+      contentStyle={styles.content}
     >
-      <ScrollView
-        contentContainerStyle={
-          styles.content
-        }
-        showsVerticalScrollIndicator={
-          false
-        }
-        keyboardShouldPersistTaps="handled"
-      >
         <View
           style={styles.header}
         >
@@ -633,7 +625,7 @@ export default function ExperiencesScreen() {
               hasFilters
                 ? clearFilters
                 : () =>
-                    router.push(
+                    router.navigate(
                       "/experiences/new"
                     )
             }
@@ -659,7 +651,7 @@ export default function ExperiencesScreen() {
                         styles.pressed,
                     ]}
                     onPress={() =>
-                      router.push({
+                      router.navigate({
                         pathname:
                           "/experiences/[id]",
                         params: {
@@ -750,26 +742,14 @@ export default function ExperiencesScreen() {
             )}
           </View>
         )}
-      </ScrollView>
-    </SafeAreaView>
+    </SoulScreen>
   );
 }
 
 const styles =
   StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor:
-        colors.background,
-    },
-
     content: {
-      width: "100%",
-      maxWidth: 720,
-      alignSelf: "center",
-      paddingHorizontal: 24,
-      paddingTop: 34,
-      paddingBottom: 115,
+      paddingTop: 20,
     },
 
     header: {

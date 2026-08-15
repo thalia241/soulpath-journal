@@ -184,7 +184,7 @@ export default function ExperienceDetailScreen() {
       );
 
       router.replace(
-        "/experiences"
+        "/(tabs)/experiences"
       );
     } catch (error) {
       console.error(
@@ -298,7 +298,7 @@ export default function ExperienceDetailScreen() {
               variant="secondary"
               onPress={() =>
                 router.replace(
-                  "/experiences"
+                  "/(tabs)/experiences"
                 )
               }
             />
@@ -492,7 +492,7 @@ export default function ExperienceDetailScreen() {
             variant="secondary"
             onPress={() =>
               router.replace(
-                "/experiences"
+                "/(tabs)/experiences"
               )
             }
           />

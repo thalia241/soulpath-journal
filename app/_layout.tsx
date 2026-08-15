@@ -22,8 +22,12 @@ import {
   StatusBar,
 } from "expo-status-bar";
 
+import * as SplashScreen from "expo-splash-screen";
+
 import {
+  useCallback,
   useEffect,
+  useState,
 } from "react";
 
 import {
@@ -34,14 +38,25 @@ import {
 } from "react-native";
 
 import {
+  SafeAreaProvider,
+  initialWindowMetrics,
+} from "react-native-safe-area-context";
+
+import {
   AuthProvider,
   useAuth,
 } from "../src/context/AuthContext";
+
+import AnimatedSoulPathLaunch from "../src/components/AnimatedSoulPathLaunch";
 
 import {
   colors,
   fonts,
 } from "../src/theme";
+
+void SplashScreen.preventAutoHideAsync().catch(() => {
+  // Native splash control is best-effort during development reloads.
+});
 
 function RootNavigator() {
   const {
@@ -49,18 +64,11 @@ function RootNavigator() {
     loading,
     authExitReason,
     acknowledgeAuthExit,
-  } =
-    useAuth();
+  } = useAuth();
 
   const router =
     useRouter();
 
-  /*
-   * If AuthContext specifically determined that the
-   * existing session expired or became unrecoverable,
-   * send the user straight to Login rather than making
-   * them wonder why they returned to the welcome page.
-   */
   useEffect(() => {
     if (
       loading ||
@@ -131,10 +139,6 @@ function RootNavigator() {
         />
 
         <Stack.Screen
-          name="journal/index"
-        />
-
-        <Stack.Screen
           name="journal/new"
         />
 
@@ -144,10 +148,6 @@ function RootNavigator() {
 
         <Stack.Screen
           name="journal/edit/[id]"
-        />
-
-        <Stack.Screen
-          name="experiences/index"
         />
 
         <Stack.Screen
@@ -223,6 +223,11 @@ function LoadingScreen({
 
 export default function RootLayout() {
   const [
+    showLaunch,
+    setShowLaunch,
+  ] = useState(true);
+
+  const [
     cormorantLoaded,
   ] =
     useCormorantFonts({
@@ -250,25 +255,56 @@ export default function RootLayout() {
     cormorantLoaded &&
     nunitoLoaded;
 
+  const finishLaunch =
+    useCallback(() => {
+      setShowLaunch(false);
+    }, []);
+
+  useEffect(() => {
+    if (!fontsLoaded) {
+      return;
+    }
+
+    void SplashScreen.hideAsync();
+  }, [fontsLoaded]);
+
   if (!fontsLoaded) {
-    return (
-      <LoadingScreen />
-    );
+    return null;
   }
 
   return (
-    <AuthProvider>
-      <StatusBar
-        style="light"
-      />
+    <SafeAreaProvider
+      initialMetrics={
+        initialWindowMetrics
+      }
+    >
+      <AuthProvider>
+        <StatusBar
+          style="light"
+        />
 
-      <RootNavigator />
-    </AuthProvider>
+        <View style={styles.appContainer}>
+          <RootNavigator />
+
+          {showLaunch ? (
+            <AnimatedSoulPathLaunch
+              onFinished={finishLaunch}
+            />
+          ) : null}
+        </View>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
 
 const styles =
   StyleSheet.create({
+    appContainer: {
+      flex: 1,
+      backgroundColor:
+        colors.background,
+    },
+
     loadingContainer: {
       flex: 1,
 

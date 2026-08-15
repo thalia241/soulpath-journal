@@ -12,8 +12,6 @@ import {
 import {
   ActivityIndicator,
   Pressable,
-  SafeAreaView,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -21,6 +19,7 @@ import {
 
 import SoulButton from "../../../src/components/SoulButton";
 import SoulInput from "../../../src/components/SoulInput";
+import SoulScreen from "../../../src/components/SoulScreen";
 import FeedbackMessage from "../../../src/components/FeedbackMessage";
 import SectionHeading from "../../../src/components/SectionHeading";
 
@@ -64,8 +63,11 @@ type Snapshot = {
 
 type FormErrors = {
   title?: string;
+
   description?: string;
+
   interpretation?: string;
+
   significance?: string;
 };
 
@@ -128,7 +130,9 @@ export default function EditExperienceScreen() {
     errors,
     setErrors,
   ] =
-    useState<FormErrors>({});
+    useState<FormErrors>(
+      {}
+    );
 
   const [
     formError,
@@ -167,6 +171,7 @@ export default function EditExperienceScreen() {
     {
       title:
         "Leave this memory?",
+
       message:
         "The changes you made haven't been saved.",
     }
@@ -247,7 +252,7 @@ export default function EditExperienceScreen() {
     }
   }
 
-  function validateForm(): boolean {
+  function validateForm() {
     const nextErrors:
       FormErrors = {};
 
@@ -256,43 +261,37 @@ export default function EditExperienceScreen() {
         title
       );
 
-    if (!titleResult.valid) {
-      nextErrors.title =
-        titleResult.message;
-    }
-
     const descriptionResult =
       validateExperienceDescription(
         description
       );
-
-    if (
-      !descriptionResult.valid
-    ) {
-      nextErrors.description =
-        descriptionResult.message;
-    }
 
     const interpretationResult =
       validateOptionalReflection(
         interpretation
       );
 
-    if (
-      !interpretationResult.valid
-    ) {
-      nextErrors.interpretation =
-        interpretationResult.message;
-    }
-
     const significanceResult =
       validateSignificanceLevel(
         significance
       );
 
-    if (
-      !significanceResult.valid
-    ) {
+    if (!titleResult.valid) {
+      nextErrors.title =
+        titleResult.message;
+    }
+
+    if (!descriptionResult.valid) {
+      nextErrors.description =
+        descriptionResult.message;
+    }
+
+    if (!interpretationResult.valid) {
+      nextErrors.interpretation =
+        interpretationResult.message;
+    }
+
+    if (!significanceResult.valid) {
       nextErrors.significance =
         significanceResult.message;
     }
@@ -388,274 +387,301 @@ export default function EditExperienceScreen() {
     }
   }
 
-  if (loading) {
-    return (
-      <SafeAreaView
-        style={styles.centered}
-      >
-        <ActivityIndicator
-          color={
-            colors.lavender
-          }
-        />
-      </SafeAreaView>
-    );
-  }
-
   return (
-    <SafeAreaView
-      style={styles.container}
+    <SoulScreen
+      keyboard
+      contentStyle={
+        styles.content
+      }
     >
-      <ScrollView
-        contentContainerStyle={
-          styles.content
-        }
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={
-          false
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Back to memory"
+        style={styles.back}
+        disabled={saving}
+        onPress={() =>
+          router.back()
         }
       >
-        <Pressable
-          style={styles.back}
-          disabled={saving}
-          onPress={() =>
-            router.back()
-          }
+        <Text
+          style={styles.backText}
         >
+          ‹ Memory
+        </Text>
+      </Pressable>
+
+      <Text
+        style={styles.title}
+      >
+        Return to the memory
+      </Text>
+
+      <Text
+        style={styles.subtitle}
+      >
+        What we remember — and
+        what it means to us — can
+        change with time.
+      </Text>
+
+      {loading ? (
+        <View
+          style={styles.loading}
+        >
+          <ActivityIndicator
+            color={
+              colors.lavender
+            }
+          />
+
           <Text
-            style={styles.backText}
+            style={
+              styles.loadingText
+            }
           >
-            ‹ Memory
+            Returning to this
+            memory...
           </Text>
-        </Pressable>
+        </View>
+      ) : (
+        <>
+          <SectionHeading
+            title="What kind of moment?"
+          />
 
-        <Text
-          style={styles.title}
-        >
-          Return to the memory
-        </Text>
-
-        <Text
-          style={styles.subtitle}
-        >
-          What we remember — and
-          what it means to us — can
-          change with time.
-        </Text>
-
-        <SectionHeading
-          title="What kind of moment?"
-        />
-
-        <View
-          style={styles.typeRow}
-        >
-          <TypeButton
-            symbol="☾"
-            label="Dream"
-            selected={
-              experienceType ===
-              "dream"
+          <View
+            style={
+              styles.typeRow
             }
-            disabled={saving}
-            onPress={() =>
-              setExperienceType(
+          >
+            <TypeButton
+              symbol="☾"
+              label="Dream"
+              selected={
+                experienceType ===
                 "dream"
-              )
-            }
-          />
+              }
+              disabled={saving}
+              onPress={() =>
+                setExperienceType(
+                  "dream"
+                )
+              }
+            />
 
-          <TypeButton
-            symbol="✦"
-            label="Sign"
-            selected={
-              experienceType ===
-              "synchronicity"
-            }
-            disabled={saving}
-            onPress={() =>
-              setExperienceType(
+            <TypeButton
+              symbol="✦"
+              label="Sign"
+              selected={
+                experienceType ===
                 "synchronicity"
-              )
-            }
-          />
-        </View>
+              }
+              disabled={saving}
+              onPress={() =>
+                setExperienceType(
+                  "synchronicity"
+                )
+              }
+            />
+          </View>
 
-        <View
-          style={styles.form}
-        >
-          <SoulInput
-            label="Title"
-            value={title}
-            onChangeText={(
-              value
-            ) => {
-              setTitle(value);
-
-              setErrors(
-                (current) => ({
-                  ...current,
-                  title: undefined,
-                })
-              );
-            }}
-            maxLength={120}
-            editable={!saving}
-            error={errors.title}
-          />
-
-          <SoulInput
-            label="What happened?"
-            value={description}
-            onChangeText={(
-              value
-            ) => {
-              setDescription(
+          <View
+            style={styles.form}
+          >
+            <SoulInput
+              label="Title"
+              value={title}
+              onChangeText={(
                 value
-              );
+              ) => {
+                setTitle(value);
 
-              setErrors(
-                (current) => ({
-                  ...current,
-                  description:
-                    undefined,
-                })
-              );
-            }}
-            multiline
-            textAlignVertical="top"
-            editable={!saving}
-            style={
-              styles.largeInput
-            }
-            error={
-              errors.description
-            }
-          />
+                setErrors(
+                  (current) => ({
+                    ...current,
 
-          <SoulInput
-            label="What does it bring up for you?"
-            value={
-              interpretation
-            }
-            onChangeText={(
-              value
-            ) => {
-              setInterpretation(
+                    title:
+                      undefined,
+                  })
+                );
+              }}
+              maxLength={120}
+              editable={!saving}
+              error={errors.title}
+            />
+
+            <SoulInput
+              label="What happened?"
+              value={description}
+              onChangeText={(
                 value
-              );
+              ) => {
+                setDescription(
+                  value
+                );
 
-              setErrors(
-                (current) => ({
-                  ...current,
-                  interpretation:
-                    undefined,
-                })
-              );
-            }}
-            multiline
-            textAlignVertical="top"
-            editable={!saving}
-            style={
-              styles.reflectionInput
-            }
-            error={
-              errors.interpretation
-            }
+                setErrors(
+                  (current) => ({
+                    ...current,
+
+                    description:
+                      undefined,
+                  })
+                );
+              }}
+              multiline
+              textAlignVertical="top"
+              editable={!saving}
+              style={
+                styles.largeInput
+              }
+              error={
+                errors.description
+              }
+            />
+
+            <SoulInput
+              label="What does it bring up for you?"
+              value={
+                interpretation
+              }
+              onChangeText={(
+                value
+              ) => {
+                setInterpretation(
+                  value
+                );
+
+                setErrors(
+                  (current) => ({
+                    ...current,
+
+                    interpretation:
+                      undefined,
+                  })
+                );
+              }}
+              multiline
+              textAlignVertical="top"
+              editable={!saving}
+              style={
+                styles.reflectionInput
+              }
+              error={
+                errors.interpretation
+              }
+            />
+          </View>
+
+          <SectionHeading
+            title="How deeply does it stay with you?"
           />
-        </View>
 
-        <SectionHeading
-          title="How deeply does it stay with you?"
-        />
+          <View
+            style={
+              styles.levelRow
+            }
+          >
+            {[1, 2, 3, 4, 5].map(
+              (level) => {
+                const selected =
+                  significance ===
+                  level;
 
-        <View
-          style={styles.levelRow}
-        >
-          {[1, 2, 3, 4, 5].map(
-            (level) => {
-              const selected =
-                significance ===
-                level;
-
-              return (
-                <Pressable
-                  key={level}
-                  disabled={saving}
-                  style={[
-                    styles.level,
-
-                    selected &&
-                      styles.levelSelected,
-                  ]}
-                  onPress={() => {
-                    setSignificance(
-                      selected
-                        ? null
-                        : level
-                    );
-
-                    setErrors(
-                      (current) => ({
-                        ...current,
-                        significance:
-                          undefined,
-                      })
-                    );
-                  }}
-                >
-                  <Text
+                return (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Significance ${level} out of 5`}
+                    accessibilityState={{
+                      selected,
+                    }}
+                    key={level}
+                    disabled={saving}
                     style={[
-                      styles.levelText,
+                      styles.level,
 
                       selected &&
-                        styles.levelTextSelected,
+                        styles.levelSelected,
                     ]}
+                    onPress={() => {
+                      setSignificance(
+                        selected
+                          ? null
+                          : level
+                      );
+
+                      setErrors(
+                        (current) => ({
+                          ...current,
+
+                          significance:
+                            undefined,
+                        })
+                      );
+                    }}
                   >
-                    {level}
-                  </Text>
-                </Pressable>
-              );
-            }
+                    <Text
+                      style={[
+                        styles.levelText,
+
+                        selected &&
+                          styles.levelTextSelected,
+                      ]}
+                    >
+                      {level}
+                    </Text>
+                  </Pressable>
+                );
+              }
+            )}
+          </View>
+
+          {errors.significance ? (
+            <Text
+              accessibilityRole="alert"
+              style={
+                styles.fieldError
+              }
+            >
+              {
+                errors.significance
+              }
+            </Text>
+          ) : (
+            <View
+              style={
+                styles.levelSpacing
+              }
+            />
           )}
-        </View>
 
-        {errors.significance ? (
-          <Text
-            style={
-              styles.fieldError
-            }
-          >
-            {
-              errors.significance
-            }
-          </Text>
-        ) : null}
+          {formError ? (
+            <FeedbackMessage
+              type="error"
+              message={
+                formError
+              }
+            />
+          ) : null}
 
-        {formError ? (
-          <FeedbackMessage
-            type="error"
-            message={formError}
+          <SoulButton
+            title={
+              dirty
+                ? "Save what changed"
+                : "Nothing to save"
+            }
+            loading={saving}
+            disabled={
+              saving ||
+              !dirty
+            }
+            onPress={
+              saveChanges
+            }
           />
-        ) : null}
-
-        <SoulButton
-          title={
-            dirty
-              ? "Save what changed"
-              : "Nothing to save"
-          }
-          loading={saving}
-          disabled={
-            saving ||
-            !dirty
-          }
-          onPress={
-            saveChanges
-          }
-        />
-      </ScrollView>
-    </SafeAreaView>
+        </>
+      )}
+    </SoulScreen>
   );
 }
 
@@ -667,13 +693,23 @@ function TypeButton({
   onPress,
 }: {
   symbol: string;
+
   label: string;
+
   selected: boolean;
+
   disabled: boolean;
+
   onPress: () => void;
 }) {
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{
+        selected,
+        disabled,
+      }}
       disabled={disabled}
       style={[
         styles.typeButton,
@@ -708,101 +744,129 @@ function TypeButton({
 
 const styles =
   StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor:
-        colors.background,
-    },
-
-    centered: {
-      flex: 1,
-      justifyContent:
-        "center",
-      alignItems: "center",
-      backgroundColor:
-        colors.background,
-    },
-
     content: {
-      width: "100%",
       maxWidth: 680,
-      alignSelf: "center",
-      paddingHorizontal: 24,
-      paddingTop: 24,
-      paddingBottom: 65,
     },
 
     back: {
       alignSelf:
         "flex-start",
-      paddingVertical: 8,
+
+      paddingVertical: 10,
     },
 
     backText: {
       color:
         colors.lavender,
+
       fontFamily:
         fonts.bodySemiBold,
+
       fontSize: 12,
     },
 
     title: {
       color: colors.text,
+
       fontFamily:
         fonts.display,
+
       fontSize: 38,
+
       lineHeight: 42,
+
       marginTop: 22,
     },
 
     subtitle: {
       color:
         colors.textMuted,
+
       fontFamily:
         fonts.displayItalic,
+
       fontSize: 17,
+
       lineHeight: 23,
+
       marginTop: 3,
+
       marginBottom: 30,
+    },
+
+    loading: {
+      paddingVertical: 50,
+
+      alignItems: "center",
+
+      gap: 12,
+    },
+
+    loadingText: {
+      color:
+        colors.textDim,
+
+      fontFamily:
+        fonts.body,
+
+      fontSize: 11,
     },
 
     typeRow: {
       flexDirection: "row",
+
       gap: 10,
+
       marginBottom: 30,
     },
 
     typeButton: {
       flex: 1,
+
+      minHeight: 90,
+
       backgroundColor:
         colors.surface,
+
       borderWidth: 1,
+
       borderColor:
         colors.border,
+
       borderRadius:
         radius.lg,
+
       paddingVertical: 17,
+
       alignItems: "center",
+
+      justifyContent:
+        "center",
     },
 
     typeSelected: {
       backgroundColor:
         colors.surfaceRaised,
+
       borderColor:
         colors.lavenderStrong,
     },
 
     typeSymbol: {
       color: colors.gold,
+
       fontSize: 20,
     },
 
     typeText: {
       color:
         colors.textMuted,
+
       fontFamily:
         fonts.bodySemiBold,
+
       fontSize: 11,
+
       marginTop: 5,
     },
 
@@ -813,40 +877,50 @@ const styles =
 
     form: {
       gap: 17,
+
       marginBottom: 30,
     },
 
     largeInput: {
-      minHeight: 150,
+      minHeight: 165,
     },
 
     reflectionInput: {
-      minHeight: 120,
+      minHeight: 125,
     },
 
     levelRow: {
       flexDirection: "row",
+
       gap: 8,
     },
 
     level: {
       flex: 1,
-      minHeight: 48,
+
+      minHeight: 50,
+
       borderWidth: 1,
+
       borderColor:
         colors.border,
+
       borderRadius:
         radius.md,
+
       backgroundColor:
         colors.surface,
+
       justifyContent:
         "center",
+
       alignItems: "center",
     },
 
     levelSelected: {
       backgroundColor:
         colors.purpleDark,
+
       borderColor:
         colors.lavenderStrong,
     },
@@ -854,8 +928,10 @@ const styles =
     levelText: {
       color:
         colors.textMuted,
+
       fontFamily:
         fonts.display,
+
       fontSize: 21,
     },
 
@@ -866,10 +942,19 @@ const styles =
     fieldError: {
       color:
         colors.errorText,
-      fontFamily: fonts.body,
+
+      fontFamily:
+        fonts.body,
+
       fontSize: 11,
+
       marginTop: 7,
+
       marginBottom: 24,
+    },
+
+    levelSpacing: {
+      height: 30,
     },
 
     disabled: {

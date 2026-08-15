@@ -20,10 +20,18 @@ type Variant =
 
 type Props = {
   title: string;
+
   onPress: () => void;
+
   loading?: boolean;
+
   disabled?: boolean;
+
   variant?: Variant;
+
+  accessibilityLabel?: string;
+
+  accessibilityHint?: string;
 };
 
 export default function SoulButton({
@@ -32,12 +40,29 @@ export default function SoulButton({
   loading = false,
   disabled = false,
   variant = "primary",
+  accessibilityLabel,
+  accessibilityHint,
 }: Props) {
   const inactive =
     disabled || loading;
 
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={
+        accessibilityLabel ??
+        title
+      }
+      accessibilityHint={
+        accessibilityHint
+      }
+      accessibilityState={{
+        disabled:
+          inactive,
+
+        busy:
+          loading,
+      }}
       disabled={inactive}
       onPress={onPress}
       style={({ pressed }) => [
@@ -65,10 +90,13 @@ export default function SoulButton({
     >
       {loading ? (
         <ActivityIndicator
+          size="small"
           color={
             variant === "primary"
               ? colors.white
-              : colors.lavender
+              : variant === "danger"
+                ? colors.errorText
+                : colors.lavender
           }
         />
       ) : (
@@ -99,36 +127,65 @@ export default function SoulButton({
 const styles = StyleSheet.create({
   base: {
     minHeight: 50,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    justifyContent: "center",
-    alignItems: "center",
+
+    minWidth: 48,
+
+    borderRadius:
+      radius.md,
+
+    paddingHorizontal:
+      spacing.xl,
+
+    paddingVertical:
+      spacing.md,
+
+    justifyContent:
+      "center",
+
+    alignItems:
+      "center",
   },
 
   primary: {
-    backgroundColor: colors.purple,
+    backgroundColor:
+      colors.purple,
   },
 
   secondary: {
-    backgroundColor: colors.surfaceRaised,
+    backgroundColor:
+      colors.surfaceRaised,
+
     borderWidth: 1,
-    borderColor: colors.borderStrong,
+
+    borderColor:
+      colors.borderStrong,
   },
 
   danger: {
-    backgroundColor: colors.errorBackground,
+    backgroundColor:
+      colors.errorBackground,
+
     borderWidth: 1,
-    borderColor: colors.errorBorder,
+
+    borderColor:
+      colors.errorBorder,
   },
 
   ghost: {
-    backgroundColor: "transparent",
+    backgroundColor:
+      "transparent",
   },
 
   text: {
-    fontFamily: fonts.bodyBold,
+    fontFamily:
+      fonts.bodyBold,
+
     fontSize: 14,
+
+    lineHeight: 19,
+
+    textAlign:
+      "center",
   },
 
   primaryText: {
@@ -136,22 +193,25 @@ const styles = StyleSheet.create({
   },
 
   secondaryText: {
-    color: colors.lavender,
+    color:
+      colors.lavender,
   },
 
   dangerText: {
-    color: colors.errorText,
+    color:
+      colors.errorText,
   },
 
   ghostText: {
-    color: colors.lavender,
+    color:
+      colors.lavender,
   },
 
   pressed: {
-    opacity: 0.8,
+    opacity: 0.78,
   },
 
   disabled: {
-    opacity: 0.5,
+    opacity: 0.48,
   },
 }); 

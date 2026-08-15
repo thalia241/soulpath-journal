@@ -1,33 +1,70 @@
-import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { Tabs } from "expo-router";
+import {
+  FontAwesome,
+} from "@expo/vector-icons";
+
+import {
+  Tabs,
+} from "expo-router";
+
+import {
+  colors,
+  fonts,
+} from "../../src/theme";
+
+import {
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 export default function TabLayout() {
+  const insets =
+    useSafeAreaInsets();
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
 
-        tabBarActiveTintColor: "#D9C6FF",
-        tabBarInactiveTintColor: "#71677F",
+        tabBarHideOnKeyboard:
+          true,
+
+        tabBarActiveTintColor:
+          colors.lavender,
+
+        tabBarInactiveTintColor:
+          colors.textDim,
 
         tabBarStyle: {
-          backgroundColor: "#121020",
-          borderTopColor: "#2B2440",
+          backgroundColor:
+            "#121020",
+
+          borderTopColor:
+            colors.border,
+
           borderTopWidth: 1,
-          height: 72,
+
+          height:
+            64 +
+            insets.bottom,
+
           paddingTop: 7,
-          paddingBottom: 9,
+
+          paddingBottom:
+            Math.max(
+              insets.bottom,
+              8
+            ),
         },
 
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: "600",
+          fontFamily:
+            fonts.bodySemiBold,
+
+          fontSize: 10,
         },
 
-        tabBarHideOnKeyboard: true,
-
         sceneStyle: {
-          backgroundColor: "#0C0A18",
+          backgroundColor:
+            colors.background,
         },
       }}
     >
@@ -36,9 +73,12 @@ export default function TabLayout() {
         options={{
           title: "Today",
 
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({
+            color,
+            size,
+          }) => (
             <FontAwesome
-              name="home"
+              name="moon-o"
               color={color}
               size={size}
             />
@@ -51,7 +91,10 @@ export default function TabLayout() {
         options={{
           title: "Journal",
 
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({
+            color,
+            size,
+          }) => (
             <FontAwesome
               name="book"
               color={color}
@@ -64,11 +107,15 @@ export default function TabLayout() {
       <Tabs.Screen
         name="experiences"
         options={{
-          title: "Experiences",
+          title:
+            "Dreams & Signs",
 
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({
+            color,
+            size,
+          }) => (
             <FontAwesome
-              name="moon-o"
+              name="star-o"
               color={color}
               size={size}
             />
@@ -81,7 +128,10 @@ export default function TabLayout() {
         options={{
           title: "Insights",
 
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({
+            color,
+            size,
+          }) => (
             <FontAwesome
               name="line-chart"
               color={color}
@@ -96,7 +146,10 @@ export default function TabLayout() {
         options={{
           title: "Settings",
 
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({
+            color,
+            size,
+          }) => (
             <FontAwesome
               name="cog"
               color={color}
@@ -107,4 +160,4 @@ export default function TabLayout() {
       />
     </Tabs>
   );
-}
+} 

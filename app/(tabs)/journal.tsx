@@ -1,1 +1,1 @@
-export { default } from "../journal/index"; 
+export { default } from "../../src/screens/JournalScreen";

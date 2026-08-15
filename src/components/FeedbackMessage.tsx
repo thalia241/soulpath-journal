@@ -13,30 +13,41 @@ import {
 
 type Props = {
   message: string;
-  type?: "success" | "error";
+
+  type?:
+    | "success"
+    | "error";
 };
 
 export default function FeedbackMessage({
   message,
   type = "success",
 }: Props) {
+  const isError =
+    type === "error";
+
   return (
     <View
+      accessibilityRole={
+        isError
+          ? "alert"
+          : undefined
+      }
       style={[
         styles.container,
 
-        type === "success"
-          ? styles.success
-          : styles.error,
+        isError
+          ? styles.error
+          : styles.success,
       ]}
     >
       <Text
         style={[
           styles.text,
 
-          type === "success"
-            ? styles.successText
-            : styles.errorText,
+          isError
+            ? styles.errorText
+            : styles.successText,
         ]}
       >
         {message}
@@ -45,38 +56,49 @@ export default function FeedbackMessage({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    borderWidth: 1,
-    borderRadius: radius.md,
-    padding: spacing.md,
-  },
+const styles =
+  StyleSheet.create({
+    container: {
+      borderWidth: 1,
 
-  success: {
-    backgroundColor:
-      colors.successBackground,
-    borderColor:
-      colors.successBorder,
-  },
+      borderRadius:
+        radius.md,
 
-  error: {
-    backgroundColor:
-      colors.errorBackground,
-    borderColor:
-      colors.errorBorder,
-  },
+      padding: spacing.md,
+    },
 
-  text: {
-    fontFamily: fonts.body,
-    fontSize: 12,
-    lineHeight: 18,
-  },
+    success: {
+      backgroundColor:
+        colors.successBackground,
 
-  successText: {
-    color: colors.successText,
-  },
+      borderColor:
+        colors.successBorder,
+    },
 
-  errorText: {
-    color: colors.errorText,
-  },
-}); 
+    error: {
+      backgroundColor:
+        colors.errorBackground,
+
+      borderColor:
+        colors.errorBorder,
+    },
+
+    text: {
+      fontFamily:
+        fonts.body,
+
+      fontSize: 12,
+
+      lineHeight: 18,
+    },
+
+    successText: {
+      color:
+        colors.successText,
+    },
+
+    errorText: {
+      color:
+        colors.errorText,
+    },
+  }); 

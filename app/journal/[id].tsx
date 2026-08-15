@@ -210,7 +210,7 @@ export default function JournalDetailScreen() {
       );
 
       router.replace(
-        "/journal"
+        "/(tabs)/journal"
       );
     } catch (error) {
       setErrorInfo(
@@ -303,7 +303,7 @@ export default function JournalDetailScreen() {
               variant="secondary"
               onPress={() =>
                 router.replace(
-                  "/journal"
+                  "/(tabs)/journal"
                 )
               }
             />
@@ -495,7 +495,7 @@ export default function JournalDetailScreen() {
             variant="secondary"
             onPress={() =>
               router.replace(
-                "/journal"
+                "/(tabs)/journal"
               )
             }
           />

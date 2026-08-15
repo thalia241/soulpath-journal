@@ -8,8 +8,6 @@ import {
 
 import {
   Pressable,
-  SafeAreaView,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -17,6 +15,7 @@ import {
 
 import SoulButton from "../src/components/SoulButton";
 import SoulInput from "../src/components/SoulInput";
+import SoulScreen from "../src/components/SoulScreen";
 import FeedbackMessage from "../src/components/FeedbackMessage";
 
 import {
@@ -41,8 +40,11 @@ import {
 
 type FormErrors = {
   displayName?: string;
+
   email?: string;
+
   password?: string;
+
   confirmPassword?: string;
 };
 
@@ -76,7 +78,9 @@ export default function RegisterScreen() {
     errors,
     setErrors,
   ] =
-    useState<FormErrors>({});
+    useState<FormErrors>(
+      {}
+    );
 
   const [
     formError,
@@ -100,68 +104,66 @@ export default function RegisterScreen() {
     {
       title:
         "Leave your setup?",
+
       message:
         "Your account details haven't been submitted yet.",
     }
   );
 
-  function clearFieldError(
+  function clearError(
     field:
       keyof FormErrors
   ) {
     setErrors(
       (current) => ({
         ...current,
+
         [field]: undefined,
       })
     );
   }
 
-  function validateForm(): boolean {
+  function validateForm() {
     const nextErrors:
       FormErrors = {};
 
-    const nameResult =
+    const name =
       validateDisplayName(
         displayName
       );
 
-    if (!nameResult.valid) {
-      nextErrors.displayName =
-        nameResult.message;
-    }
-
-    const emailResult =
+    const mail =
       validateEmail(email);
 
-    if (!emailResult.valid) {
-      nextErrors.email =
-        emailResult.message;
-    }
-
-    const passwordResult =
+    const pass =
       validatePassword(
         password
       );
 
-    if (
-      !passwordResult.valid
-    ) {
-      nextErrors.password =
-        passwordResult.message;
-    }
-
-    const matchResult =
+    const matching =
       validateMatchingPasswords(
         password,
         confirmPassword
       );
 
-    if (
-      !matchResult.valid
-    ) {
+    if (!name.valid) {
+      nextErrors.displayName =
+        name.message;
+    }
+
+    if (!mail.valid) {
+      nextErrors.email =
+        mail.message;
+    }
+
+    if (!pass.valid) {
+      nextErrors.password =
+        pass.message;
+    }
+
+    if (!matching.valid) {
       nextErrors.confirmPassword =
-        matchResult.message;
+        matching.message;
     }
 
     setErrors(nextErrors);
@@ -185,14 +187,6 @@ export default function RegisterScreen() {
       return;
     }
 
-    const name =
-      displayName.trim();
-
-    const cleanEmail =
-      email
-        .trim()
-        .toLowerCase();
-
     try {
       setLoading(true);
 
@@ -203,14 +197,16 @@ export default function RegisterScreen() {
         await supabase.auth.signUp(
           {
             email:
-              cleanEmail,
+              email
+                .trim()
+                .toLowerCase(),
 
             password,
 
             options: {
               data: {
                 display_name:
-                  name,
+                  displayName.trim(),
               },
             },
           }
@@ -234,11 +230,6 @@ export default function RegisterScreen() {
         "Your SoulPath has been created. Check your email to confirm your account, then return here to sign in."
       );
     } catch (error) {
-      console.error(
-        "Unable to register:",
-        error
-      );
-
       setFormError(
         error instanceof Error
           ? error.message
@@ -250,277 +241,300 @@ export default function RegisterScreen() {
   }
 
   return (
-    <SafeAreaView
-      style={styles.container}
+    <SoulScreen
+      keyboard
+      contentStyle={
+        styles.content
+      }
     >
-      <ScrollView
-        contentContainerStyle={
-          styles.content
-        }
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={
-          false
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Go back"
+        style={styles.back}
+        disabled={loading}
+        onPress={() =>
+          router.back()
         }
       >
-        <Pressable
-          style={styles.back}
-          disabled={loading}
-          onPress={() =>
-            router.back()
+        <Text
+          style={styles.backText}
+        >
+          ‹ Back
+        </Text>
+      </Pressable>
+
+      <Text
+        style={styles.symbol}
+      >
+        ✦
+      </Text>
+
+      <Text
+        style={styles.title}
+      >
+        Begin your SoulPath
+      </Text>
+
+      <Text
+        style={styles.subtitle}
+      >
+        Make a quiet place for
+        whatever you're becoming,
+        remembering, or learning
+        to notice.
+      </Text>
+
+      <View
+        style={styles.form}
+      >
+        <SoulInput
+          label="What should we call you?"
+          value={displayName}
+          onChangeText={(
+            value
+          ) => {
+            setDisplayName(
+              value
+            );
+
+            setDirty(true);
+
+            clearError(
+              "displayName"
+            );
+          }}
+          placeholder="Display name"
+          autoCapitalize="words"
+          autoComplete="name"
+          textContentType="name"
+          maxLength={60}
+          editable={!loading}
+          error={
+            errors.displayName
           }
-        >
-          <Text
-            style={styles.backText}
-          >
-            ‹ Back
-          </Text>
-        </Pressable>
+        />
 
-        <Text
-          style={styles.symbol}
-        >
-          ✦
-        </Text>
+        <SoulInput
+          label="Email"
+          value={email}
+          onChangeText={(
+            value
+          ) => {
+            setEmail(value);
 
-        <Text
-          style={styles.title}
-        >
-          Begin your SoulPath
-        </Text>
+            setDirty(true);
 
-        <Text
-          style={styles.subtitle}
-        >
-          Make a quiet place for
-          whatever you're becoming,
-          remembering, or learning
-          to notice.
-        </Text>
+            clearError(
+              "email"
+            );
+          }}
+          placeholder="you@example.com"
+          keyboardType="email-address"
+          autoComplete="email"
+          textContentType="emailAddress"
+          autoCapitalize="none"
+          autoCorrect={false}
+          editable={!loading}
+          error={errors.email}
+        />
 
-        <View
-          style={styles.form}
-        >
-          <SoulInput
-            label="What should we call you?"
-            value={displayName}
-            onChangeText={(
+        <SoulInput
+          label="Password"
+          value={password}
+          onChangeText={(
+            value
+          ) => {
+            setPassword(
               value
-            ) => {
-              setDisplayName(
-                value
-              );
+            );
 
-              setDirty(true);
+            setDirty(true);
 
-              clearFieldError(
-                "displayName"
-              );
-            }}
-            placeholder="Display name"
-            autoCapitalize="words"
-            maxLength={60}
-            editable={!loading}
-            error={
-              errors.displayName
-            }
-          />
+            clearError(
+              "password"
+            );
 
-          <SoulInput
-            label="Email"
-            value={email}
-            onChangeText={(
+            clearError(
+              "confirmPassword"
+            );
+          }}
+          placeholder="At least 8 characters"
+          secureTextEntry
+          autoComplete="new-password"
+          textContentType="newPassword"
+          autoCapitalize="none"
+          editable={!loading}
+          error={
+            errors.password
+          }
+        />
+
+        <SoulInput
+          label="One more time"
+          value={
+            confirmPassword
+          }
+          onChangeText={(
+            value
+          ) => {
+            setConfirmPassword(
               value
-            ) => {
-              setEmail(value);
+            );
 
-              setDirty(true);
+            setDirty(true);
 
-              clearFieldError(
-                "email"
-              );
-            }}
-            placeholder="you@example.com"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            editable={!loading}
-            error={errors.email}
+            clearError(
+              "confirmPassword"
+            );
+          }}
+          placeholder="Repeat your password"
+          secureTextEntry
+          autoComplete="new-password"
+          textContentType="newPassword"
+          autoCapitalize="none"
+          editable={!loading}
+          returnKeyType="done"
+          onSubmitEditing={() =>
+            void handleRegister()
+          }
+          error={
+            errors.confirmPassword
+          }
+        />
+
+        {formError ? (
+          <FeedbackMessage
+            type="error"
+            message={formError}
           />
+        ) : null}
 
-          <SoulInput
-            label="Password"
-            value={password}
-            onChangeText={(
-              value
-            ) => {
-              setPassword(
-                value
-              );
-
-              setDirty(true);
-
-              clearFieldError(
-                "password"
-              );
-
-              clearFieldError(
-                "confirmPassword"
-              );
-            }}
-            placeholder="At least 8 characters"
-            secureTextEntry
-            autoCapitalize="none"
-            editable={!loading}
-            error={
-              errors.password
-            }
-          />
-
-          <SoulInput
-            label="One more time"
-            value={
-              confirmPassword
-            }
-            onChangeText={(
-              value
-            ) => {
-              setConfirmPassword(
-                value
-              );
-
-              setDirty(true);
-
-              clearFieldError(
-                "confirmPassword"
-              );
-            }}
-            placeholder="Repeat your password"
-            secureTextEntry
-            autoCapitalize="none"
-            editable={!loading}
-            error={
-              errors.confirmPassword
-            }
-          />
-
-          {formError ? (
+        {successMessage ? (
+          <>
             <FeedbackMessage
-              type="error"
-              message={formError}
-            />
-          ) : null}
-
-          {successMessage ? (
-            <>
-              <FeedbackMessage
-                message={
-                  successMessage
-                }
-              />
-
-              <SoulButton
-                title="Go to sign in"
-                variant="secondary"
-                onPress={() => {
-                  setDirty(false);
-
-                  router.replace(
-                    "/login"
-                  );
-                }}
-              />
-            </>
-          ) : (
-            <SoulButton
-              title="Create my SoulPath"
-              loading={loading}
-              disabled={loading}
-              onPress={
-                handleRegister
+              message={
+                successMessage
               }
             />
-          )}
-        </View>
 
-        <Text
-          style={styles.privacy}
-        >
-          Your journal is intended
-          to be private to your
-          authenticated account.
-        </Text>
-      </ScrollView>
-    </SafeAreaView>
+            <SoulButton
+              title="Go to sign in"
+              variant="secondary"
+              onPress={() => {
+                setDirty(false);
+
+                router.replace(
+                  "/login"
+                );
+              }}
+            />
+          </>
+        ) : (
+          <SoulButton
+            title="Create my SoulPath"
+            loading={loading}
+            disabled={loading}
+            onPress={
+              handleRegister
+            }
+          />
+        )}
+      </View>
+
+      <Text
+        style={styles.privacy}
+      >
+        Your journal is intended
+        to be private to your
+        authenticated account.
+      </Text>
+    </SoulScreen>
   );
 }
 
 const styles =
   StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor:
-        colors.background,
-    },
-
     content: {
-      width: "100%",
       maxWidth: 560,
-      alignSelf: "center",
+
       paddingHorizontal: 28,
-      paddingTop: 32,
+
+      paddingTop: 24,
+
       paddingBottom: 55,
     },
 
     back: {
       alignSelf:
         "flex-start",
-      paddingVertical: 8,
+
+      paddingVertical: 10,
     },
 
     backText: {
       color:
         colors.lavender,
+
       fontFamily:
         fonts.bodySemiBold,
+
       fontSize: 12,
     },
 
     symbol: {
       color: colors.gold,
+
       fontSize: 30,
+
       marginTop: 26,
     },
 
     title: {
       color: colors.text,
+
       fontFamily:
         fonts.display,
+
       fontSize: 41,
+
       lineHeight: 45,
+
       marginTop: 10,
     },
 
     subtitle: {
       color:
         colors.textMuted,
+
       fontFamily:
         fonts.displayItalic,
+
       fontSize: 17,
+
       lineHeight: 24,
+
       marginTop: 5,
     },
 
     form: {
       gap: 16,
+
       marginTop: 31,
     },
 
     privacy: {
-      color: colors.textDim,
-      fontFamily: fonts.body,
+      color:
+        colors.textDim,
+
+      fontFamily:
+        fonts.body,
+
       fontSize: 9,
+
       textAlign: "center",
+
       lineHeight: 15,
+
       marginTop: 22,
     },
   }); 

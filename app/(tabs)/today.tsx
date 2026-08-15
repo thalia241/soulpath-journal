@@ -881,7 +881,7 @@ export default function TodayScreen() {
             variant="ghost"
             onPress={() =>
               router.push(
-                "/journal"
+                "/(tabs)/journal"
               )
             }
           />
@@ -929,7 +929,7 @@ export default function TodayScreen() {
               variant="secondary"
               onPress={() =>
                 router.push(
-                  "/experiences"
+                  "/(tabs)/experiences"
                 )
               }
             />
